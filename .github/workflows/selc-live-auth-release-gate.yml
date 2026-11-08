@@ -1,0 +1,32 @@
+name: SELC live authentication release gate (real accounts)
+on:
+  workflow_dispatch:
+jobs:
+  live-accounts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: selc-auth-release
+    permissions:
+      contents: read
+    env:
+      SE_AUTH_MEMBER_USERNAME: ${{ secrets.SE_AUTH_MEMBER_USERNAME }}
+      SE_AUTH_MEMBER_PASSWORD: ${{ secrets.SE_AUTH_MEMBER_PASSWORD }}
+      SE_AUTH_REP_USERNAME: ${{ secrets.SE_AUTH_REP_USERNAME }}
+      SE_AUTH_REP_PASSWORD: ${{ secrets.SE_AUTH_REP_PASSWORD }}
+      SE_AUTH_COORD_USERNAME: ${{ secrets.SE_AUTH_COORD_USERNAME }}
+      SE_AUTH_COORD_PASSWORD: ${{ secrets.SE_AUTH_COORD_PASSWORD }}
+      SE_AUTH_LEADER_USERNAME: ${{ secrets.SE_AUTH_LEADER_USERNAME }}
+      SE_AUTH_LEADER_PASSWORD: ${{ secrets.SE_AUTH_LEADER_PASSWORD }}
+      SE_AUTH_OWNER_USERNAME: ${{ secrets.SE_AUTH_OWNER_USERNAME }}
+      SE_AUTH_OWNER_PASSWORD: ${{ secrets.SE_AUTH_OWNER_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install isolated browser test dependency
+        run: npm install --no-save --no-package-lock playwright@1.58.2
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Verify five production roles via real Portal/SELC SSO
+        run: node qa/live-auth-release-gate.mjs
