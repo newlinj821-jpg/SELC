@@ -12,6 +12,9 @@ assert.doesNotMatch(home.match(/<div class="site-ribbon">[\s\S]*?<\/div>/)?.[0]|
 assert.doesNotMatch(home.match(/<section class="hero"[\s\S]*?<\/section>/)?.[0]||'',/SANCTUM EROS LEADERSHIP COMMITTEE/,'Avoid repeating the full title within the mobile hero');
 assert.doesNotMatch(home,/<p class="hero-deck">/,'Do not repeat committee title above hero introduction');
 assert.match(home,/SHAPING WHAT COMES NEXT/);
+assert.match(home,/class="ribbon-location"/);
+assert.match(home,/class="ribbon-values"/);
+assert.doesNotMatch(home,/CONSENT · EDUCATION · COMMUNITY/);
 assert.doesNotMatch(home,/SE-SELC/i);
 for(const doc of [home,purpose,education,leaders]){
  assert.match(doc,/https:\/\/sanctumportal\.org/, 'Use canonical Portal domain');
