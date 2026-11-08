@@ -196,7 +196,7 @@ async function applicationsPage(){
   else await post('selc-governance','review_application',{id:a.id,status:action==='review'?'Under Review':action==='recommend'?'Recommended':'Not Recommended',notes:vals.notes});
   d.close();flash('Application updated.');applicationsPage()
  }catch(e){setStatus($('[data-status]',d),e.message)}});
- }) );
+ });
 }
 async function leaderPage(){
  const data=await api('selc-governance',{query:{scope:'members'}}),people=data.members||[];
