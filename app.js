@@ -145,6 +145,7 @@ async function beginHeadquarters(){
 }
 const NAV=[
  ['home','⌂','Overview','Your work',u=>!organizerRole(u)],
+ ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
  ['join','✎','Apply to SELC','Your work',u=>u==='member'],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
@@ -154,6 +155,8 @@ const NAV=[
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
  ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
  ['proposals','◉','Proposals & votes','Committee',u=>committeeRole(u)],
+ ['content','✎','Website content','Committee',u=>committeeRole(u)],
+ ['chat','▤','Community chat','Community',u=>!['community-applicant'].includes(u)],
  ['requests','↗','Community conversations','Committee',u=>committeeRole(u)],
  ['communityleaders','◇','Community Leaders network','Partnerships'],
  ['applyeducator','✦','Become a Community Educator','Education',u=>!organizerRole(u)],
@@ -164,6 +167,7 @@ const NAV=[
  ['volunteer','✋','Volunteer shifts','Event operations',u=>committeeRole(u)],
  ['door','⌗','Check-in & tickets','Event operations',u=>committeeRole(u)],
  ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
+ ['banhistory','⌛','Ban history','Safety',u=>committeeRole(u)],
  ['appeals','⚖','Access appeals','Safety',u=>u==='coordinator'||u==='founder'],
  ['myaccount','◎','My account','Your work']
 ];
@@ -179,6 +183,7 @@ function setupHQNav(){
 function closeHQNav(){$('#hqSidebar').classList.remove('open');$('#hqShade').classList.remove('open');$('#hqMenu').setAttribute('aria-expanded','false')}
 async function signOut(){try{await post('selc-auth','logout')}catch{}clearAccess();$('#headquarters').classList.add('hidden');$('#headquarters').setAttribute('aria-hidden','true');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';history.replaceState(null,'',location.pathname);scrollTo(0,0);flash('Signed out of SELC. Your Portal account remains separate.')}
 async function openPage(page){
+ if(context.chatTimer){clearTimeout(context.chatTimer);context.chatTimer=null}
  const allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())));
  if(!allowed)page=organizerRole(role())?'communityleaders':'home';context.activePage=page;
  $$('#hqNavigation [data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
@@ -186,7 +191,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -627,6 +632,88 @@ async function communityLeadersPage(){
   const id=button.dataset.shareApprove||button.dataset.shareDecline,decision=button.dataset.shareApprove?'Approved':'Declined';
   if(!await confirmDecision('Record '+decision+' for this inter-organizational safety summary? This action is auditable.'))return;
   try{await post('community-leaders','approve_safety_share',{id,decision});communityLeadersPage()}catch(e){flash(e.message)}
+ });
+}
+
+
+async function founderDeskPage(){
+ if(!owner())return openPage('home');
+ const links=[
+  ['Website changes','content','Review proposed Hub, Portal and SELC wording'],
+  ['Community chat','chat','Join the rooms you oversee'],
+  ['Ban history','banhistory','Current, expired and lifted restrictions'],
+  ['Volunteer management','volunteer','Review event coverage and shifts'],
+  ['Committee & educator applications','applications','Approve appointments and invitations'],
+  ['Rules, votes & proposals','proposals','Review committee recommendations'],
+  ['Events & RSVPs','events','Event operations and roster'],
+  ['Member & role applications','generalapps','Membership and staff approvals']
+ ];
+ setContent(pageHeader('FOUNDER & CHAIR','Founder desk','Focused oversight across SELC, operations and community programs.')+
+  '<div class="hq-stats">'+links.map(([title,target,desc])=>'<button class="hq-card" data-go="'+esc(target)+'" style="text-align:left;cursor:pointer"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p></button>').join('')+'</div>');
+ $('[data-go]').forEach(el=>el.onclick=()=>openPage(el.dataset.go));
+}
+async function banHistoryPage(){
+ const d=await api('ban-history'),rows=d.records||[];
+ let filter='all',search='';
+ function render(){
+  const visible=rows.filter(x=>(filter==='all'||x.status===filter)&&(!search||[x.name,x.fetlife,...(x.aliases||[])].join(' ').toLowerCase().includes(search)));
+  const stats='<p class="hq-muted">'+rows.length+' historical and current records · '+rows.filter(x=>['Active','Temporary'].includes(x.status)).length+' currently in force</p>';
+  $('#banRows').innerHTML=stats+(visible.length?visible.map(x=>card('<div class="hq-row"><div class="grow"><strong>'+esc(x.name)+'</strong><p>'+esc(x.fetlife?'@'+x.fetlife:'')+' · '+esc(x.kind)+' · '+esc(date(x.bannedAt))+'</p><p>'+esc(x.reason||'No public-facing reason recorded')+'</p><small>'+(x.liftedAt?'Lifted '+esc(date(x.liftedAt))+' · ':'')+(x.expiredAt?'Expired '+esc(date(x.expiredAt))+' · ':'')+(x.expiresAt?'End '+esc(date(x.expiresAt)):'')+'</small></div>'+tag(x.status)+'</div>')).join(''):empty('No matching records','Change the filter or search.'));
+ }
+ setContent(pageHeader('RESTRICTION HISTORY','Current & previous bans','Search the complete Sanctum Eros restriction ledger. Decisions and investigation records remain separate.')+
+  card('<div class="hq-form-grid"><label>Search<input id="banSearch" type="search" placeholder="Name or username"></label><label>Status<select id="banFilter"><option value="all">All statuses</option><option>Active</option><option>Temporary</option><option>Lifted</option><option>Expired</option><option>Inactive</option></select></label></div>')+'<div id="banRows"></div>');
+ $('#banSearch').oninput=e=>{search=e.target.value.toLowerCase();render()};
+ $('#banFilter').onchange=e=>{filter=e.target.value;render()};render();
+}
+async function communityChatPage(){
+ const d=await api('community-chat'),rooms=d.rooms||[];
+ let active=context.chatRoom||rooms.find(x=>x.joined)?.id||rooms[0]?.id||'';
+ if(!rooms.some(x=>x.id===active))active=rooms[0]?.id||'';
+ context.chatRoom=active;
+ const current=rooms.find(x=>x.id===active);
+ const tabs=rooms.map(x=>btn(x.name+(x.joined?' ✓':''),'data-chat-room="'+esc(x.id)+'"',x.id===active?'primary':'')).join('');
+ let html=pageHeader('CONVERSATIONS','Community chat','Join the rooms you are eligible for. Participation is optional.')+
+  card('<div class="hq-actions">'+tabs+'</div>')+
+  (current?card('<h2>'+esc(current.name)+'</h2><p>'+esc(current.description)+'</p>'+
+   (current.joined?'<div id="chatMessages" class="hq-panel-list" style="max-height:370px;overflow:auto"></div><form id="chatSend" class="hq-form"><label>Message<textarea name="message" rows="3" maxlength="1200" required></textarea></label><p data-status></p><button class="hq-button primary">Send</button></form>'+btn('Leave room','data-chat-leave'):'<p>Join to read and participate.</p>'+btn('Join room','data-chat-join','primary'))):
+  empty('No rooms available','Approved roles unlock their corresponding rooms.'));
+ setContent(html);
+ $('[data-chat-room]').forEach(x=>x.onclick=()=>{context.chatRoom=x.dataset.chatRoom;communityChatPage()});
+ async function refresh(){
+  if(context.activePage!=='chat'||!current?.joined)return;
+  try{
+   const result=await api('community-chat',{query:{room:current.id}});
+   const container=$('#chatMessages');
+   if(container){const nearBottom=container.scrollHeight-container.scrollTop-container.clientHeight<80;
+    container.innerHTML=(result.messages||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+esc(m.name)+'</strong><small> · '+esc(date(m.createdAt))+'</small><p class="hq-prose">'+esc(m.message)+'</p></div></div>').join('')||'<p class="hq-muted">No messages yet.</p>';
+    if(nearBottom)container.scrollTop=container.scrollHeight;
+   }
+  }catch(err){if($('#chatMessages'))$('#chatMessages').textContent=err.message}
+  if(context.activePage==='chat')context.chatTimer=setTimeout(refresh,12000);
+ }
+ if(current?.joined){
+  watchForm($('#chatSend'),async values=>{await post('community-chat','send',{room:active,message:values.message});$('#chatSend').reset();await refresh()});
+  $('[data-chat-leave]').onclick=async()=>{await post('community-chat','leave',{room:active});communityChatPage()};
+  await refresh();
+ }else if(current)$('[data-chat-join]').onclick=async()=>{try{await post('community-chat','join',{room:active});communityChatPage()}catch(e){flash(e.message)}};
+}
+async function contentManagementPage(){
+ const result=await api('selc-content'),rows=result.proposals||[];
+ const choices=[['hub','Hub'],['portal','Member Portal'],['selc','SELC website']];
+ let html=pageHeader('WEBSITE EDITOR','Website & content management','Edit written content, review the committee vote and publish only after Founder approval.')+
+  card('<h2>Propose a change</h2><form id="newContent" class="hq-form"><div class="hq-form-grid"><label>Website<select name="site">'+choices.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('')+'</select></label><label>Page path<input name="path" placeholder="/about/" value="/" required></label></div><label>Exact existing text<textarea name="original" rows="3" required maxlength="2000"></textarea></label><label>Replacement text<textarea name="replacement" rows="4" required maxlength="2000"></textarea></label><label>Reason or context<input name="summary" maxlength="400"></label><p class="hq-muted">This changes displayed wording only. It cannot change code, calculations, permissions or payments. Multiple identical matches on a page will all update.</p><p data-status></p><button class="hq-button primary">Send to committee vote</button></form>');
+ html+='<h2 style="margin:20px 0 10px">Change proposals</h2>';
+ html+=rows.length?rows.map(p=>card('<div class="hq-row"><div class="grow"><small>'+esc(p.site.toUpperCase())+' · '+esc(p.path)+'</small><strong>'+esc(p.summary||p.original.slice(0,90))+'</strong><p><del>'+esc(p.original.slice(0,180))+'</del></p><p>'+esc(p.replacement.slice(0,180))+'</p><small>Votes: '+number(p.tally?.yes)+' support / '+number(p.tally?.needed)+' needed · '+number(p.tally?.no)+' oppose</small></div>'+tag(p.status)+btn('Review','data-content-id="'+esc(p.id)+'"')+'</div>')).join(''):empty('No changes submitted yet');
+ setContent(html);
+ watchForm($('#newContent'),async values=>{await post('selc-content','propose',values);flash('Sent for committee vote.');contentManagementPage()});
+ $('[data-content-id]').forEach(b=>b.onclick=()=>{
+  const p=rows.find(x=>x.id===b.dataset.contentId);if(!p)return;
+  const base=p.site==='hub'?'https://sanctumeroshub.org':p.site==='selc'?'https://se-selc.netlify.app':'https://sanctumportal.org';
+  const votes=p.status==='Voting'&&!owner()?'<h3>Vote</h3><div class="hq-actions">'+btn('Support','data-content-vote="yes"','primary')+btn('Oppose','data-content-vote="no"')+btn('Abstain','data-content-vote="abstain"')+'</div>':'';
+  const founder=owner()?'<h3>Founder review</h3><div class="hq-actions">'+(p.tally?.passed&&['Voting','Awaiting Founder'].includes(p.status)?btn('Approve & publish','data-content-decision="approve"','primary'):'')+(p.status==='Published'?btn('Rollback change','data-content-decision="rollback"'):'')+(p.status==='Voting'||p.status==='Awaiting Founder'?btn('Return for edits','data-content-decision="return"')+btn('Decline','data-content-decision="decline"','danger'):'')+'</div>':'';
+  const dialog=modal('Review website text','<p><a target="_blank" rel="noopener noreferrer" href="'+base+esc(p.path)+'">View affected page ↗</a></p><h3>Current wording</h3>'+card('<p class="hq-prose">'+esc(p.original)+'</p>')+'<h3>Proposed wording</h3>'+card('<p class="hq-prose">'+esc(p.replacement)+'</p>')+'<p>'+tag(p.status)+' · '+number(p.tally?.yes)+' support · '+number(p.tally?.needed)+' required</p>'+votes+founder);
+  $('[data-content-vote]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','vote',{id:p.id,vote:x.dataset.contentVote});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
+  $('[data-content-decision]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','decide',{id:p.id,decision:x.dataset.contentDecision,reason:''});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
  });
 }
 
