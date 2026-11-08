@@ -26,7 +26,11 @@ assert.match(home,/<a[^>]+href="\/community-leaders\/"[^>]*>COMMUNITY LEADERS &a
 assert.match(home,/href="\/purpose\/">GET TO KNOW US/);
 assert.match(home,/href="https:\/\/sanctumportal\.org\/selc-connect\.html"/);
 assert.match(home,/login-handoff/);
-assert.match(home,/selc-unified-11/);
+assert.match(home,/selc-governance-12/);
+assert.match(app,/async function communityChatPage\(\)/);
+assert.match(app,/async function contentManagementPage\(\)/);
+assert.match(app,/async function founderDeskPage\(\)/);
+assert.match(app,/async function banHistoryPage\(\)/);
 assert.match(css,/\.login-handoff>\.button/);
 assert.match(css,/max-height:calc\(100dvh - 20px\)/);
 assert.match(app,/\$\$\('\[data-leader-review\]'\)\.forEach/);
