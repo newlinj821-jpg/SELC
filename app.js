@@ -562,16 +562,16 @@ async function communityLeadersPage(){
    const dlg=modal('Review '+item.organization,'<p>Applicant: '+esc(item.leaderName)+'</p><p>'+esc(item.motivation)+'</p><form class="hq-form" id="leaderDecision"><label>Decision</label><select name="status"><option>Needs Verification</option><option>Approved</option><option>Declined</option></select><label>Review notes</label><textarea name="notes" rows="3"></textarea><p data-status></p><button class="hq-button primary">Save review</button></form>');
    watchForm($('#leaderDecision',dlg),async values=>{await post('community-leaders','review',{id:item.id,...values});dlg.close();flash('Community Leader review saved.');communityLeadersPage()});
  });
- $('[data-leader-revoke]').forEach(button=>button.onclick=()=>{
+ $$('[data-leader-revoke]').forEach(button=>button.onclick=()=>{
   const id=button.dataset.leaderRevoke,person=(d.directory||[]).find(x=>x.id===id);if(!person)return;
   const dlg=modal('Revoke Community Leaders access','<p>This only closes the private organizer network. It does not ban someone from Sanctum Eros, modify an IA case, or change an SE membership.</p><form id="leaderRevoke" class="hq-form"><label>Reason for revocation</label><textarea name="reason" rows="3" minlength="10" required></textarea><p data-status></p><button class="hq-button danger">Revoke organizer access</button></form>');
   watchForm($('#leaderRevoke',dlg),async values=>{await post('community-leaders','revoke_leader',{accountId:id,...values});dlg.close();flash('Community Leaders network access revoked.');communityLeadersPage()});
  });
- $('[data-share-revoke]').forEach(button=>button.onclick=async()=>{
+ $$('[data-share-revoke]').forEach(button=>button.onclick=async()=>{
   if(!await confirmDecision('Withdraw this shared safety notice from other Community Leaders? Existing Portal references will be marked as withdrawn.'))return;
   try{await post('community-leaders','revoke_safety_share',{id:button.dataset.shareRevoke});flash('Shared disclosure withdrawn.');communityLeadersPage()}catch(e){flash(e.message)}
  });
- $('[data-share-approve],[data-share-decline]').forEach(button=>button.onclick=async()=>{
+ $$('[data-share-approve],[data-share-decline]').forEach(button=>button.onclick=async()=>{
   const id=button.dataset.shareApprove||button.dataset.shareDecline,decision=button.dataset.shareApprove?'Approved':'Declined';
   if(!await confirmDecision('Record '+decision+' for this inter-organizational safety summary? This action is auditable.'))return;
   try{await post('community-leaders','approve_safety_share',{id,decision});communityLeadersPage()}catch(e){flash(e.message)}
