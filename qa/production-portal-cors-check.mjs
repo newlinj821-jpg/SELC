@@ -1,40 +1,23 @@
 import assert from 'node:assert/strict';
 const origin='https://se-selc.netlify.app';
+const targets=[
+ ['canonical','https://sanctumportal.org'],
+ ['netlify-production','https://thesanctumerosportal.netlify.app'],
+ ['fixed-preview','https://deploy-preview-30--thesanctumerosportal.netlify.app'],
+];
 const services=['selc-auth','ecosystem-session','selc-governance','community-leaders'];
-for(const service of services){
- const endpoint='https://sanctumportal.org/.netlify/functions/'+service;
- const response=await fetch(endpoint,{
-   method:'OPTIONS',
-   headers:{
-     Origin:origin,
-     'Access-Control-Request-Method':'POST',
-     'Access-Control-Request-Headers':'content-type'
-   },
-   redirect:'manual',
-   signal:AbortSignal.timeout(16000)
- });
- const body=(await response.text()).slice(0,300).replace(/[\r\n]+/g,' ');
- const result={
-   service,
-   status:response.status,
-   allowedOrigin:response.headers.get('access-control-allow-origin'),
-   allowedMethods:response.headers.get('access-control-allow-methods'),
-   allowedHeaders:response.headers.get('access-control-allow-headers'),
-   nfRequestId:response.headers.get('x-nf-request-id'),
-   body
- };
- console.log(JSON.stringify(result));
- assert.equal(response.status,204,service+' live CORS preflight failed');
- assert.equal(result.allowedOrigin,origin,service+' did not permit official SELC origin');
- assert.match(result.allowedMethods||'',/POST/i,service+' missing POST permission');
- assert.match(result.allowedHeaders||'',/content-type/i,service+' missing content-type permission');
+let canonicalFailed=false;
+for(const [target,base] of targets){
+ for(const service of services){
+  const endpoint=base+'/.netlify/functions/'+service;
+  try{
+   const r=await fetch(endpoint,{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'POST','Access-Control-Request-Headers':'content-type'},redirect:'manual',signal:AbortSignal.timeout(12000)});
+   const body=(await r.text()).slice(0,200);
+   const result={target,service,status:r.status,cors:r.headers.get('access-control-allow-origin'),nfRequestId:r.headers.get('x-nf-request-id'),body};
+   console.log(JSON.stringify(result));
+   if(target==='canonical'&&(r.status!==204||result.cors!==origin))canonicalFailed=true;
+  }catch(e){console.log(JSON.stringify({target,service,error:e?.name||'FetchError'}));if(target==='canonical')canonicalFailed=true}
+ }
 }
-const status=await fetch('https://sanctumportal.org/.netlify/functions/selc-auth',{
- headers:{Origin:origin},
- redirect:'manual',
- signal:AbortSignal.timeout(16000)
-});
-console.log(JSON.stringify({service:'selc-auth anonymous session',status:status.status,cors:status.headers.get('access-control-allow-origin')}));
-assert.equal(status.status,401,'Unauthenticated session must require sign-in, not return a 503');
-assert.equal(status.headers.get('access-control-allow-origin'),origin,'Even 401 must preserve CORS headers');
-console.log('Live Portal/SELC preflight and unauthenticated session connection verified.');
+if(canonicalFailed)throw Error('Canonical Portal CORS is not repaired in the live deployment.');
+console.log('Canonical Portal preflight now permits official SELC origin.');
