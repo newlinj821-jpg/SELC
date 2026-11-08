@@ -26,7 +26,7 @@ async function api(service,{method='GET',query={},body,token=context.token,timeo
    let data={};try{data=await response.json()}catch{}
    if(!response.ok){const error=new Error(data.error||('Request failed ('+response.status+')'));error.status=response.status;throw error}
    return data;
-  }catch(e){if(e.name==='AbortError')throw new Error('The Portal is taking too long to respond. Please try again.');throw e}finally{clearTimeout(timer)}
+  }catch(e){if(e.name==='AbortError')throw new Error('The Portal did not respond in time. Confirm the Portal is online, then try again.');if(e instanceof TypeError)throw new Error('Unable to contact the Sanctum Eros Portal. The SELC connection may need updating or the Portal deployment may be unavailable.');throw e}finally{clearTimeout(timer)}
 }
 const post=(service,action,data={})=>api(service,{method:'POST',body:{action,...data}});
 function setAccess(token){context.token=token;sessionStorage.setItem(TOKEN_KEY,token)}
@@ -51,11 +51,28 @@ function startPublic(){
  $$('#publicNav a').forEach(a=>a.addEventListener('click',closeMobileNav));
  $$('[data-signin]').forEach(b=>b.addEventListener('click',openLogin));
  $('#loginDialog').addEventListener('click',e=>{if(e.target.id==='loginDialog')e.target.close()});
- watchForm($('#loginForm'),async b=>{
-  setStatus($('#loginStatus'),'Checking your Portal account…');
-  const result=await api('selc-auth',{method:'POST',token:'',body:{action:'login',username:b.username,password:b.password}});
-  if(!result.token)throw new Error('The sign-in service did not return a session.');
-  setAccess(result.token);$('#loginDialog').close();$('#loginForm').reset();await beginHeadquarters();
+ const loginForm=$('#loginForm'),loginMessage=$('#loginStatus');
+ loginForm.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(!loginForm.reportValidity())return;
+  const submit=loginForm.querySelector('[type="submit"]'),credentials=formValues(loginForm);
+  submit.disabled=true;submit.setAttribute('aria-busy','true');
+  setStatus(loginMessage,'Checking your Portal account…');
+  try{
+   const result=await api('selc-auth',{method:'POST',token:'',timeout:12000,body:{action:'login',username:credentials.username,password:credentials.password}});
+   if(!result.token)throw new Error('The sign-in service did not establish a session.');
+   setAccess(result.token);
+   // Verify the new session before dismissing the dialog so failed cross-site
+   // sessions never masquerade as successful sign-in.
+   await api('selc-auth',{timeout:10000});
+   await beginHeadquarters();
+   $('#loginDialog').close();loginForm.reset();setStatus(loginMessage,'');
+  }catch(error){
+   clearAccess();
+   const message=error?.message||'Sign-in failed. Please try again.';
+   setStatus(loginMessage,message);
+   loginMessage.setAttribute('role','alert');
+  }finally{submit.disabled=false;submit.removeAttribute('aria-busy')}
  });
  loadPublicLeadership().catch(()=>{});
  const params=new URLSearchParams(location.search);
