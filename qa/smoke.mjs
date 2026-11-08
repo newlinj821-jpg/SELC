@@ -26,8 +26,8 @@ assert.match(gateway,/const ALLOWED=new Set/);
 assert.match(gateway,/'selc-auth'/);
 assert.match(gateway,/'community-leaders'/);
 assert.match(gateway,/status!==404&&status!==502&&status!==503&&status!==504/);
-assert.doesNotMatch(app,/(?<!\\$)\\$\\('[^']+'\\)\\.forEach/, 'A single-element selector cannot be iterated with forEach');
+assert.doesNotMatch(app,/(^|[^$])\$\('[^']+'\)\.forEach/, 'A single-element selector cannot be iterated with forEach');
 for(const selector of ['[data-educator-review]','[data-handover]','[data-claim-shift],[data-release-shift]','[data-leader-review]','[data-share-approve],[data-share-decline]']){
- assert.ok(app.includes("$('"+selector+"').forEach"),'Multi-button handler must use the collection selector: '+selector);
+ assert.ok(app.includes("$$('"+selector+"').forEach"),'Multi-button handler must use the collection selector: '+selector);
 }
 console.log('SELC public route, branding, login UI, Community Leaders and gateway source checks passed.');
