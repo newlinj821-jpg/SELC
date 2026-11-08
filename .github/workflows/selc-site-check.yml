@@ -17,6 +17,6 @@ jobs:
         run: |
           grep -q "width:clamp(118px,38%,165px)" style.css
           grep -q "setStatus(loginMessage,message)" app.js
-          grep -q "selc-login-mobile-3" index.html
+          grep -q "selc-purpose-4" index.html
       - name: Check website structure and key workflows
         run: node --test tests/*.test.mjs
