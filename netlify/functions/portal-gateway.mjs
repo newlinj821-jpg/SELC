@@ -3,7 +3,6 @@
  * membership, roles, and permissions for every request.
  */
 const PRIMARY='https://sanctumportal.org';
-const SECONDARY='https://thesanctumerosportal.netlify.app';
 const ORIGIN='https://se-selc.netlify.app';
 const ALLOWED=new Set(['selc-auth','member-auth','selc-governance','selc-public','ecosystem-session','staff-portal','rsvps','community-requests','community-leaders','educator-applications','education-programs','ban-reports','shifts','leadership-library','leadership-queue','safety-appeal-review','applications','leadership-briefing','selc-system-health']);
 export default async function handler(request){
@@ -32,7 +31,7 @@ export default async function handler(request){
  const authorization=request.headers.get('authorization');
  if(authorization&&/^Bearer [A-Za-z0-9._~-]{24,}$/i.test(authorization))headers.authorization=authorization;
  const statuses=[];
- for(const base of [PRIMARY,SECONDARY]){
+ for(const base of [PRIMARY]){
   try{
    const control=new AbortController(),t=setTimeout(()=>control.abort(),8500);
    let response;
@@ -47,5 +46,5 @@ export default async function handler(request){
    statuses.push(status);
   }catch(error){statuses.push('network')}
  }
- return new Response(JSON.stringify({error:'Neither configured Portal endpoint responded. Check the Portal Netlify production deploy and functions.',upstreamUnavailable:true}),{status:503,headers:cors});
+ return new Response(JSON.stringify({error:'The canonical Portal service did not respond. Check sanctumportal.org and its production functions.',upstreamUnavailable:true}),{status:503,headers:cors});
 }
