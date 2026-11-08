@@ -1,0 +1,36 @@
+name: SELC production verification (read-only)
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  production:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify independent SELC production routes and required certification copy
+        run: |
+          for attempt in $(seq 1 30); do
+            if node --input-type=module -e '
+              import assert from "node:assert/strict";
+              const root="https://se-selc.netlify.app";
+              for(const route of ["/","/purpose/","/community-leaders/","/education/","/app.js"]){
+                const r=await fetch(root+route,{redirect:"follow",signal:AbortSignal.timeout(10000)});
+                assert(r.ok,route+" HTTP "+r.status);
+                assert.equal(new URL(r.url).hostname,"se-selc.netlify.app");
+                const body=await r.text();
+                if(route==="/")assert.match(body,/SELC certification before your committee appointment/);
+                if(route==="/community-leaders/")assert.match(body,/not SELC Representatives or committee voters/);
+                if(route==="/app.js")assert.match(body,/async function certificationPage\(\)/);
+              }
+            '; then
+              echo "SELC production routes and certification content verified."
+              exit 0
+            fi
+            sleep 12
+          done
+          exit 1
