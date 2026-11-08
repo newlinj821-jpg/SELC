@@ -276,3 +276,11 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
  .messenger-message-actions button{font-size:10px}
 }
 @media(prefers-reduced-motion:reduce){.messenger-room{transition:none}}
+
+
+/* Website editor: compare current and proposed copy before committee voting. */
+.editor-copy-compare{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:14px 0}
+.editor-copy-compare section{min-width:0;padding:18px;border-radius:10px;background:#18191d;border:1px solid #49454b}
+.editor-copy-compare strong{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#f28798;margin-bottom:10px}
+.editor-copy-compare p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;color:#f4ecee}
+@media(max-width:700px){.editor-copy-compare{grid-template-columns:1fr}.editor-copy-compare section{padding:14px}}
