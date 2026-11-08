@@ -82,7 +82,7 @@ function startPublic(){
    $('#loginDialog').close();loginForm.reset();setStatus(loginMessage,'');
   }catch(error){
    clearAccess();
-   const message=error?.status===401?'That username/password was not accepted by the connected Portal, or SELC access is not yet approved. Verify that you can sign in to the Member Portal with this exact account. If you can, SELC authentication needs administrator review.':(error?.message||'Sign-in failed. Please try again.');
+   const message=error?.status===401?'Sign-in was not verified. Use your existing Portal credentials. If this is your Eros member account, connect it to Owner Administration from Portal → Owner Settings. Your existing Owner login can also sign in directly.':(error?.message||'Sign-in failed. Please try again.');
    setStatus(loginMessage,message);
    loginMessage.setAttribute('role','alert');
   }finally{submit.disabled=false;submit.removeAttribute('aria-busy')}
