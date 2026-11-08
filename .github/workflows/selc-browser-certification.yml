@@ -1,5 +1,7 @@
 name: SELC role and certification browser integration (isolated)
 on:
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 jobs:
