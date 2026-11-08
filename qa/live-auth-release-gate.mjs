@@ -23,9 +23,11 @@ try{
   try{
    const response=await page.goto(SELC,{waitUntil:'domcontentloaded',timeout:25000});
    assert.equal(response?.status(),200,'SELC public site must be available without login');
-   await page.locator('[data-signin]').first().click();
+   if(!(await page.locator('[data-signin]:visible').count()))await page.locator('#mobileNavTrigger').click();
+   await page.locator('[data-signin]:visible').first().click();
    await page.getByRole('link',{name:/CONTINUE WITH SANCTUM EROS PORTAL/i}).click();
    await page.waitForURL(url=>url.origin===PORTAL,{timeout:20000});
+   await page.getByRole('link',{name:role==='owner'?/Sign in with Owner Administration/i:/Sign in with Member Portal/i}).click();
    if(role==='owner'){
     await page.locator('#ou').waitFor({timeout:15000});
     await page.locator('#ou').fill(username);
