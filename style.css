@@ -97,3 +97,12 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 }
 
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+
+
+/* Keep the complete organization name unmistakable, including on phones. */
+.site-header .brand-type small{display:block!important;font-size:clamp(9px,.8vw,12px)!important;letter-spacing:.07em!important;line-height:1.32!important;color:#f2d9dc!important;font-weight:820!important;max-width:275px}
+.site-ribbon{letter-spacing:.11em;text-align:center}
+.hero-deck{font:850 clamp(14px,2.4vw,20px)/1.35 system-ui,-apple-system,sans-serif;color:#ffbbc5;letter-spacing:.105em;margin:-13px 0 26px;text-transform:uppercase;max-width:520px}
+.hero-deck strong{display:block;color:#fff2eb;font-size:clamp(19px,2.8vw,27px);letter-spacing:.04em;margin-top:5px}
+@media(max-width:850px){.site-header .brand{gap:9px}.site-header .brand img{width:39px;height:47px}.site-header .brand-type>b{font-size:24px}.site-header .brand-type small{font-size:9px!important;max-width:215px}.hero-deck{margin:-6px 0 25px}}
+@media(max-width:390px){.site-header .brand-type small{max-width:180px}.site-ribbon{font-size:8px;letter-spacing:.06em}.hero-deck strong{font-size:18px}}
