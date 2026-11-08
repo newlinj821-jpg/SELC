@@ -10,7 +10,9 @@ const plain=x=>String(x??'').trim(),date=x=>{if(!x)return 'Not specified';const 
 const number=x=>Number(x||0).toLocaleString('en-US');const initials=x=>String(x||'SE').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
 const context={token:'',me:null,activePage:'home',data:{},eventId:'',lastScan:null,stream:null};
 const TOKEN_KEY='selc.session.v1';
-const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator',representative:'SELC Representative',member:'Community Member'};
+const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator',representative:'SELC Representative',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
+const committeeRole=u=>['founder','coordinator','representative'].includes(u);
+const organizerRole=u=>['community-applicant','community-leader'].includes(u);
 const leader=()=>context.me&&['founder','coordinator','representative'].includes(context.me.role);
 const reviewer=()=>context.me&&['founder','coordinator'].includes(context.me.role);
 const owner=()=>context.me?.role==='founder';
@@ -114,28 +116,28 @@ async function beginHeadquarters(){
  context.me={role:session.role,displayName:session.displayName,owner:session.owner};
  $('#publicSite').classList.add('hidden');$('#headquarters').classList.remove('hidden');$('#headquarters').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
  $('#hqUserName').textContent=context.me.displayName||'Member';$('#hqInitials').textContent=initials(context.me.displayName);$('#hqRole').textContent=RANK[role()]||'Community Member';$('#hqRoleChip').textContent=(RANK[role()]||'Member').toUpperCase();
- setupHQNav();const hash=location.hash.split('/')[1];await openPage(hash||'home');
+ setupHQNav();const hash=location.hash.split('/')[1];await openPage(hash||(organizerRole(role())?'communityleaders':'home'));
 }
 const NAV=[
- ['home','⌂','Overview','Your work'],
+ ['home','⌂','Overview','Your work',u=>!organizerRole(u)],
  ['join','✎','Apply to SELC','Your work',u=>u==='member'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
  ['ballots','✓','Coordinator election','Your work',u=>u==='representative'||u==='coordinator'],
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
  ['leader','◈','Leadership & appointments','Leadership',u=>u==='founder'||u==='coordinator'||u==='representative'],
- ['work','▣','Leadership Action Center','Leadership',u=>u!=='member'],
- ['library','▤','Staff & SELC Handbook','Leadership',u=>u!=='member'],
- ['proposals','◉','Proposals & votes','Committee',u=>u!=='member'],
- ['requests','↗','Community conversations','Committee',u=>u!=='member'],
+ ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
+ ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
+ ['proposals','◉','Proposals & votes','Committee',u=>committeeRole(u)],
+ ['requests','↗','Community conversations','Committee',u=>committeeRole(u)],
  ['communityleaders','◇','Community Leaders network','Partnerships'],
- ['applyeducator','✦','Become a Community Educator','Education'],
+ ['applyeducator','✦','Become a Community Educator','Education',u=>!organizerRole(u)],
  ['educatorreviews','▤','Educator applications','Education',u=>u==='founder'||u==='coordinator'],
- ['educators','✦','Education & workshops','Committee',u=>u!=='member'],
- ['generalapps','▧','Member & role applications','Event operations',u=>u!=='member'],
- ['events','▦','Events & RSVPs','Event operations',u=>u!=='member'],
- ['volunteer','✋','Volunteer shifts','Event operations',u=>u!=='member'],
- ['door','⌗','Check-in & tickets','Event operations',u=>u!=='member'],
- ['banreports','⚑','Ban Reports','Safety',u=>u!=='member'],
+ ['educators','✦','Education & workshops','Committee',u=>committeeRole(u)],
+ ['generalapps','▧','Member & role applications','Event operations',u=>committeeRole(u)],
+ ['events','▦','Events & RSVPs','Event operations',u=>committeeRole(u)],
+ ['volunteer','✋','Volunteer shifts','Event operations',u=>committeeRole(u)],
+ ['door','⌗','Check-in & tickets','Event operations',u=>committeeRole(u)],
+ ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
  ['appeals','⚖','Access appeals','Safety',u=>u==='coordinator'||u==='founder'],
  ['myaccount','◎','My account','Your work']
 ];
@@ -152,7 +154,7 @@ function closeHQNav(){$('#hqSidebar').classList.remove('open');$('#hqShade').cla
 async function signOut(){try{await post('selc-auth','logout')}catch{}clearAccess();$('#headquarters').classList.add('hidden');$('#headquarters').setAttribute('aria-hidden','true');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';history.replaceState(null,'',location.pathname);scrollTo(0,0);flash('Signed out of SELC. Your Portal account remains separate.')}
 async function openPage(page){
  const allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())));
- if(!allowed)page='home';context.activePage=page;
+ if(!allowed)page=organizerRole(role())?'communityleaders':'home';context.activePage=page;
  $$('#hqNavigation [data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
  $('#hqCurrentSection').textContent=allowed?.[2]?.toUpperCase()||'HEADQUARTERS';
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
@@ -561,6 +563,6 @@ async function communityLeadersPage(){
  });
 }
 
-async function accountPage(){setContent(pageHeader('YOUR ACCOUNT','Your SELC space','Your Portal membership is the identity behind this account.')+card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div><p>Your personal Portal remains available whenever you need events, courses, personal tickets, and account settings.</p><div class="hq-actions"><a class="hq-button" href="'+PORTAL+'/member.html" rel="noopener noreferrer">Open Member Portal ↗</a><a class="hq-button" href="'+PORTAL+'/staff.html" rel="noopener noreferrer">Open Staff Portal ↗</a>'+btn('Sign out of SELC','data-signout','danger')+'</div>'));$('[data-signout]').onclick=signOut}
+async function accountPage(){const external=organizerRole(role());setContent(pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is the identity behind your authorized SELC access.')+card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div><p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal is available for eligible events, courses, tickets, and account settings.')+'</p><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html" rel="noopener noreferrer">Open Member Portal ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>'));$('[data-signout]').onclick=signOut}
 addEventListener('DOMContentLoaded',startPublic);
 })();
