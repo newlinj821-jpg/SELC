@@ -104,8 +104,8 @@ try{
  await p.locator('#hqMenu').click();
  await p.locator('#hqNavigation [data-page="communityleaders"]').click();
  await p.getByText('Message Community Leaders, SELC or Eros',{exact:false}).waitFor();
- await mobile.close();
  assert.equal(await p.locator('#hqRole').count(),1);
+ await mobile.close();
  const founderContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
  await founderContext.route('https://sanctumportal.org/.netlify/functions/**',mockPortal);
  const founderPage=await founderContext.newPage();
