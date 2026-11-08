@@ -8,6 +8,9 @@ const leaders=read('community-leaders/index.html'),gateway=read('netlify/functio
 for(const p of ['purpose','education','community-leaders'])assert.ok(existsSync(p+'/index.html'),p+' route missing');
 assert.match(home,/<a href="\/community-leaders\/">Community Leaders<\/a>/);
 assert.match(home,/SANCTUM EROS LEADERSHIP COMMITTEE/);
+assert.equal((home.match(/SANCTUM EROS LEADERSHIP COMMITTEE/g)||[]).length,1,'Full name should appear just once in the public landing header');
+assert.doesNotMatch(home,/<p class="hero-deck">/,'Do not repeat committee title above hero introduction');
+assert.match(home,/SHAPING WHAT COMES NEXT/);
 assert.doesNotMatch(home,/SE-SELC/i);
 for(const doc of [home,purpose,education,leaders]){
  assert.match(doc,/https:\/\/sanctumportal\.org/, 'Use canonical Portal domain');
