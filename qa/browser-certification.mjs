@@ -53,6 +53,19 @@ async function mockPortal(route){
    data={passed,percent:passed?100:88,missed:passed?[]:['r-role'],member:passed?{role:'representative'}:undefined};
   }else data={applications:[],members:[],ballots:[],proposals:[]};
  }else if(service==='community-leaders')data={role,canDiscuss:role==='community-leader',approvedLeader:role==='community-leader',directory:[],messages:[],sharedSafety:[]};
+ else if(service==='community-chat'){
+  if(method==='GET'&&url.searchParams.get('room'))data={room:url.searchParams.get('room'),messages:[]};
+  else if(method==='POST')data={ok:true,joined:body.action==='join',message:{id:'message',message:body.message||'',name:'Synthetic Test'}};
+  else data={rooms:role==='founder'?
+    ['selc','leaders','educators','network','staff-educators'].map(id=>({id,name:id,description:id+' shared room',joined:true})):
+    role==='community-leader'?[{id:'leaders',name:'Community Leaders',description:'Approved organizers',joined:true},{id:'network',name:'Community Collaboration',description:'Shared network',joined:true}]:
+    role==='representative'?[{id:'selc',name:'SELC',description:'Committee room',joined:true},{id:'leaders',name:'Community Leaders',description:'Leaders',joined:false}]:[]};
+ }
+ else if(service==='selc-content')data={proposals:[],canPublish:role==='founder'};
+ else if(service==='ban-history')data={records:[{id:'historic',name:'Synthetic Previous Ban',status:'Lifted',kind:'temporary',bannedAt:'2026-10-01',liftedAt:'2026-10-15',reason:'Synthetic test only'}]};
+ else if(service==='shifts')data={events:[],me:{linked:true,certified:true,dm:false}};
+ else if(service==='applications')data={applications:[]};
+ else if(service==='members')data={members:[]};
  else if(service==='community-requests')data={openCount:0};
  else if(service==='staff-portal')data={events:[]};
  else if(service==='ban-reports')data={pendingCount:0};
@@ -117,6 +130,14 @@ try{
  assert.ok(!founderPage.url().includes('se_owner_handoff'),'Owner handoff code must be erased from browser history');
  assert.equal(await founderPage.locator('#hqNavigation [data-page="applications"]').count(),1);
  assert.equal(await founderPage.locator('#hqNavigation [data-page="work"]').count(),1);
+ assert.equal(await founderPage.locator('#hqNavigation [data-page="founderdesk"]').count(),1);
+ for(const section of ['founderdesk','content','chat','banhistory','volunteer']){
+  await founderPage.locator('#hqMenu').click();
+  await founderPage.locator('#hqNavigation [data-page="'+section+'"]').click();
+  await founderPage.waitForFunction(name=>document.querySelector('#hqContent')?.textContent?.includes(name),{
+   founderdesk:'Founder desk',content:'Website & content management',chat:'Community chat',banhistory:'Current & previous bans',volunteer:'Volunteer for an event'
+  }[section],{timeout:12000});
+ }
  assert.equal(founderErrors.length,0,'Founder browser JavaScript errors: '+founderErrors.join('; '));
  await founderContext.close();
  console.log('SELC authenticated UI browser simulation passed: acceptance, retry, certification, role activation and mobile organizer isolation.');
