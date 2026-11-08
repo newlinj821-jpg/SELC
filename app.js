@@ -96,6 +96,7 @@ const NAV=[
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
  ['leader','◈','Leadership & appointments','Leadership',u=>u==='founder'||u==='coordinator'||u==='representative'],
  ['work','▣','Leadership Action Center','Leadership',u=>u!=='member'],
+ ['library','▤','Staff & SELC Handbook','Leadership',u=>u!=='member'],
  ['proposals','◉','Proposals & votes','Committee',u=>u!=='member'],
  ['requests','↗','Community conversations','Committee',u=>u!=='member'],
  ['educators','✦','Education & workshops','Committee',u=>u!=='member'],
@@ -125,7 +126,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:()=>requestsPage('education'),generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,myaccount:accountPage};
+  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:()=>requestsPage('education'),generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -208,6 +209,25 @@ async function applicationsPage(){
  }catch(e){setStatus($('[data-status]',d),e.message)}});
  });
 }
+async function libraryPage(){
+ const data=await api('leadership-library'),docs=data.articles||[];
+ let markup=pageHeader('KNOWLEDGE / SHARED PRACTICE','Staff & SELC Handbook','Venue operations, consent-response procedures, education, and leadership guidance. Official policies require Founder approval.',
+ data.canCreate?btn('Write a guide','data-write-guide','primary'):'');
+ markup+=docs.length?docs.map(row=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(row.category)+' / '+esc(row.access)+'</span><h2>'+esc(row.title)+'</h2><p>'+esc(row.summary||'Open this guide to read more.')+'</p><p class="hq-micro">'+esc(row.updatedBy)+' · '+esc(date(row.updatedAt))+' · version '+esc(row.version)+'</p></div>'+tag(row.status)+btn('Read','data-guide="'+esc(row.id)+'"')+'</div>')).join(''):empty('Your handbook is ready to build','Add procedures, role expectations, educator resources, and practical event guides here.');
+ setContent(markup);
+ const editor=(doc={})=>{
+  const dlg=modal(doc.id?'Edit a handbook guide':'Write a handbook guide','<form id="guideForm" class="hq-form"><label>Title</label><input name="title" value="'+esc(doc.title||'')+'" required minlength="6"><label>Short summary</label><textarea name="summary" rows="2">'+esc(doc.summary||'')+'</textarea><div class="hq-form-grid"><div><label>Category</label><select name="category">'+(data.categories||[]).map(c=>'<option '+(c===doc.category?'selected':'')+'>'+esc(c)+'</option>').join('')+'</select></div><div><label>Who may read this?</label><select name="access">'+['staff','selc','educator'].map(c=>'<option value="'+c+'" '+(c===(doc.access||'staff')?'selected':'')+'>'+esc(c.toUpperCase())+'</option>').join('')+'</select></div></div><label>Guide content</label><textarea name="body" rows="13" minlength="40" required>'+esc(doc.body||'')+'</textarea><label>Publishing status</label><select name="status"><option value="Draft" '+(doc.status==='Draft'?'selected':'')+'>Draft</option><option value="Published" '+(doc.status==='Published'?'selected':'')+'>Publish internally</option></select><label class="checkline"><input type="checkbox" name="official" '+(doc.official?'checked':'')+' '+(!owner()?'disabled':'')+'> Official organizational policy (Founder only)</label><p data-status class="hq-form-status"></p><button class="hq-button primary" type="submit">Save guide</button></form>');
+  watchForm($('#guideForm',dlg),async vals=>{await post('leadership-library','save',{id:doc.id,...vals,official:!!$('#guideForm input[name=official]',dlg).checked});dlg.close();flash('Handbook guide saved.');await libraryPage()});
+ };
+ $('[data-write-guide]')?.addEventListener('click',()=>editor());
+ $$('[data-guide]').forEach(b=>b.onclick=async()=>{
+  try{const d=await api('leadership-library',{query:{id:b.dataset.guide}}),doc=d.articles?.[0];if(!doc)return flash('Guide no longer available.');
+   const dlg=modal(doc.title,'<p>'+tag(doc.status)+' '+esc(doc.category)+' · '+esc(doc.access)+'</p><p class="hq-prose" style="line-height:1.9">'+esc(doc.body)+'</p><p class="hq-micro">Updated '+esc(date(doc.updatedAt))+' by '+esc(doc.updatedBy)+'</p><div class="hq-actions">'+(doc.canEdit?btn('Edit guide','data-edit-guide','primary'):'')+'</div>');
+   $('[data-edit-guide]',dlg)?.addEventListener('click',()=>{dlg.close();editor(doc)});
+  }catch(error){flash(error.message)}
+ });
+}
+
 async function leadershipWorkPage(){
  const data=await api('leadership-queue'),items=data.items||[],counts=data.counts||{};
  const categories={member:'Membership',role:'Role applications',selc:'SELC',ban:'Ban Reports',community:'Community'};
