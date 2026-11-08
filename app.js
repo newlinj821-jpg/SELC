@@ -25,21 +25,33 @@ async function api(service,{method='GET',query={},body,token=context.token,timeo
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
   const options={method,mode:'cors',cache:'no-store',credentials:'omit',headers:{...(token?{'Authorization':'Bearer '+token}:{}),...(body!==undefined?{'Content-Type':'application/json'}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal};
   try{
-   let response;
-   try{response=await fetch(url,options)}
-   catch(err){
-    // Fail over ONLY on transport / CORS / timeout errors, never on a valid
-    // unauthorized, banned, or denied response. The local gateway verifies
-    // the same canonical Portal records.
-    const local=new URL('/.netlify/functions/portal-gateway',location.origin);
-    local.searchParams.set('service',service);
-    for(const [key,value]of Object.entries(query))if(value!==undefined&&value!==null&&value!=='')local.searchParams.set(key,String(value));
-    response=await fetch(local,{...options,mode:'same-origin'});
-   }
+   // One authoritative identity service. Never retry credentials against a
+   // second gateway or silently disguise an authentication error as network loss.
+   const response=await fetch(url,options);
    let data={};try{data=await response.json()}catch{}
-   if(!response.ok){const error=new Error(data.error||('The Portal rejected this request (HTTP '+response.status+').'));error.status=response.status;throw error}
+   if(!response.ok){
+    const code=String(data.code||'');
+    const categories={
+     invalid_credentials:'The Portal did not accept these credentials.',
+     session_expired:'Your session has expired. Connect through the Portal again.',
+     account_restricted:'This account is restricted. Contact Sanctum Eros for review.',
+     access_denied:'Your account is signed in but does not have permission for this action.',
+     handoff_expired:'The connection link expired or was already used. Reconnect through the Portal.',
+     rate_limited:'Too many sign-in attempts. Try again later.',
+     portal_unavailable:'Portal authentication is unavailable. Your password has not been checked.'
+    };
+    const message=categories[code]||data.error||('Portal returned HTTP '+response.status+'.');
+    const error=new Error(message);
+    error.status=response.status;error.code=code||'http_'+response.status;
+    error.requestId=String(data.requestId||response.headers.get('x-request-id')||'').slice(0,80);
+    throw error;
+   }
    return data;
-  }catch(e){if(e.name==='AbortError')throw new Error('The Portal did not respond in time. Try the Portal handoff or reload the page.');if(e instanceof TypeError)throw new Error('Both SELC connection routes failed. Check the Portal production deployment.');throw e}finally{clearTimeout(timer)}
+  }catch(e){
+   if(e.name==='AbortError'){const error=new Error('Portal authentication timed out; your credentials were not verified.');error.code='portal_timeout';throw error}
+   if(e instanceof TypeError){const error=new Error('Cannot reach the Sanctum Eros Portal authentication service. This is a connection problem, not necessarily an incorrect password.');error.code='portal_connection';throw error}
+   throw e;
+  }finally{clearTimeout(timer)}
 }
 const post=(service,action,data={})=>api(service,{method:'POST',body:{action,...data}});
 function setAccess(token){context.token=token;sessionStorage.setItem(TOKEN_KEY,token)}
@@ -82,7 +94,7 @@ function startPublic(){
    $('#loginDialog').close();loginForm.reset();setStatus(loginMessage,'');
   }catch(error){
    clearAccess();
-   const message=error?.status===401?'These credentials were not accepted by the Portal. Check your existing account login, or use Continue with Member Portal / Continue with Owner Portal below.':(error?.message||'Sign-in failed. Please try again.');
+   const message=(error?.message||'Sign-in could not be completed.')+(error?.requestId?' Reference: '+error.requestId:'');
    setStatus(loginMessage,message);
    loginMessage.setAttribute('role','alert');
   }finally{submit.disabled=false;submit.removeAttribute('aria-busy')}
