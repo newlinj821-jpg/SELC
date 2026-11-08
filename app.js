@@ -95,6 +95,7 @@ const NAV=[
  ['ballots','✓','Coordinator election','Your work',u=>u==='representative'||u==='coordinator'],
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
  ['leader','◈','Leadership & appointments','Leadership',u=>u==='founder'||u==='coordinator'||u==='representative'],
+ ['work','▣','Leadership Action Center','Leadership',u=>u!=='member'],
  ['proposals','◉','Proposals & votes','Committee',u=>u!=='member'],
  ['requests','↗','Community conversations','Committee',u=>u!=='member'],
  ['educators','✦','Education & workshops','Committee',u=>u!=='member'],
@@ -124,7 +125,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:()=>requestsPage('education'),generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,myaccount:accountPage};
+  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:()=>requestsPage('education'),generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -144,7 +145,7 @@ async function homePage(){
   ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
   ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',staff?.events?.length||0,'events']
  ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
- card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Applications','generalapps'],['Volunteer shifts','volunteer'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
+ card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Applications','generalapps'],['Volunteer shifts','volunteer'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
  if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
  setContent(markup);bindPageLinks();
 }
@@ -207,6 +208,31 @@ async function applicationsPage(){
  }catch(e){setStatus($('[data-status]',d),e.message)}});
  });
 }
+async function leadershipWorkPage(){
+ const data=await api('leadership-queue'),items=data.items||[],counts=data.counts||{};
+ const categories={member:'Membership',role:'Role applications',selc:'SELC',ban:'Ban Reports',community:'Community'};
+ let markup=pageHeader('LEADERSHIP / WORK IN PROGRESS','Leadership Action Center','See what needs attention, claim a review, and avoid two people working on the same application.',btn('Refresh','data-work-refresh'));
+ markup+='<div class="hq-stats">'+Object.entries(categories).filter(([k])=>counts[k]).map(([key,label])=>'<div class="hq-stat"><small>'+esc(label)+'</small><strong>'+number(counts[key]||0)+'</strong></div>').join('')+'</div>';
+ markup+=items.length?Object.entries(categories).map(([kind,label])=>{
+  const filtered=items.filter(x=>x.kind===kind);if(!filtered.length)return '';
+  return card('<h2>'+esc(label)+' ('+filtered.length+')</h2>'+
+   filtered.map(row=>{
+    const mine=row.claim?.mine,claimed=row.claim&&!mine,route={member:'generalapps',role:'generalapps',selc:'applications',ban:'banreports',community:'requests'}[kind];
+    return '<div class="hq-row"><div class="grow"><strong>'+esc(row.title)+' · '+esc(row.name)+'</strong><p>'+tag(row.status)+' '+esc(date(row.createdAt))+'</p>'+
+      (row.dueAt?'<p class="hq-micro">Review target: '+esc(date(row.dueAt))+'</p>':'')+
+      (row.claim?'<p class="hq-micro">'+(mine?'You claimed this review.':'Being reviewed by '+esc(row.claim.by))+ ' · until '+esc(date(row.claim.until))+'</p>':'<p class="hq-micro">Unassigned · available to claim</p>')+'</div><div class="hq-actions">'+
+      (mine?btn('Release','data-queue-action="release" data-queue-kind="'+kind+'" data-queue-id="'+esc(row.id)+'"'):claimed?tag('Claimed'):btn('Claim','data-queue-action="claim" data-queue-kind="'+kind+'" data-queue-id="'+esc(row.id)+'"','primary'))+
+      btn('Open','data-page-link="'+route+'"')+'</div></div>';
+   }).join(''));
+ }).join(''):empty('Everything is up to date','New applications, Ban Reports, and community conversations appear here when they need attention.');
+ setContent(markup);bindPageLinks();$('[data-work-refresh]')?.addEventListener('click',leadershipWorkPage);
+ $$('[data-queue-action]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{
+  await post('leadership-queue',b.dataset.queueAction,{kind:b.dataset.queueKind,id:b.dataset.queueId});
+  flash(b.dataset.queueAction==='claim'?'Review assigned to you.':'Review released.');
+  await leadershipWorkPage();
+ }catch(e){flash(e.message);b.disabled=false}});
+}
+
 async function leaderPage(){
  const data=await api('selc-governance',{query:{scope:'members'}}),people=data.members||[];
  let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Representative seats, including no more than two Coordinators. Members keep one committee vote regardless of title.');
