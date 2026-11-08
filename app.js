@@ -128,6 +128,8 @@ const NAV=[
  ['proposals','◉','Proposals & votes','Committee',u=>u!=='member'],
  ['requests','↗','Community conversations','Committee',u=>u!=='member'],
  ['communityleaders','◇','Community Leaders network','Partnerships'],
+ ['applyeducator','✦','Become a Community Educator','Education'],
+ ['educatorreviews','▤','Educator applications','Education',u=>u==='founder'||u==='coordinator'],
  ['educators','✦','Education & workshops','Committee',u=>u!=='member'],
  ['generalapps','▧','Member & role applications','Event operations',u=>u!=='member'],
  ['events','▦','Events & RSVPs','Event operations',u=>u!=='member'],
@@ -156,7 +158,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -309,6 +311,34 @@ async function proposalPage(){
   $$('[data-chair]',d).forEach(x=>x.onclick=async()=>{const reason=prompt('Give a reason or brief summary for this decision:')||'';if(!reason)return;try{await post('selc-governance','decide_proposal',{id:p.id,decision:x.dataset.chair,reason});d.close();proposalPage()}catch(e){flash(e.message)}});
  });
 }
+async function educatorApplicationPage(){
+ const d=await api('educator-applications'),mine=d.mine||[];
+ const questions=[
+  ['motivation','Why do you want to educate others through Sanctum Eros?','What you hope participants gain, what good teaching looks like to you, and your approach to responsibility.'],
+  ['topics','What kink or BDSM subjects would you teach?','Specific topics, practical skills, discussions, or demonstrations.'],
+  ['experience','Tell us about your lived and practical experience.','Include relevant scene practice, instruction, mentorship, or other learning. A formal credential is not required.'],
+  ['teaching','How would you structure a class and support beginners?','Your approach to questions, demonstrations, checking comprehension, and boundaries.'],
+  ['safety','How do you teach consent, negotiation, risk awareness, and aftercare?','Explain what you would cover, when you would stop a demo, and how you manage uncertainty.'],
+  ['accessibility','How will you make learning accessible to different people?','Consider disabilities, varied experience, language, sensory needs, and nonparticipation.'],
+  ['format','Preferred formats (optional)','Discussion, online seminar, demonstration, hands-on workshop, or mentoring.'],
+  ['availability','Availability and support needs (optional)','Your schedule, supplies, training, or a mentor you may need.']
+ ];
+ let markup=pageHeader('LEARN / TEACH / SHARE','Become a Community Educator','Teaching is a community contribution, not a title to collect. SELC reviews applications and Eros makes final appointments. Teaching and workshop approval are separate.');
+ if(mine.length)markup+=card('<h2>Your application history</h2>'+mine.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.status)+'</strong><p>Submitted '+esc(date(x.submittedAt))+'</p><p>'+esc(x.notes||'Your application is with the committee.')+'</p></div></div>').join(''));
+ if(!mine.some(x=>!['Declined','Withdrawn'].includes(x.status))){
+  markup+=card('<h2>Community Educator application</h2><p>Be specific. We value actual experience, willingness to learn, strong consent practices, and the ability to teach without gatekeeping.</p><form id="educatorApplication" class="hq-form">'+questions.map(([key,label,hint])=>'<label>'+esc(label)+'</label><p class="hq-muted">'+esc(hint)+'</p><textarea name="'+key+'" rows="'+(['motivation','safety','teaching'].includes(key)?5:3)+'" '+(['format','availability'].includes(key)?'':'required')+'></textarea>').join('')+'<label class="hq-checkbox"><input type="checkbox" name="acknowledge" value="true" required> I agree to follow the venue’s consent, safety, privacy, and educational standards and understand that submitting does not grant permission to teach.</label><p data-status></p><button class="hq-button primary" type="submit">Submit to SELC</button></form>');
+ }
+ setContent(markup);
+ const form=$('#educatorApplication');if(form)watchForm(form,async values=>{values.acknowledge=values.acknowledge==='true';await post('educator-applications','apply',values);flash('Your educator application was submitted.');educatorApplicationPage()});
+}
+async function educatorReviewsPage(){
+ const d=await api('educator-applications'),rows=d.review||[];
+ let markup=pageHeader('EDUCATION / LEADERSHIP','Educator applications','SELC Coordinators assess teaching experience, consent literacy, accessibility, and readiness. Only Eros may approve a Community Educator appointment.');
+ markup+=rows.length?rows.map(x=>card('<div class="hq-row"><div class="grow"><h2>'+esc(x.applicantName)+'</h2><p>Topics: '+esc(x.topics)+'</p><p>Experience: '+esc(x.experience)+'</p><p>Approach: '+esc(x.teaching)+'</p><p>Consent & safety: '+esc(x.safety)+'</p><p>Accessibility: '+esc(x.accessibility)+'</p></div>'+tag(x.status)+btn('Record review','data-educator-review="'+esc(x.id)+'"')+'</div>')).join(''):empty('No educator applications to review','Applications submitted by Portal members appear here.');
+ setContent(markup);
+ $('[data-educator-review]').forEach(b=>b.onclick=()=>{const x=rows.find(r=>r.id===b.dataset.educatorReview);if(!x)return;const dlg=modal('Community Educator · '+x.applicantName,'<form id="educatorReviewForm" class="hq-form"><label>Review decision</label><select name="status"><option>Changes Requested</option><option>Recommended</option><option>Declined</option>'+(owner()?'<option>Approved</option>':'')+'</select><label>Reasoning and next steps</label><textarea name="notes" rows="5" required minlength="20"></textarea><p data-status></p><button class="hq-button primary" type="submit">Save review</button></form>');watchForm($('#educatorReviewForm',dlg),async values=>{await post('educator-applications','review',{id:x.id,...values});dlg.close();flash('Educator review saved.');educatorReviewsPage()})});
+}
+
 async function educationProgramsPage(){
  const [data]=await Promise.all([api('education-programs')]),plans=data.plans||[];
  let markup=pageHeader('LEARN / TEACH / SHARE','Community Education Program','Work with educators to shape practical workshops. No class becomes a published event until Eros approves its scheduling.',btn('Education conversations','data-page-link="requests"'));
