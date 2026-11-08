@@ -165,6 +165,7 @@ const NAV=[
  ['generalapps','▧','Member & role applications','Event operations',u=>committeeRole(u)],
  ['events','▦','Events & RSVPs','Event operations',u=>committeeRole(u)],
  ['volunteer','✋','Volunteer shifts','Event operations',u=>committeeRole(u)],
+ ['readiness','▣','Event readiness','Event operations',u=>committeeRole(u)],
  ['door','⌗','Check-in & tickets','Event operations',u=>committeeRole(u)],
  ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
  ['banhistory','⌛','Ban history','Safety',u=>committeeRole(u)],
@@ -191,7 +192,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -661,19 +662,38 @@ async function communityLeadersPage(){
 
 async function founderDeskPage(){
  if(!owner())return openPage('home');
- const links=[
-  ['Website changes','content','Review proposed Hub, Portal and SELC wording'],
-  ['Community chat','chat','Join the rooms you oversee'],
-  ['Ban history','banhistory','Current, expired and lifted restrictions'],
-  ['Volunteer management','volunteer','Review event coverage and shifts'],
-  ['Committee & educator applications','applications','Approve appointments and invitations'],
-  ['Rules, votes & proposals','proposals','Review committee recommendations'],
-  ['Events & RSVPs','events','Event operations and roster'],
-  ['Member & role applications','generalapps','Membership and staff approvals']
+ const sections=[
+  ['Website approvals','content','Review and publish voted changes'],
+  ['Event readiness','readiness','Identify staffing and operational gaps'],
+  ['Community messages','chat','Oversee participating rooms'],
+  ['Volunteer management','volunteer','Manage positions, claims and coverage'],
+  ['Education programs','educators','Review workshop planning'],
+  ['Ban history','banhistory','Review current and prior restrictions'],
+  ['Member applications','generalapps','Membership and role decisions'],
+  ['Committee proposals','proposals','Review votes and recommendations']
  ];
- setContent(pageHeader('FOUNDER & CHAIR','Founder desk','Focused oversight across SELC, operations and community programs.')+
-  '<div class="hq-stats">'+links.map(([title,target,desc])=>'<button class="hq-card" data-go="'+esc(target)+'" style="text-align:left;cursor:pointer"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p></button>').join('')+'</div>');
+ const results=await Promise.allSettled([api('selc-content'),api('event-readiness'),api('community-chat')]);
+ const content=results[0].status==='fulfilled'?results[0].value:{proposals:[]};
+ const readiness=results[1].status==='fulfilled'?results[1].value:{events:[],needsAttention:0};
+ const chats=results[2].status==='fulfilled'?results[2].value:{rooms:[]};
+ const pending=(content.proposals||[]).filter(x=>x.status==='Awaiting Founder').length;
+ const unread=(chats.rooms||[]).reduce((n,x)=>n+Number(x.unread||0),0);
+ setContent(pageHeader('FOUNDER & CHAIR','Founder command center','One place for decisions and operational oversight without crowding the workspace.')+
+  '<div class="hq-stats">'+
+  card('<span class="hq-eyebrow">Approval queue</span><h2>'+number(pending)+'</h2><p>Content changes awaiting your decision</p>'+btn('Review decisions','data-go="content"','primary'))+
+  card('<span class="hq-eyebrow">Event readiness</span><h2>'+number(readiness.needsAttention)+'</h2><p>Upcoming events requiring attention</p>'+btn('Review events','data-go="readiness"'))+
+  card('<span class="hq-eyebrow">Conversations</span><h2>'+number(unread)+'</h2><p>Unread chat messages in joined rooms</p>'+btn('Open messages','data-go="chat"'))+
+  card('<span class="hq-eyebrow">Oversight</span><h2>Activity</h2><p>Committee, safety and staffing workflows</p>'+btn('Review operations','data-go="volunteer"'))+'</div>'+
+  '<div class="hq-grid" style="margin-top:20px">'+sections.map(([title,target,desc])=>'<button type="button" class="hq-card" data-go="'+esc(target)+'" style="text-align:left;cursor:pointer"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p></button>').join('')+'</div>');
  $$('[data-go]').forEach(el=>el.onclick=()=>openPage(el.dataset.go));
+}
+async function eventReadinessPage(){
+ const d=await api('event-readiness'),events=d.events||[];
+ const rows=events.map(ev=>card('<div class="hq-row"><div class="grow"><strong>'+esc(ev.title)+'</strong><p>'+esc(date(ev.start))+' · '+(ev.ready?'Ready':number(ev.outstanding)+' items need attention')+'</p>'+
+ '<div class="hq-panel-list">'+(ev.checks||[]).map(check=>'<div class="hq-row"><span>'+esc(check.complete?'✓':'○')+' '+esc(check.label)+'</span>'+tag(check.complete?'Complete':'Needs attention')+(check.detail?'<small>'+esc(check.detail)+'</small>':'')+'</div>').join('')+'</div></div></div>')).join('');
+ setContent(pageHeader('EVENT OPERATIONS','Event readiness','Review staffing, handovers, schedule and admission configuration before doors open.')+
+ card('<div class="hq-row"><strong>'+number(d.ready||0)+' ready</strong><strong>'+number(d.needsAttention||0)+' need attention</strong></div>')+
+ (events.length?rows:empty('No upcoming events','Published future events will appear here.')));
 }
 async function banHistoryPage(){
  const d=await api('ban-history'),rows=d.records||[];
