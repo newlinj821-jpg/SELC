@@ -345,11 +345,18 @@ async function volunteerPage(){
    return '<div class="hq-row"><div class="grow"><strong>'+esc(slot.label)+(slot.role==='dm'?' · Certified DM':'')+'</strong><p>'+esc(slot.description||'Help make this event run smoothly.')+'</p><p class="hq-micro">'+slot.filled+'/'+slot.count+' filled'+(slot.claims.length?' · '+slot.claims.map(c=>esc(c.mine?'You':c.name)).join(', '):'')+'</p></div>'+
     (owner()?'':own?btn('Release','data-release-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','danger'):slot.open>0&&me.certified&&me.linked&&(slot.role!=='dm'||me.dm)?btn('Volunteer','data-claim-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','primary'):tag(slot.open>0?'Requires qualification':'Full'))+'</div>';
   }).join('');
-  return card(head+'<div class="hq-panel-list">'+shifts+'</div>');
+  return card(head+'<div class="hq-panel-list">'+shifts+'</div>'+btn('Event handover notes','data-handover="'+esc(e.event.id)+'"'));
  }).join('');
  if(!events.length)html+=empty('No upcoming volunteer shifts','Positions will appear automatically when an event is published.');
  setContent(html);
- $$('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
+ $('[data-handover]').forEach(b=>b.onclick=async()=>{
+  try{const eventId=b.dataset.handover,d=await api('shifts',{query:{eventId}}),notes=d.handoffs||[];
+  const entries=notes.map(n=>'<div class="hq-row"><div class="grow"><strong>'+esc(n.by)+' · '+esc(n.kind)+'</strong><p class="hq-prose">'+esc(n.text)+'</p><small>'+esc(date(n.at))+'</small></div></div>').join('');
+  const dlg=modal('Shift handover · '+(d.event?.title||'Event'),'<p class="hq-muted">Share operational updates, staffing changes and equipment checks. Private investigations belong in the separate IA workflow.</p>'+entries+'<form id="handoverForm" class="hq-form"><label>Type</label><select name="kind">'+['arrival','equipment','support','staffing','closing','general'].map(k=>'<option value="'+k+'">'+esc(k)+'</option>').join('')+'</select><label>What does the incoming team need to know?</label><textarea name="text" minlength="15" rows="4" required></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Save handover</button></form>');
+  watchForm($('#handoverForm',dlg),async vals=>{await post('shifts','handoff',{eventId,...vals});dlg.close();flash('Handover note saved.');volunteerPage()});
+  }catch(e){flash(e.message)}
+ });
+ $('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
   const claim=!!button.dataset.claimShift,ids=(button.dataset.claimShift||button.dataset.releaseShift).split('|'),[eventId,slotId]=ids;
   if(!claim&&!confirmDecision('Release your volunteer shift? This could leave the event short-staffed.'))return;
   button.disabled=true;try{const result=await post('shifts',claim?'claim':'release',{eventId,slotId});flash(result.message||'Shift updated.');await volunteerPage()}catch(error){flash(error.message);button.disabled=false}
