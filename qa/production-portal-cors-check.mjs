@@ -11,13 +11,17 @@ const response=await fetch(portal,{
   redirect:'manual',
   signal:AbortSignal.timeout(16000)
 });
+const safeResponseBody=(await response.text()).slice(0,360).replace(/[\r\n]+/g,' ');
 const result={
   endpoint:portal,
   status:response.status,
   allowedOrigin:response.headers.get('access-control-allow-origin'),
   allowedMethods:response.headers.get('access-control-allow-methods'),
   allowedHeaders:response.headers.get('access-control-allow-headers'),
-  redirected:response.status>=300&&response.status<400
+  redirected:response.status>=300&&response.status<400,
+  contentType:response.headers.get('content-type'),
+  nfRequestId:response.headers.get('x-nf-request-id'),
+  safeResponseBody
 };
 console.log(JSON.stringify(result));
 assert.equal(response.status,204,'Live SELC/Portal authentication CORS preflight failed');
