@@ -1,0 +1,19 @@
+name: SELC role and certification browser integration (isolated)
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser test dependency
+        run: npm install --no-save --no-package-lock playwright@1.58.2
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test certification and Community Leader isolation with mocked Portal
+        run: node qa/browser-certification.mjs
