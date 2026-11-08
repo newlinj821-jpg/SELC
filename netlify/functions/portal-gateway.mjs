@@ -8,7 +8,7 @@ const ORIGIN='https://se-selc.netlify.app';
 const ALLOWED=new Set(['selc-auth','selc-governance','selc-public','ecosystem-session','staff-portal','rsvps','community-requests','community-leaders','educator-applications','education-programs','ban-reports','shifts','leadership-library','leadership-queue','safety-appeal-review','applications','leadership-briefing','selc-system-health']);
 export default async function handler(request){
  const cors={'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff'};
- if(request.method==='OPTIONS')return new Response('',{status:204,headers:cors});
+ if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
  const origin=request.headers.get('origin')||'';
  const referer=request.headers.get('referer')||'';
  // A browser cannot read this function cross-origin, and the same-origin
