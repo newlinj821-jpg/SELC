@@ -8,6 +8,10 @@ const leaders=read('community-leaders/index.html'),gateway=read('netlify/functio
 for(const p of ['purpose','education','community-leaders'])assert.ok(existsSync(p+'/index.html'),p+' route missing');
 assert.match(home,/<a href="\/community-leaders\/">Community Leaders<\/a>/);
 assert.match(home,/SANCTUM EROS LEADERSHIP COMMITTEE/);
+assert.doesNotMatch(home.match(/<div class="site-ribbon">[\s\S]*?<\/div>/)?.[0]||'',/LEADERSHIP COMMITTEE/,'Avoid duplicating the full title in the mobile ribbon');
+assert.doesNotMatch(home.match(/<section class="hero"[\s\S]*?<\/section>/)?.[0]||'',/SANCTUM EROS LEADERSHIP COMMITTEE/,'Avoid repeating the full title within the mobile hero');
+assert.doesNotMatch(home,/<p class="hero-deck">/,'Do not repeat committee title above hero introduction');
+assert.match(home,/SHAPING WHAT COMES NEXT/);
 assert.doesNotMatch(home,/SE-SELC/i);
 for(const doc of [home,purpose,education,leaders]){
  assert.match(doc,/https:\/\/sanctumportal\.org/, 'Use canonical Portal domain');
@@ -17,14 +21,14 @@ for(const doc of [home,purpose,education,leaders]){
 assert.match(home,/<section class="section community-network"/);
 assert.match(home,/<a[^>]+href="\/community-leaders\/"[^>]*>COMMUNITY LEADERS &amp; APPLICATION|href="\/community-leaders\/">COMMUNITY LEADERS & APPLICATION/);
 assert.match(home,/href="\/purpose\/">GET TO KNOW US/);
-assert.match(home,/href="https:\/\/sanctumportal\.org\/ecosystem-connect\.html\?app=selc"/);
+assert.match(home,/href="https:\/\/sanctumportal\.org\/selc-connect\.html"/);
 assert.match(home,/login-handoff/);
-assert.match(home,/selc-login-10/);
+assert.match(home,/selc-unified-11/);
 assert.match(css,/\.login-handoff>\.button/);
 assert.match(css,/max-height:calc\(100dvh - 20px\)/);
 assert.match(app,/\$\$\('\[data-leader-review\]'\)\.forEach/);
 assert.match(app,/if\(!response\.ok\)/);
-assert.match(app,/error\?\.status===401/);
+assert.match(app,/error\?\.requestId/);
 assert.match(leaders,/id="leaderApplication"/);
 const organizerJS=read('community-leaders/account.js');
 const organizerCSS=read('editorial.css');
@@ -35,6 +39,9 @@ assert.match(leaders,/No — create a Community Leaders account/);
 assert.match(leaders,/id="leaderVerify"/);
 assert.match(leaders,/id="leaderReset"/);
 assert.match(organizerJS,/call\('community-leaders'/);
+assert.match(organizerJS,/portal='https:\/\/sanctumportal\.org\/\.netlify\/functions\/'/);
+assert.match(organizerJS,/service==='member-auth'/);
+assert.doesNotMatch(organizerJS,/base\+encodeURIComponent\(service\)/);
 assert.match(organizerJS,/email_reset_request/);
 assert.match(organizerJS,/email_reset_complete/);
 assert.match(organizerJS,/Verify email in the Portal/);
@@ -71,3 +78,9 @@ assert.match(app,/async function certificationPage\(\)/);
 assert.match(app,/action.*complete_certification|complete_certification/);
 assert.match(app,/\['certification','✓','SELC certification'/);
 console.log('SELC public route, branding, login UI, Community Leaders and gateway source checks passed.');
+
+assert.match(app,/const response=await fetch\(url,options\)/);
+assert.doesNotMatch(app,/fetch\(local,\{\.\.\.options/,'No credential retry through a second gateway');
+assert.match(app,/portal_connection/);
+assert.match(app,/requestId/);
+assert.doesNotMatch(home,/CONTINUE WITH MEMBER PORTAL|CONTINUE WITH OWNER PORTAL/);

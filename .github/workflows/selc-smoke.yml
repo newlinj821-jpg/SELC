@@ -17,5 +17,6 @@ jobs:
           node --check app.js
           node --check netlify/functions/portal-gateway.mjs
           node --check qa/smoke.mjs
+          node --check qa/live-auth-release-gate.mjs
       - name: Validate public routes, Community Leaders and sign-in paths
         run: node qa/smoke.mjs

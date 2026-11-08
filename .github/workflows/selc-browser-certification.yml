@@ -7,7 +7,11 @@ on:
 jobs:
   browser:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -15,7 +19,9 @@ jobs:
           node-version: '24'
       - name: Install browser test dependency
         run: npm install --no-save --no-package-lock playwright@1.58.2
-      - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+      - name: Install supported browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: Test certification and Community Leader isolation with mocked Portal
+        env:
+          QA_BROWSER: ${{ matrix.browser }}
         run: node qa/browser-certification.mjs
