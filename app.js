@@ -21,12 +21,23 @@ async function api(service,{method='GET',query={},body,token=context.token,timeo
   const url=new URL(FN+service);
   for(const [key,value]of Object.entries(query))if(value!==undefined&&value!==null&&value!=='')url.searchParams.set(key,String(value));
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
+  const options={method,mode:'cors',cache:'no-store',credentials:'omit',headers:{...(token?{'Authorization':'Bearer '+token}:{}),...(body!==undefined?{'Content-Type':'application/json'}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal};
   try{
-   const response=await fetch(url,{method,mode:'cors',cache:'no-store',credentials:'omit',headers:{...(token?{'Authorization':'Bearer '+token}:{}),...(body!==undefined?{'Content-Type':'application/json'}:{})},body:body===undefined?undefined:JSON.stringify(body),signal:controller.signal});
+   let response;
+   try{response=await fetch(url,options)}
+   catch(err){
+    // Fail over ONLY on transport / CORS / timeout errors, never on a valid
+    // unauthorized, banned, or denied response. The local gateway verifies
+    // the same canonical Portal records.
+    const local=new URL('/.netlify/functions/portal-gateway',location.origin);
+    local.searchParams.set('service',service);
+    for(const [key,value]of Object.entries(query))if(value!==undefined&&value!==null&&value!=='')local.searchParams.set(key,String(value));
+    response=await fetch(local,{...options,mode:'same-origin'});
+   }
    let data={};try{data=await response.json()}catch{}
    if(!response.ok){const error=new Error(data.error||('Request failed ('+response.status+')'));error.status=response.status;throw error}
    return data;
-  }catch(e){if(e.name==='AbortError')throw new Error('The Portal did not respond in time. Confirm the Portal is online, then try again.');if(e instanceof TypeError)throw new Error('Unable to contact the Sanctum Eros Portal. The SELC connection may need updating or the Portal deployment may be unavailable.');throw e}finally{clearTimeout(timer)}
+  }catch(e){if(e.name==='AbortError')throw new Error('The Portal did not respond in time. Try the Portal handoff or reload the page.');if(e instanceof TypeError)throw new Error('Both SELC connection routes failed. Check the Portal production deployment.');throw e}finally{clearTimeout(timer)}
 }
 const post=(service,action,data={})=>api(service,{method:'POST',body:{action,...data}});
 function setAccess(token){context.token=token;sessionStorage.setItem(TOKEN_KEY,token)}
