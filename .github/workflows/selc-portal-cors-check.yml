@@ -1,0 +1,15 @@
+name: SELC to Portal live CORS preflight
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  cors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check real Portal CORS endpoint without credentials
+        run: node qa/production-portal-cors-check.mjs
