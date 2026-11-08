@@ -105,6 +105,7 @@ const NAV=[
  ['volunteer','✋','Volunteer shifts','Event operations',u=>u!=='member'],
  ['door','⌗','Check-in & tickets','Event operations',u=>u!=='member'],
  ['banreports','⚑','Ban Reports','Safety',u=>u!=='member'],
+ ['appeals','⚖','Access appeals','Safety',u=>u==='coordinator'||u==='founder'],
  ['myaccount','◎','My account','Your work']
 ];
 function setupHQNav(){
@@ -126,7 +127,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:educationProgramsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,myaccount:accountPage};
+  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:educationProgramsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -445,6 +446,21 @@ async function banReportsPage(){
   watchForm($('#banDecision',dlg),async vals=>{if(vals.decision==='approve'&&vals.kind==='temporary'&&!vals.expiresAt)throw new Error('Choose an expiration for a temporary ban.');if(!confirmDecision('Confirm this formal access decision? Every outcome is recorded and visible in Owner Administration.'))return;await post('ban-reports','decide',{id:r.id,...vals,expiresAt:vals.expiresAt?new Date(vals.expiresAt).toISOString():''});dlg.close();flash('Decision recorded.');banReportsPage()});
  });
 }
+async function appealReviewPage(){
+ const d=await api('safety-appeal-review'),rows=d.appeals||[];
+ let markup=pageHeader('CONFIDENTIAL / ACCESS DECISIONS','Access appeals','Separate from the original Ban Report and any IA case. The person who issued the ban must recuse themselves from recommending its appeal outcome.');
+ markup+=rows.length?rows.map(a=>card('<div class="hq-row"><div class="grow"><strong>Appeal '+esc(a.id.slice(0,8))+'</strong><p>Received '+esc(date(a.createdAt))+' · '+(a.relatedBanReports||[]).length+' linked Ban Report(s)</p></div>'+tag(a.status)+btn('Review','data-review-appeal="'+esc(a.accountId)+'|'+esc(a.id)+'"')+'</div>')).join(''):empty('No access appeals','Appeals from members under a restriction appear here after submission.');
+ setContent(markup);
+ $$('[data-review-appeal]').forEach(b=>b.onclick=()=>{
+  const [accountId,id]=b.dataset.reviewAppeal.split('|'),a=rows.find(r=>r.id===id&&r.accountId===accountId);if(!a)return;
+  const prior=(a.originalDecisions||[]).map(dec=>'<div class="hq-row"><div class="grow"><strong>'+esc(dec.by||'Decision-maker')+'</strong><p>'+esc(date(dec.at))+' · '+esc(dec.kind)+'</p></div></div>').join('');
+  const notes=(a.recommendations||[]).map(n=>'<div class="hq-row"><div class="grow"><strong>'+esc(n.by)+' · '+esc(n.outcome)+'</strong><p class="hq-prose">'+esc(n.note)+'</p><small>'+esc(date(n.at))+'</small></div></div>').join('');
+  const form='<form id="appealRecommend" class="hq-form"><label>Independent recommendation</label><select name="outcome"><option value="support">Support appeal</option><option value="deny">Recommend upholding restriction</option><option value="information">More information needed</option><option value="recuse">Recuse due to conflict</option></select><label>Factual rationale</label><textarea name="note" rows="5" minlength="30" required></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Record recommendation</button></form>';
+  const dlg=modal('Access appeal','<p>'+tag(a.status)+'</p><h3>Member statement</h3><p class="hq-prose">'+esc(a.statement)+'</p><h3>Supporting information</h3><p class="hq-prose">'+esc(a.supportingInfo||'None included')+'</p><h3>Related records</h3><p class="hq-muted">Ban Reports: '+esc((a.relatedBanReports||[]).join(', ')||'None linked')+'</p><p class="hq-muted">IA cases: '+esc((a.relatedIaCases||[]).join(', ')||'None linked')+'</p><h3>Original access decisions</h3>'+prior+'<h3>Review history</h3>'+notes+form+(owner()?'<p><a class="hq-button" href="'+PORTAL+'/admin.html#safety/appeals">Open final appeal decision in Owner Portal ↗</a></p>':'<p class="hq-muted">Your recommendation is recorded for independent review; it does not automatically change the ban.</p>'));
+  watchForm($('#appealRecommend',dlg),async vals=>{await post('safety-appeal-review','recommend',{accountId,id,...vals});dlg.close();flash('Review recommendation recorded.');appealReviewPage()});
+ });
+}
+
 async function accountPage(){setContent(pageHeader('YOUR ACCOUNT','Your SELC space','Your Portal membership is the identity behind this account.')+card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div><p>Your personal Portal remains available whenever you need events, courses, personal tickets, and account settings.</p><div class="hq-actions"><a class="hq-button" href="'+PORTAL+'/member.html" rel="noopener noreferrer">Open Member Portal ↗</a><a class="hq-button" href="'+PORTAL+'/staff.html" rel="noopener noreferrer">Open Staff Portal ↗</a>'+btn('Sign out of SELC','data-signout','danger')+'</div>'));$('[data-signout]').onclick=signOut}
 addEventListener('DOMContentLoaded',startPublic);
 })();
