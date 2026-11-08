@@ -464,7 +464,7 @@ async function volunteerPage(){
    return '<div class="hq-row"><div class="grow"><strong>'+esc(slot.label)+(slot.role==='dm'?' · Certified DM':'')+'</strong><p>'+esc(slot.description||'Help make this event run smoothly.')+'</p><p class="hq-micro">'+slot.filled+'/'+slot.count+' filled'+(slot.claims.length?' · '+slot.claims.map(c=>esc(c.mine?'You':c.name)).join(', '):'')+'</p></div>'+
     (owner()?'':own?btn('Release','data-release-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','danger'):slot.open>0&&me.certified&&me.linked&&(slot.role!=='dm'||me.dm)?btn('Volunteer','data-claim-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','primary'):tag(slot.open>0?'Requires qualification':'Full'))+'</div>';
   }).join('');
-  return card(head+'<div class="hq-panel-list">'+shifts+'</div>'+btn('Event handover notes','data-handover="'+esc(e.event.id)+'"'));
+  return card(head+'<div class="hq-panel-list">'+shifts+'</div><div class="hq-actions">'+btn('Event handover notes','data-handover="'+esc(e.event.id)+'"')+(owner()?btn('Manage volunteer positions','data-manage-shifts="'+esc(e.event.id)+'"','primary'):'')+'</div>');
  }).join('');
  if(!events.length)html+=empty('No upcoming volunteer shifts','Positions will appear automatically when an event is published.');
  setContent(html);
@@ -475,7 +475,29 @@ async function volunteerPage(){
   watchForm($('#handoverForm',dlg),async vals=>{await post('shifts','handoff',{eventId,...vals});dlg.close();flash('Handover note saved.');volunteerPage()});
   }catch(e){flash(e.message)}
  });
- $$('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
+ $('[data-manage-shifts]').forEach(button=>button.onclick=async()=>{
+  const eventId=button.dataset.manageShifts;
+  try{
+   const data=await api('shifts',{query:{eventId}}),slots=data.slots||[];
+   const form='<form id="manageShiftForm" class="hq-form">'+slots.map((slot,i)=>
+    '<fieldset class="hq-card"><legend>'+esc(slot.label)+'</legend><input type="hidden" name="id'+i+'" value="'+esc(slot.id)+'"><label>Position<select name="role'+i+'"><option value="staff" '+(slot.role==='staff'?'selected':'')+'>Staff</option><option value="dm" '+(slot.role==='dm'?'selected':'')+'>Dungeon Monitor</option></select></label><label>Shift name<input name="label'+i+'" value="'+esc(slot.label)+'" required></label><label>Positions needed<input type="number" name="count'+i+'" min="1" max="20" value="'+number(slot.count)+'"></label><label>Description<input name="description'+i+'" value="'+esc(slot.description||'')+'"></label>'+
+    slot.claims.map(c=>'<div class="hq-row"><span>'+esc(c.name)+'</span>'+btn('Remove volunteer','data-remove-volunteer="'+esc(eventId)+'|'+esc(slot.id)+'|'+esc(c.staffId||'')+'"','danger')+'</div>').join('')+'</fieldset>').join('')+
+    '<fieldset class="hq-card"><legend>Add another position (optional)</legend><label>Type<select name="newRole"><option value="staff">Staff</option><option value="dm">Dungeon Monitor</option></select></label><label>Title<input name="newLabel" placeholder="Setup / Door / DM"></label><label>Number needed<input type="number" name="newCount" min="1" max="20" value="1"></label></fieldset><p data-status></p><button class="hq-button primary">Save volunteer positions</button></form>';
+   const dlg=modal('Volunteer management · '+esc(data.event.title),form);
+   watchForm($('#manageShiftForm',dlg),async values=>{
+    const result=slots.map((x,i)=>({id:values['id'+i],role:values['role'+i],label:values['label'+i],count:Number(values['count'+i]),description:values['description'+i]}));
+    if(values.newLabel)result.push({role:values.newRole,label:values.newLabel,count:Number(values.newCount)||1});
+    await post('shifts','set_slots',{eventId,slots:result});
+    dlg.close();flash('Volunteer positions saved.');volunteerPage();
+   });
+   $('[data-remove-volunteer]',dlg).forEach(b=>b.onclick=async()=>{
+    const [ev,slotId,staffId]=b.dataset.removeVolunteer.split('|');
+    if(!staffId||!confirmDecision('Remove this volunteer from the shift?'))return;
+    try{await post('shifts','remove_claim',{eventId:ev,slotId,staffId});dlg.close();flash('Volunteer removed.');volunteerPage()}catch(error){flash(error.message)}
+   });
+  }catch(e){flash(e.message)}
+ });
+ $('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
   const claim=!!button.dataset.claimShift,ids=(button.dataset.claimShift||button.dataset.releaseShift).split('|'),[eventId,slotId]=ids;
   if(!claim&&!confirmDecision('Release your volunteer shift? This could leave the event short-staffed.'))return;
   button.disabled=true;try{const result=await post('shifts',claim?'claim':'release',{eventId,slotId});flash(result.message||'Shift updated.');await volunteerPage()}catch(error){flash(error.message);button.disabled=false}
