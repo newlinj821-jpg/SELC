@@ -7,20 +7,24 @@
   <p class="lead">Community Leaders is independent of Sanctum Eros membership. You do <strong>not</strong> need to join Sanctum Eros to participate. Create a verified organizer account, complete an application, and wait for Founder approval. Your login uses the same secure Portal infrastructure, password reset, and email service.</p>
   <div class="leader-account-layout">
    <div class="panel">
-    <div class="leader-account-tabs" role="group" aria-label="Community Leaders account options">
-     <button type="button" class="leader-tab active" data-leader-tab="signin" aria-pressed="true">Sign in</button>
-     <button type="button" class="leader-tab" data-leader-tab="register" aria-pressed="false">Create account</button>
-     <button type="button" class="leader-tab" data-leader-tab="verify" aria-pressed="false">Verify email</button>
-     <button type="button" class="leader-tab" data-leader-tab="reset" aria-pressed="false">Reset password</button>
+    <h3 id="leader-account-question">Do you already have a Sanctum Eros account?</h3>
+    <p class="hint">Choose your existing SE account or set up a Community Leaders-only organizer account. Both options lead to the same application.</p>
+    <div class="leader-account-choice" role="group" aria-labelledby="leader-account-question">
+     <button type="button" class="leader-choice active" data-leader-tab="signin" aria-pressed="true"><strong>Yes — I already have an SE account</strong><small>Use the username or verified email and password you already use for the Member Portal. No second account is needed.</small></button>
+     <button type="button" class="leader-choice" data-leader-tab="register" aria-pressed="false"><strong>No — create a Community Leaders account</strong><small>For organizers outside Sanctum Eros. Email verification is required, but SE membership is not.</small></button>
+    </div>
+    <div class="leader-account-utility" role="group" aria-label="Account assistance">
+     <button type="button" data-leader-tab="verify" aria-pressed="false">Verify an organizer account</button>
+     <button type="button" data-leader-tab="reset" aria-pressed="false">Forgot password?</button>
     </div>
     <form class="form leader-account-form" id="leaderSignIn" data-leader-panel="signin">
-     <h3>Sign in to Community Leaders</h3><p class="hint">Existing Portal account holders may use those credentials. No Sanctum Eros membership approval is required for external organizer accounts.</p>
+     <h3>Use your existing SE account</h3><p class="hint">Your existing Sanctum Eros username or verified email works here. No duplicate account is created. Community Leaders approval is separate from SE membership and committee appointment.</p>
      <label for="clLoginEmail">Account email or Portal username</label><input id="clLoginEmail" name="username" autocomplete="username" required>
      <label for="clLoginPassword">Password</label><input id="clLoginPassword" type="password" name="password" autocomplete="current-password" required>
      <button class="cta" type="submit">Sign in</button><p role="status" aria-live="polite" class="status" data-leader-status></p>
     </form>
     <form class="form leader-account-form" id="leaderRegister" data-leader-panel="register" hidden>
-     <h3>Create an organizer account</h3><p class="hint">This account is for Community Leaders only; it does not authorize Staff, membership, ticket, venue, or IA case access.</p>
+     <h3>Create your Community Leaders account</h3><p class="hint">You do not need Sanctum Eros membership. This verified account uses the Portal’s existing email and password-reset services; it does not give access to Staff, tickets, private IA cases, or SELC committee controls.</p>
      <label for="clName">Your name or organizer name</label><input id="clName" name="displayName" maxlength="120" required>
      <label for="clRegisterEmail">Email address</label><input id="clRegisterEmail" type="email" name="email" autocomplete="email" required>
      <label for="clRegisterPassword">Create a password (8 characters minimum)</label><input id="clRegisterPassword" type="password" name="password" autocomplete="new-password" required minlength="8" maxlength="128">
@@ -61,4 +65,4 @@
  </div></section>
 <section class="section"><div class="wrap"><p class="eye">After approval</p><h2>YOUR NETWORK <em>WORKSPACE.</em></h2><p class="lead">Approved leaders can message the Founder, SELC, or each other, share organizing resources, and submit safety notices for controlled review. No external report automatically becomes a Sanctum Eros ban or finding.</p><div class="actions"><a class="cta" href="/#headquarters">Open SELC Headquarters</a><a class="cta secondary" href="/purpose/">Read our values</a></div></div></section>
 </main><footer class="footer"><div class="wrap"><span>Sanctum Eros Leadership Committee · 18+ organization · Private dungeon 21+</span><a href="https://sanctumeroshub.org/community/">Sanctum Eros Hub</a><a href="https://sanctumportal.org/member.html">Member Portal</a><span>Community care includes privacy and accountability.</span></div></footer>
-<script defer src="/community-leaders/account.js?v=1"></script></body></html>
+<script defer src="/community-leaders/account.js?v=2"></script></body></html>
