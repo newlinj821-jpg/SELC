@@ -100,6 +100,7 @@ const NAV=[
  ['educators','✦','Education & workshops','Committee',u=>u!=='member'],
  ['generalapps','▧','Member & role applications','Event operations',u=>u!=='member'],
  ['events','▦','Events & RSVPs','Event operations',u=>u!=='member'],
+ ['volunteer','✋','Volunteer shifts','Event operations',u=>u!=='member'],
  ['door','⌗','Check-in & tickets','Event operations',u=>u!=='member'],
  ['banreports','⚑','Ban Reports','Safety',u=>u!=='member'],
  ['myaccount','◎','My account','Your work']
@@ -123,7 +124,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:()=>requestsPage('education'),generalapps:generalAppsPage,events:eventPage,door:doorPage,banreports:banReportsPage,myaccount:accountPage};
+  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:()=>requestsPage('education'),generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -143,7 +144,7 @@ async function homePage(){
   ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
   ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',staff?.events?.length||0,'events']
  ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
- card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Applications','generalapps'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
+ card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Applications','generalapps'],['Volunteer shifts','volunteer'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
  if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
  setContent(markup);bindPageLinks();
 }
@@ -267,6 +268,30 @@ async function generalAppsPage(){
   $$('[data-role-decision]',dlg).forEach(x=>x.onclick=async()=>{try{await api('applications',{method:'POST',body:{adminAction:'review',id:a.id,status:x.dataset.roleDecision,...formValues($('#roleReview',dlg))}});dlg.close();flash('Application updated.');generalAppsPage()}catch(e){setStatus($('[data-status]',dlg),e.message)}});
  });
 }
+async function volunteerPage(){
+ const data=await api('shifts'),events=data.events||[],me=data.me||{},mine=events.reduce((n,e)=>n+e.slots.reduce((x,s)=>x+s.claims.filter(c=>c.mine).length,0),0);
+ let html=pageHeader('EVENT OPERATIONS','Volunteer for an event','Upcoming events offer volunteer shifts automatically. Choose where you can help; Eros can still adjust the positions when needed.');
+ html+='<div class="hq-stats"><div class="hq-stat"><small>YOUR SHIFTS</small><strong>'+mine+'</strong></div><div class="hq-stat"><small>EVENTS WITH SHIFTS</small><strong>'+events.length+'</strong></div></div>';
+ if(!owner()&&!me.linked)html+=card('<h2>Connect your membership</h2><p>Your Staff profile must be linked to an approved Portal member account before volunteering.</p><a class="hq-button" href="'+PORTAL+'/member.html">Go to Member Portal</a>');
+ else if(!owner()&&!me.certified)html+=card('<h2>Complete your Staff certification first</h2><p>Event shifts involve actual responsibilities. Current Staff certification is required, and Dungeon Monitor shifts separately require DM certification.</p><a class="hq-button" href="'+PORTAL+'/staff.html#cert">Open certification</a>');
+ html+=events.map(e=>{
+  const coverage=e.coverage||{},head='<div class="hq-row"><div class="grow"><h2>'+esc(e.event.title)+'</h2><p>'+esc(date(e.event.start))+' · '+coverage.filled+'/'+coverage.needed+' roles filled</p></div>'+tag(coverage.complete?'Fully covered':'Open positions')+'</div>';
+  const shifts=e.slots.map(slot=>{
+   const own=slot.claims.some(c=>c.mine);
+   return '<div class="hq-row"><div class="grow"><strong>'+esc(slot.label)+(slot.role==='dm'?' · Certified DM':'')+'</strong><p>'+esc(slot.description||'Help make this event run smoothly.')+'</p><p class="hq-micro">'+slot.filled+'/'+slot.count+' filled'+(slot.claims.length?' · '+slot.claims.map(c=>esc(c.mine?'You':c.name)).join(', '):'')+'</p></div>'+
+    (owner()?'':own?btn('Release','data-release-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','danger'):slot.open>0&&me.certified&&me.linked&&(slot.role!=='dm'||me.dm)?btn('Volunteer','data-claim-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','primary'):tag(slot.open>0?'Requires qualification':'Full'))+'</div>';
+  }).join('');
+  return card(head+'<div class="hq-panel-list">'+shifts+'</div>');
+ }).join('');
+ if(!events.length)html+=empty('No upcoming volunteer shifts','Positions will appear automatically when an event is published.');
+ setContent(html);
+ $$('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
+  const claim=!!button.dataset.claimShift,ids=(button.dataset.claimShift||button.dataset.releaseShift).split('|'),[eventId,slotId]=ids;
+  if(!claim&&!confirmDecision('Release your volunteer shift? This could leave the event short-staffed.'))return;
+  button.disabled=true;try{const result=await post('shifts',claim?'claim':'release',{eventId,slotId});flash(result.message||'Shift updated.');await volunteerPage()}catch(error){flash(error.message);button.disabled=false}
+ });
+}
+
 async function eventPage(){
  const data=await api('staff-portal'),evs=data.events||[];
  let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','The same RSVP decisions, assignments and guest lists as the Sanctum Eros Portal.',btn('Open check-in','data-page-link="door"'));
