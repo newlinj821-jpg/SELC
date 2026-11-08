@@ -74,4 +74,26 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 @media(max-width:650px){.container{width:calc(100% - 30px)}.site-ribbon{font-size:8px;gap:7px;letter-spacing:.06em;flex-wrap:wrap}.ribbon-sep:last-of-type{display:none}.header-wrap{min-height:73px}.brand img{width:39px;height:49px}.brand-type>b{font-size:29px}.brand-type small{font-size:7px}.brand-type small span{display:none}.hero-content{padding:54px 0 19px}.hero h1{font-size:clamp(37px,10.7vw,58px);line-height:1.08;white-space:normal}.hero-copy{font-size:14px}.hero-cta{align-items:stretch}.hero-cta .button{width:100%}.hero-visual{height:300px}.hero-mark-frame{height:218px}.hero-visual-bottom{font-size:8px}.motto-inner{flex-wrap:wrap;justify-content:center;padding:12px 0;min-height:54px;gap:10px;font-size:9px}.motto-stud{width:5px;height:5px}.section{padding:62px 0}.section h2{font-size:clamp(36px,10vw,51px)}.section-title-row{display:block}.section-title-row>p{margin-top:20px}.principle-grid{grid-template-columns:1fr}.principle-card{min-height:270px}.card-icon{margin:12px 0}.educator-strip{flex-direction:column;align-items:start;padding:20px}.educator-strip .button{width:100%}.leader-card{align-items:flex-start;gap:15px;padding:22px}.leader-emblem{height:92px;width:68px}.leader-emblem img{height:89px;width:60px}.leader-copy h3{font-size:37px}.leader-index{display:none}.people-subsection{align-items:start}.people-stats{min-width:95px}.people-stats b{font-size:51px}.people-stats small{font-size:7px}.directory{grid-template-columns:repeat(2,1fr)}.seat-card{min-height:137px}.culture-large{font-size:105px}.faq-layout{grid-template-columns:1fr;gap:12px}.footer-inner{display:block}.footer-right{text-align:left;margin-top:22px}.footer-links{flex-wrap:wrap;gap:13px}.footer-credit{margin-top:23px}.login-inner{padding:26px 20px}.login-inner h2{font-size:40px}
  .headquarters{display:block}.hq-sidebar{position:absolute;top:0;bottom:0;left:0;width:min(304px,85vw);z-index:80;transform:translateX(-101%);transition:transform .18s ease}.hq-sidebar.open{transform:translateX(0)}.hq-shade.open{display:block;position:absolute;inset:0;background:#0009;z-index:70}.hq-main{height:100dvh}.hq-hamburger{display:block}.hq-content{padding:21px 15px 50px}.hq-topbar{padding:0 13px;min-height:58px;height:58px}.hq-top-brand{font-size:9px;letter-spacing:.06em}.hq-top-actions{gap:8px}.hq-chip{font-size:8px}.hq-stats{grid-template-columns:repeat(2,1fr);gap:8px}.hq-stat{padding:12px}.hq-stat strong{font-size:29px}.hq-page-header{display:block}.hq-page-header .hq-actions{margin-top:15px}.hq-grid,.hq-grid-3,.hq-form-grid{grid-template-columns:1fr}.hq-card{padding:15px}.hq-row{flex-wrap:wrap}.hq-row .hq-actions{width:100%}.hq-row .hq-actions .hq-button{flex:1}.hq-form :is(input,textarea,select){font-size:16px}.hq-button{min-height:43px}.hq-tabs{gap:6px}.hq-tabs button{flex:1 1 auto}
 }
+
+/* Mobile layout hardening: the logo must never size a CSS grid track beyond
+   its visual frame or obscure the captions on iPhone-class screens. */
+.hero-mark-frame,.hero-mark{min-width:0;min-height:0;box-sizing:border-box}
+.hero-mark-frame{overflow:hidden;isolation:isolate}
+.hero-mark{display:block;max-width:100%;max-height:100%;object-fit:contain;object-position:center}
+@media(max-width:850px){
+ .hero-visual{display:flex;justify-content:center;align-items:center;isolation:isolate}
+ .hero-mark-frame{display:flex;flex:0 0 auto;justify-content:center;align-items:center;width:min(43%,195px);height:215px;max-width:195px;max-height:73%;margin:auto auto 30px}
+ .hero-mark{height:100%;width:100%}
+ .hero-visual-bottom{z-index:3;left:25px;right:25px;bottom:20px;font-size:9px;letter-spacing:.06em}
+}
+@media(max-width:650px){
+ .hero-visual{height:275px;min-height:275px;width:100%;max-width:100%;overflow:hidden}
+ .hero-mark-frame{width:clamp(118px,38%,165px);height:180px;max-height:68%;margin:auto auto 38px;filter:drop-shadow(0 7px 10px #0006)}
+ .hero-mark{max-height:100%;max-width:100%}
+ .hero-visual-bottom{bottom:18px;left:17px;right:17px;gap:12px;font-size:8px;white-space:normal}
+ .hero-visual-bottom span:last-child{text-align:right}
+ .login-submit:disabled{opacity:.68;cursor:progress}
+ .status-text{min-height:20px;white-space:normal;overflow-wrap:anywhere}
+}
+
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
