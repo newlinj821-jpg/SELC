@@ -3,9 +3,16 @@
 /* Community Leaders: distinct self-service identity and application panels. */
 .leader-account-layout{display:grid;grid-template-columns:minmax(0,0.9fr) minmax(0,1.1fr);gap:18px;align-items:start;margin-top:26px}
 .leader-account-layout>.panel{min-width:0}
-.leader-account-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-bottom:24px}
-.leader-tab{padding:11px 10px;min-height:46px;background:#25222b;border:1px solid #755968;border-radius:5px;color:#eee2e5;font:700 12px/1.3 system-ui,sans-serif;cursor:pointer}
-.leader-tab.active{background:#8c2b46;border-color:#df839a;color:#fff}
+.leader-account-choice{display:grid;gap:12px;margin:16px 0 17px}
+.leader-choice{display:flex;flex-direction:column;gap:8px;width:100%;min-height:92px;text-align:left;padding:18px 20px;border:1px solid #806370;background:#25212a;border-radius:10px;color:#f4e8eb;cursor:pointer}
+.leader-choice strong{display:block;font-size:16px;line-height:1.35}
+.leader-choice small{display:block;font-size:13px;line-height:1.55;color:#dfcbd3}
+.leader-choice.active,.leader-choice[aria-pressed="true"]{border:2px solid #f29bae;padding:17px 19px;background:#462532}
+.leader-choice:hover{border-color:#f1a4b5}
+.leader-choice:focus-visible,.leader-account-utility button:focus-visible{outline:3px solid #ffbccc;outline-offset:3px}
+.leader-account-utility{display:flex;flex-wrap:wrap;gap:10px 18px;margin:0 0 23px}
+.leader-account-utility button{border:0;background:transparent;color:#f7b3c2;padding:6px 0;text-decoration:underline;text-underline-offset:4px;cursor:pointer;font-size:13px;font-weight:700}
+.leader-account-utility button.active{color:#fff}
 .leader-account-form[hidden],#leaderApplication[hidden]{display:none!important}
 .leader-account-form h3,.leader-application-panel h3{margin-top:0}
 .leader-account-layout .form{display:flex;flex-direction:column;align-items:stretch;gap:10px}
@@ -16,4 +23,4 @@
 .leader-consent input{width:18px;height:18px;flex:none;margin-top:3px}
 .leader-account-layout .status:not(:empty){margin:8px 0 2px;min-height:28px;line-height:1.55}
 @media(max-width:830px){.leader-account-layout{grid-template-columns:1fr}.leader-account-layout>.panel{padding:clamp(18px,4vw,28px)}}
-@media(max-width:390px){.leader-account-tabs{grid-template-columns:1fr 1fr}.leader-tab{font-size:11px}}
+@media(max-width:390px){.leader-choice{padding:14px}.leader-choice.active{padding:13px}.leader-choice strong{font-size:14px}}
