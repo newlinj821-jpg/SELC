@@ -37,7 +37,8 @@ async function mockPortal(route){
  let data={},status=200;
  if(service==='selc-public')data={people:[]};
  else if(service==='selc-auth'){
-  if(method==='POST'&&body.action==='login')data={token:'x'.repeat(44),role,displayName:'Test Account'};
+  if(method==='POST'&&body.action==='exchange_owner_handoff'){assert.match(body.code,/^[a-z]{43}$/);role='founder';data={token:'y'.repeat(44),role,displayName:'Eros'}}
+  else if(method==='POST'&&body.action==='login')data={token:'x'.repeat(44),role,displayName:'Test Account'};
   else if(method==='POST'&&body.action==='logout')data={ok:true};
   else data={authenticated:true,role,displayName:'Test Account'};
  }else if(service==='selc-governance'){
@@ -103,6 +104,20 @@ try{
  await p.locator('#hqMenu').click();
  await p.locator('#hqNavigation [data-page="communityleaders"]').click();
  await p.getByText('Message Community Leaders, SELC or Eros',{exact:false}).waitFor();
+ assert.equal(await p.locator('#hqRole').count(),1);
  await mobile.close();
+ const founderContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
+ await founderContext.route('https://sanctumportal.org/.netlify/functions/**',mockPortal);
+ const founderPage=await founderContext.newPage();
+ const founderErrors=[];
+ founderPage.on('pageerror',e=>founderErrors.push(e.message));
+ await founderPage.goto(base+'/?se_owner_handoff='+'a'.repeat(43),{waitUntil:'domcontentloaded'});
+ await founderPage.waitForFunction(()=>document.querySelector('#hqRole')?.textContent?.includes('Founder'),undefined,{timeout:12000});
+ assert.equal((await founderPage.locator('#hqRole').textContent()).trim(),'Founder & Chair');
+ assert.ok(!founderPage.url().includes('se_owner_handoff'),'Owner handoff code must be erased from browser history');
+ assert.equal(await founderPage.locator('#hqNavigation [data-page="applications"]').count(),1);
+ assert.equal(await founderPage.locator('#hqNavigation [data-page="work"]').count(),1);
+ assert.equal(founderErrors.length,0,'Founder browser JavaScript errors: '+founderErrors.join('; '));
+ await founderContext.close();
  console.log('SELC authenticated UI browser simulation passed: acceptance, retry, certification, role activation and mobile organizer isolation.');
 }finally{await browser.close();await new Promise(r=>server.close(r))}

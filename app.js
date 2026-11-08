@@ -82,13 +82,26 @@ function startPublic(){
    $('#loginDialog').close();loginForm.reset();setStatus(loginMessage,'');
   }catch(error){
    clearAccess();
-   const message=error?.status===401?'Sign-in was not verified. Use your existing Portal credentials. If this is your Eros member account, connect it to Owner Administration from Portal → Owner Settings. Your existing Owner login can also sign in directly.':(error?.message||'Sign-in failed. Please try again.');
+   const message=error?.status===401?'These credentials were not accepted by the Portal. Check your existing account login, or use Continue with Member Portal / Continue with Owner Portal below.':(error?.message||'Sign-in failed. Please try again.');
    setStatus(loginMessage,message);
    loginMessage.setAttribute('role','alert');
   }finally{submit.disabled=false;submit.removeAttribute('aria-busy')}
  });
  loadPublicLeadership().catch(()=>{});
  const params=new URLSearchParams(location.search);
+ const ownerCode=params.get('se_owner_handoff');
+ if(ownerCode){
+  // The code was minted only after the Portal verified its existing Owner session.
+  // Exchange it once, then remove it from browser history before opening HQ.
+  history.replaceState(null,'',location.pathname+location.hash);
+  (async()=>{try{
+   const result=await api('selc-auth',{method:'POST',token:'',body:{action:'exchange_owner_handoff',code:ownerCode}});
+   if(!result.token||result.role!=='founder')throw new Error('The Owner Portal could not verify this Founder connection.');
+   setAccess(result.token);
+   await beginHeadquarters();
+  }catch(error){flash(error.message);openLogin()}})();
+  return;
+ }
  const code=params.get('se_handoff');
  if(code&&params.get('se_app')==='selc'){
   const targetPortal=params.get('se_portal');
