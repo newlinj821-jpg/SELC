@@ -440,7 +440,7 @@ async function generalAppsPage(){
  markup+='<section id="roleTab" hidden>'+(roles.length?roles.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.name||'Applicant')+'</strong><p>'+esc((a.type||'').replaceAll('_',' '))+' · '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+btn('Review','data-role-app="'+esc(a.id)+'"')+'</div>')).join(''):empty('No role applications'))+'</section>';
  markup+='<section id="assistanceTab" hidden>'+(assistance.length?assistance.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.name||'Applicant')+'</strong><p>Event: '+esc(a.eventTitle||a.event||'Unknown event')+' · '+esc(date(a.eventStart))+'</p><p>'+esc(a.requestType||'Admission Assistance')+'</p></div>'+tag(a.status)+btn('Review','data-role-app="'+esc(a.id)+'"')+'</div>')).join(''):empty('No current Admission Assistance requests','Requests for previous events are retained in Portal history but no longer appear in this queue.'))+'</section>';
  setContent(markup);
- $('[data-app-tab]').forEach(b=>b.onclick=()=>{$('[data-app-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#membershipTab').hidden=b.dataset.appTab!=='membership';$('#roleTab').hidden=b.dataset.appTab!=='roles';$('#assistanceTab').hidden=b.dataset.appTab!=='assistance'});
+ $$('[data-app-tab]').forEach(b=>b.onclick=()=>{$$('[data-app-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#membershipTab').hidden=b.dataset.appTab!=='membership';$('#roleTab').hidden=b.dataset.appTab!=='roles';$('#assistanceTab').hidden=b.dataset.appTab!=='assistance'});
  $$('[data-member-app]').forEach(b=>b.onclick=()=>{const m=memberRows.find(x=>x.id===b.dataset.memberApp);if(!m)return;
   const details=['name','fetlife','loginEmail','generalArea','about','experience','limits','whyJoin','communityConflict','adminNotes','reviewAssist'].filter(k=>m[k]).map(k=>'<div class="hq-row"><div class="grow"><strong>'+esc(k)+'</strong><p class="hq-prose">'+esc(typeof m[k]==='object'?JSON.stringify(m[k]):m[k])+'</p></div></div>').join('');
   const dlg=modal('Membership application','<div class="hq-card">'+details+'</div><form class="hq-form" id="memberReview"><label>Private review notes</label><textarea name="adminNotes" rows="4"></textarea><p data-status class="hq-form-status"></p><div class="hq-actions">'+btn('Approve','data-membership-decision="approved"','primary')+btn('Decline','data-membership-decision="denied"','danger')+btn('Keep pending','data-membership-decision="pending"')+'</div></form>');
@@ -475,7 +475,7 @@ async function volunteerPage(){
   watchForm($('#handoverForm',dlg),async vals=>{await post('shifts','handoff',{eventId,...vals});dlg.close();flash('Handover note saved.');volunteerPage()});
   }catch(e){flash(e.message)}
  });
- $('[data-manage-shifts]').forEach(button=>button.onclick=async()=>{
+ $$('[data-manage-shifts]').forEach(button=>button.onclick=async()=>{
   const eventId=button.dataset.manageShifts;
   try{
    const data=await api('shifts',{query:{eventId}}),slots=data.slots||[];
@@ -497,7 +497,7 @@ async function volunteerPage(){
    });
   }catch(e){flash(e.message)}
  });
- $('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
+ $$('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
   const claim=!!button.dataset.claimShift,ids=(button.dataset.claimShift||button.dataset.releaseShift).split('|'),[eventId,slotId]=ids;
   if(!claim&&!confirmDecision('Release your volunteer shift? This could leave the event short-staffed.'))return;
   button.disabled=true;try{const result=await post('shifts',claim?'claim':'release',{eventId,slotId});flash(result.message||'Shift updated.');await volunteerPage()}catch(error){flash(error.message);button.disabled=false}
@@ -673,7 +673,7 @@ async function founderDeskPage(){
  ];
  setContent(pageHeader('FOUNDER & CHAIR','Founder desk','Focused oversight across SELC, operations and community programs.')+
   '<div class="hq-stats">'+links.map(([title,target,desc])=>'<button class="hq-card" data-go="'+esc(target)+'" style="text-align:left;cursor:pointer"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p></button>').join('')+'</div>');
- $('[data-go]').forEach(el=>el.onclick=()=>openPage(el.dataset.go));
+ $$('[data-go]').forEach(el=>el.onclick=()=>openPage(el.dataset.go));
 }
 async function banHistoryPage(){
  const d=await api('ban-history'),rows=d.records||[];
@@ -701,7 +701,7 @@ async function communityChatPage(){
    (current.joined?'<div id="chatMessages" class="hq-panel-list" style="max-height:370px;overflow:auto"></div><form id="chatSend" class="hq-form"><label>Message<textarea name="message" rows="3" maxlength="1200" required></textarea></label><p data-status></p><button class="hq-button primary">Send</button></form>'+btn('Leave room','data-chat-leave'):'<p>Join to read and participate.</p>'+btn('Join room','data-chat-join','primary'))):
   empty('No rooms available','Approved roles unlock their corresponding rooms.'));
  setContent(html);
- $('[data-chat-room]').forEach(x=>x.onclick=()=>{context.chatRoom=x.dataset.chatRoom;communityChatPage()});
+ $$('[data-chat-room]').forEach(x=>x.onclick=()=>{context.chatRoom=x.dataset.chatRoom;communityChatPage()});
  async function refresh(){
   if(context.activePage!=='chat'||!current?.joined)return;
   try{
@@ -729,7 +729,7 @@ async function contentManagementPage(){
  html+=rows.length?rows.map(p=>card('<div class="hq-row"><div class="grow"><small>'+esc(p.site.toUpperCase())+' · '+esc(p.path)+'</small><strong>'+esc(p.summary||p.original.slice(0,90))+'</strong><p><del>'+esc(p.original.slice(0,180))+'</del></p><p>'+esc(p.replacement.slice(0,180))+'</p><small>Votes: '+number(p.tally?.yes)+' support / '+number(p.tally?.needed)+' needed · '+number(p.tally?.no)+' oppose</small></div>'+tag(p.status)+btn('Review','data-content-id="'+esc(p.id)+'"')+'</div>')).join(''):empty('No changes submitted yet');
  setContent(html);
  watchForm($('#newContent'),async values=>{await post('selc-content','propose',values);flash('Sent for committee vote.');contentManagementPage()});
- $('[data-content-id]').forEach(b=>b.onclick=()=>{
+ $$('[data-content-id]').forEach(b=>b.onclick=()=>{
   const p=rows.find(x=>x.id===b.dataset.contentId);if(!p)return;
   const base=p.site==='hub'?'https://sanctumeroshub.org':p.site==='selc'?'https://se-selc.netlify.app':'https://sanctumportal.org';
   const votes=p.status==='Voting'&&!owner()?'<h3>Vote</h3><div class="hq-actions">'+btn('Support','data-content-vote="yes"','primary')+btn('Oppose','data-content-vote="no"')+btn('Abstain','data-content-vote="abstain"')+'</div>':'';
