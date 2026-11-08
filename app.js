@@ -127,6 +127,7 @@ const NAV=[
  ['library','▤','Staff & SELC Handbook','Leadership',u=>u!=='member'],
  ['proposals','◉','Proposals & votes','Committee',u=>u!=='member'],
  ['requests','↗','Community conversations','Committee',u=>u!=='member'],
+ ['communityleaders','◇','Community Leaders network','Partnerships'],
  ['educators','✦','Education & workshops','Committee',u=>u!=='member'],
  ['generalapps','▧','Member & role applications','Event operations',u=>u!=='member'],
  ['events','▦','Events & RSVPs','Event operations',u=>u!=='member'],
@@ -155,7 +156,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:educationProgramsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -493,6 +494,40 @@ async function appealReviewPage(){
   const form='<form id="appealRecommend" class="hq-form"><label>Independent recommendation</label><select name="outcome"><option value="support">Support appeal</option><option value="deny">Recommend upholding restriction</option><option value="information">More information needed</option><option value="recuse">Recuse due to conflict</option></select><label>Factual rationale</label><textarea name="note" rows="5" minlength="30" required></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Record recommendation</button></form>';
   const dlg=modal('Access appeal','<p>'+tag(a.status)+'</p><h3>Member statement</h3><p class="hq-prose">'+esc(a.statement)+'</p><h3>Supporting information</h3><p class="hq-prose">'+esc(a.supportingInfo||'None included')+'</p><h3>Related records</h3><p class="hq-muted">Ban Reports: '+esc((a.relatedBanReports||[]).join(', ')||'None linked')+'</p><p class="hq-muted">IA cases: '+esc((a.relatedIaCases||[]).join(', ')||'None linked')+'</p><h3>Original access decisions</h3>'+prior+'<h3>Review history</h3>'+notes+form+(owner()?'<p><a class="hq-button" href="'+PORTAL+'/admin.html#safety/appeals">Open final appeal decision in Owner Portal ↗</a></p>':'<p class="hq-muted">Your recommendation is recorded for independent review; it does not automatically change the ban.</p>'));
   watchForm($('#appealRecommend',dlg),async vals=>{await post('safety-appeal-review','recommend',{accountId,id,...vals});dlg.close();flash('Review recommendation recorded.');appealReviewPage()});
+ });
+}
+
+async function communityLeadersPage(){
+ const d=await api('community-leaders'),canDiscuss=!!d.canDiscuss;
+ let markup=pageHeader('SELC / COMMUNITY PARTNERSHIPS','Community Leaders','A verified network for people who organize kink education, socials, and community spaces. Membership in this program never grants SELC or Staff authority.');
+ if(!canDiscuss){
+  markup+=card('<h2>Connect with other organizers</h2><p>Owners and authorized organizers of other kink organizations may apply to join this network. Each application is individually reviewed. To access confidential conversations after approval, you must also have a verified, active Member Portal account linked to the approved application email.</p><p><a class="hq-button primary" href="/community-leaders/">About the program and application ↗</a></p>');
+ }
+ if(canDiscuss){
+  markup+=card('<h2>Share practical ideas, not private identities</h2><p>Discuss education exchanges, events, responsible organizing, volunteer support, and lessons learned. Do not post personally identifying allegations or private IA evidence here. Safety summaries require a separate controlled disclosure review.</p><form id="communityPost" class="hq-form"><label>Conversation title</label><input name="topic" minlength="5" required placeholder="What would you like other organizers to discuss?"><label>Details</label><textarea name="message" rows="4" minlength="20" required placeholder="Share a useful question, resource, or collaboration idea."></textarea><p data-status class="hq-form-status"></p><button class="hq-button primary">Post to the network</button></form>');
+  markup+=card('<h2>Organizers’ conversations</h2>'+((d.posts||[]).length?(d.posts||[]).map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.topic)+'</strong><p class="hq-prose">'+esc(p.message)+'</p><small>'+esc(p.organization)+' · '+esc(p.by)+' · '+esc(date(p.at))+'</small></div></div>').join(''):empty('No conversations yet','Start a respectful conversation about organizing, education or cooperation.')));
+  markup+=card('<h2>Approved safety notices</h2><p>Only carefully minimized, Founder-approved summaries are shared with this network, and only when there is a legitimate need and documented consent. A report is not a finding of fact.</p>'+((d.sharedSafety||[]).length?d.sharedSafety.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.title)+'</strong><p class="hq-prose">'+esc(x.summary)+'</p><small>Authorized by '+esc(x.by)+' · '+esc(date(x.at))+'</small></div></div>').join(''):empty('No shared safety notices','Private IA reports remain inside the Sanctum Eros system.')));
+ }
+ if(d.canReview){
+  markup+=card('<h2>Community Leader applications</h2>'+((d.applications||[]).length?d.applications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.organization)+' · '+esc(a.leaderName)+'</strong><p>'+esc(a.experience)+'</p><p>'+esc(a.motivation)+'</p><small>'+esc(a.status)+' · '+esc(date(a.submittedAt))+'</small></div>'+btn('Review','data-leader-review="'+esc(a.id)+'"')+'</div>').join(''):empty('No applications','Applications from other organizations appear here.')));
+  markup+=card('<h2>Request an inter-organizational safety share</h2><p>Proposals must be minimized, factual, and accompanied by a documented disclosure basis. Eros authorizes any release; no private case record is shared automatically.</p><form id="communitySafety" class="hq-form"><label>Subject (avoid personal identifiers)</label><input name="title" minlength="5" required><label>Carefully minimized summary</label><textarea name="summary" minlength="80" rows="5" required></textarea><label>Documented consent and disclosure basis</label><textarea name="consentNote" minlength="30" rows="3" required></textarea><p data-status></p><button class="hq-button">Submit confidential sharing request</button></form>');
+ }
+ if(owner()&&(d.pendingSafety||[]).length){
+  markup+=card('<h2>Founder’s disclosure decisions</h2>'+d.pendingSafety.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.title)+'</strong><p>'+esc(x.summary)+'</p><p>Disclosure basis: '+esc(x.consentNote)+'</p></div>'+btn('Approve','data-share-approve="'+esc(x.id)+'"')+btn('Decline','data-share-decline="'+esc(x.id)+'"')+'</div>').join(''));
+ }
+ setContent(markup);
+ const postForm=$('#communityPost');if(postForm)watchForm(postForm,async values=>{await post('community-leaders','post',values);flash('Posted to the approved network.');communityLeadersPage()});
+ const shareForm=$('#communitySafety');if(shareForm)watchForm(shareForm,async values=>{await post('community-leaders','propose_safety_share',values);flash('Request queued for Founder review.');communityLeadersPage()});
+ $('[data-leader-review]').forEach(button=>button.onclick=()=>{
+   const item=(d.applications||[]).find(x=>x.id===button.dataset.leaderReview);
+   if(!item)return;
+   const dlg=modal('Review '+item.organization,'<p>Applicant: '+esc(item.leaderName)+'</p><p>'+esc(item.motivation)+'</p><form class="hq-form" id="leaderDecision"><label>Decision</label><select name="status"><option>Needs Verification</option><option>Approved</option><option>Declined</option></select><label>Verified Portal account ID (required for approval)</label><input name="accountId" placeholder="Exact active member account ID"><label>Review notes</label><textarea name="notes" rows="3"></textarea><p data-status></p><button class="hq-button primary">Save review</button></form>');
+   watchForm($('#leaderDecision',dlg),async values=>{await post('community-leaders','review',{id:item.id,...values});dlg.close();flash('Community Leader review saved.');communityLeadersPage()});
+ });
+ $('[data-share-approve],[data-share-decline]').forEach(button=>button.onclick=async()=>{
+  const id=button.dataset.shareApprove||button.dataset.shareDecline,decision=button.dataset.shareApprove?'Approved':'Declined';
+  if(!await confirmDecision('Record '+decision+' for this inter-organizational safety summary? This action is auditable.'))return;
+  try{await post('community-leaders','approve_safety_share',{id,decision});communityLeadersPage()}catch(e){flash(e.message)}
  });
 }
 
