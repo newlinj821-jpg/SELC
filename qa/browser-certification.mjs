@@ -91,7 +91,8 @@ try{
  await mobile.route('https://sanctumportal.org/.netlify/functions/**',mockPortal);
  const p=await mobile.newPage();
  await p.goto(base+'/',{waitUntil:'domcontentloaded'});
- await p.locator('[data-signin]').first().click();
+ if(!(await p.locator('[data-signin]:visible').count()))await p.locator('#mobileNavTrigger').click();
+ await p.locator('[data-signin]:visible').first().click();
  await p.locator('#loginUser').fill('test-external-organizer');
  await p.locator('#loginPass').fill('synthetic-secret');
  await p.locator('#loginForm [type=submit]').click();
