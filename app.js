@@ -336,7 +336,7 @@ async function educatorReviewsPage(){
  let markup=pageHeader('EDUCATION / LEADERSHIP','Educator applications','SELC Coordinators assess teaching experience, consent literacy, accessibility, and readiness. Only Eros may approve a Community Educator appointment.');
  markup+=rows.length?rows.map(x=>card('<div class="hq-row"><div class="grow"><h2>'+esc(x.applicantName)+'</h2><p>Topics: '+esc(x.topics)+'</p><p>Experience: '+esc(x.experience)+'</p><p>Approach: '+esc(x.teaching)+'</p><p>Consent & safety: '+esc(x.safety)+'</p><p>Accessibility: '+esc(x.accessibility)+'</p></div>'+tag(x.status)+btn('Record review','data-educator-review="'+esc(x.id)+'"')+'</div>')).join(''):empty('No educator applications to review','Applications submitted by Portal members appear here.');
  setContent(markup);
- $('[data-educator-review]').forEach(b=>b.onclick=()=>{const x=rows.find(r=>r.id===b.dataset.educatorReview);if(!x)return;const dlg=modal('Community Educator · '+x.applicantName,'<form id="educatorReviewForm" class="hq-form"><label>Review decision</label><select name="status"><option>Changes Requested</option><option>Recommended</option><option>Declined</option>'+(owner()?'<option>Approved</option>':'')+'</select><label>Reasoning and next steps</label><textarea name="notes" rows="5" required minlength="20"></textarea><p data-status></p><button class="hq-button primary" type="submit">Save review</button></form>');watchForm($('#educatorReviewForm',dlg),async values=>{await post('educator-applications','review',{id:x.id,...values});dlg.close();flash('Educator review saved.');educatorReviewsPage()})});
+ $$('[data-educator-review]').forEach(b=>b.onclick=()=>{const x=rows.find(r=>r.id===b.dataset.educatorReview);if(!x)return;const dlg=modal('Community Educator · '+x.applicantName,'<form id="educatorReviewForm" class="hq-form"><label>Review decision</label><select name="status"><option>Changes Requested</option><option>Recommended</option><option>Declined</option>'+(owner()?'<option>Approved</option>':'')+'</select><label>Reasoning and next steps</label><textarea name="notes" rows="5" required minlength="20"></textarea><p data-status></p><button class="hq-button primary" type="submit">Save review</button></form>');watchForm($('#educatorReviewForm',dlg),async values=>{await post('educator-applications','review',{id:x.id,...values});dlg.close();flash('Educator review saved.');educatorReviewsPage()})});
 }
 
 async function educationProgramsPage(){
@@ -408,14 +408,14 @@ async function volunteerPage(){
  }).join('');
  if(!events.length)html+=empty('No upcoming volunteer shifts','Positions will appear automatically when an event is published.');
  setContent(html);
- $('[data-handover]').forEach(b=>b.onclick=async()=>{
+ $$('[data-handover]').forEach(b=>b.onclick=async()=>{
   try{const eventId=b.dataset.handover,d=await api('shifts',{query:{eventId}}),notes=d.handoffs||[];
   const entries=notes.map(n=>'<div class="hq-row"><div class="grow"><strong>'+esc(n.by)+' · '+esc(n.kind)+'</strong><p class="hq-prose">'+esc(n.text)+'</p><small>'+esc(date(n.at))+'</small></div></div>').join('');
   const dlg=modal('Shift handover · '+(d.event?.title||'Event'),'<p class="hq-muted">Share operational updates, staffing changes and equipment checks. Private investigations belong in the separate IA workflow.</p>'+entries+'<form id="handoverForm" class="hq-form"><label>Type</label><select name="kind">'+['arrival','equipment','support','staffing','closing','general'].map(k=>'<option value="'+k+'">'+esc(k)+'</option>').join('')+'</select><label>What does the incoming team need to know?</label><textarea name="text" minlength="15" rows="4" required></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Save handover</button></form>');
   watchForm($('#handoverForm',dlg),async vals=>{await post('shifts','handoff',{eventId,...vals});dlg.close();flash('Handover note saved.');volunteerPage()});
   }catch(e){flash(e.message)}
  });
- $('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
+ $$('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
   const claim=!!button.dataset.claimShift,ids=(button.dataset.claimShift||button.dataset.releaseShift).split('|'),[eventId,slotId]=ids;
   if(!claim&&!confirmDecision('Release your volunteer shift? This could leave the event short-staffed.'))return;
   button.disabled=true;try{const result=await post('shifts',claim?'claim':'release',{eventId,slotId});flash(result.message||'Shift updated.');await volunteerPage()}catch(error){flash(error.message);button.disabled=false}
@@ -548,13 +548,13 @@ async function communityLeadersPage(){
  setContent(markup);
  const postForm=$('#communityPost');if(postForm)watchForm(postForm,async values=>{await post('community-leaders','post',values);flash('Posted to the approved network.');communityLeadersPage()});
  const shareForm=$('#communitySafety');if(shareForm)watchForm(shareForm,async values=>{await post('community-leaders','propose_safety_share',values);flash('Request queued for Founder review.');communityLeadersPage()});
- $('[data-leader-review]').forEach(button=>button.onclick=()=>{
+ $$('[data-leader-review]').forEach(button=>button.onclick=()=>{
    const item=(d.applications||[]).find(x=>x.id===button.dataset.leaderReview);
    if(!item)return;
    const dlg=modal('Review '+item.organization,'<p>Applicant: '+esc(item.leaderName)+'</p><p>'+esc(item.motivation)+'</p><form class="hq-form" id="leaderDecision"><label>Decision</label><select name="status"><option>Needs Verification</option><option>Approved</option><option>Declined</option></select><label>Verified Portal account ID (required for approval)</label><input name="accountId" placeholder="Exact active member account ID"><label>Review notes</label><textarea name="notes" rows="3"></textarea><p data-status></p><button class="hq-button primary">Save review</button></form>');
    watchForm($('#leaderDecision',dlg),async values=>{await post('community-leaders','review',{id:item.id,...values});dlg.close();flash('Community Leader review saved.');communityLeadersPage()});
  });
- $('[data-share-approve],[data-share-decline]').forEach(button=>button.onclick=async()=>{
+ $$('[data-share-approve],[data-share-decline]').forEach(button=>button.onclick=async()=>{
   const id=button.dataset.shareApprove||button.dataset.shareDecline,decision=button.dataset.shareApprove?'Approved':'Declined';
   if(!await confirmDecision('Record '+decision+' for this inter-organizational safety summary? This action is auditable.'))return;
   try{await post('community-leaders','approve_safety_share',{id,decision});communityLeadersPage()}catch(e){flash(e.message)}
