@@ -189,7 +189,15 @@ async function applicationsPage(){
  (rows.length?rows.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.displayName)+' · '+(a.type==='coordinator'?'Coordinator advancement':'Representative application')+'</strong><p>'+esc(date(a.createdAt))+' · '+esc(a.id)+'</p></div>'+tag(a.status)+btn('Open','data-openapp="'+esc(a.id)+'"')+'</div>')).join(''):empty('No applications here','Applicants and their responses will appear when submitted.')));
  $$('[data-openapp]').forEach(b=>b.onclick=()=>{const a=rows.find(x=>x.id===b.dataset.openapp);if(!a)return;
  const answers=Object.entries(a.answers||{}).map(([k,v])=>'<div class="hq-row"><div class="grow"><strong>'+esc(k.replaceAll('_',' '))+'</strong><p class="hq-prose">'+esc(v)+'</p></div></div>').join('');
- const d=modal(a.displayName+' · '+a.type,'<p>'+tag(a.status)+' Submitted '+esc(date(a.createdAt))+'</p><div class="hq-card">'+answers+'</div><form class="hq-form" id="appReviewForm"><label>Notes for review</label><textarea name="notes" rows="4" placeholder="Record questions, findings, recommendations, or appointment reasons">'+esc(a.reviewNotes||'')+'</textarea><label>Public display name (optional)</label><input name="publicName" value="'+esc(a.displayName||'')+'"><label class="checkline"><input type="checkbox" name="publicProfile"> Show this person's name publicly with their consent</label><div class="hq-actions">'+btn('Mark under review','data-action="review"')+(owner()?btn('Appoint','data-action="appoint"','primary')+btn('Decline','data-action="decline"','danger'):btn('Recommend','data-action="recommend"','primary')+btn('Not recommended','data-action="not-recommended"'))+'</div><p data-status class="hq-form-status"></p></form>');
+ const actionButtons=owner()
+  ?btn('Mark under review','data-action="review"')+btn('Appoint','data-action="appoint"','primary')+btn('Decline','data-action="decline"','danger')
+  :btn('Mark under review','data-action="review"')+btn('Recommend','data-action="recommend"','primary')+btn('Not recommended','data-action="not-recommended"');
+ const reviewMarkup='<p>'+tag(a.status)+' Submitted '+esc(date(a.createdAt))+'</p><div class="hq-card">'+answers+'</div>'+
+  '<form class="hq-form" id="appReviewForm"><label>Notes for review</label><textarea name="notes" rows="4">'+esc(a.reviewNotes||'')+'</textarea>'+
+  '<label>Public display name (optional)</label><input name="publicName" value="'+esc(a.displayName||'')+'">'+
+  '<label class="checkline"><input type="checkbox" name="publicProfile"> Show this person’s name publicly with their consent</label>'+
+  '<div class="hq-actions">'+actionButtons+'</div><p data-status class="hq-form-status"></p></form>';
+ const d=modal(a.displayName+' · '+a.type,reviewMarkup);
  $$('[data-action]',d).forEach(btnEl=>btnEl.onclick=async()=>{const vals=formValues($('#appReviewForm',d)),action=btnEl.dataset.action;try{
   if(action==='appoint'){if(!confirmDecision('Appoint this person? Committee limits and votes are checked by the Portal.'))return;await post('selc-governance','appoint',{id:a.id,...vals,publicProfile:!!$('#appReviewForm input[name=publicProfile]',d).checked})}
   else if(action==='decline')await post('selc-governance','decline',{id:a.id,notes:vals.notes});
