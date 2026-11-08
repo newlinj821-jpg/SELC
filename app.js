@@ -689,41 +689,72 @@ async function banHistoryPage(){
  $('#banFilter').onchange=e=>{filter=e.target.value;render()};render();
 }
 async function communityChatPage(){
- const d=await api('community-chat'),rooms=d.rooms||[];
- let active=context.chatRoom||rooms.find(x=>x.joined)?.id||rooms[0]?.id||'';
- if(!rooms.some(x=>x.id===active))active=rooms[0]?.id||'';
+ const data=await api('community-chat'),rooms=data.rooms||[];
+ let active=context.chatRoom||rooms.find(r=>r.joined)?.id||rooms[0]?.id||'';
+ if(!rooms.some(r=>r.id===active))active=rooms[0]?.id||'';
  context.chatRoom=active;
- const current=rooms.find(x=>x.id===active);
- const tabs=rooms.map(x=>btn(x.name+(x.unread?' · '+x.unread:'')+(x.joined?' ✓':''),'data-chat-room="'+esc(x.id)+'"',x.id===active?'primary':'')).join('');
- let html=pageHeader('CONVERSATIONS','Community chat','Join the rooms you are eligible for. Participation is optional.')+
-  card('<div class="hq-actions">'+tabs+'</div>')+
-  (current?card('<h2>'+esc(current.name)+'</h2><p>'+esc(current.description)+'</p>'+
-   (current.joined?'<label>Search conversation<input id="chatSearch" type="search" placeholder="Search messages"></label><div id="chatMessages" class="hq-panel-list" style="max-height:370px;overflow:auto"></div><form id="chatSend" class="hq-form"><label>Message<textarea name="message" rows="3" maxlength="1200" required></textarea></label><p data-status></p><button class="hq-button primary">Send</button></form>'+btn('Leave room','data-chat-leave'):'<p>Join to read and participate.</p>'+btn('Join room','data-chat-join','primary'))):
-  empty('No rooms available','Approved roles unlock their corresponding rooms.'));
- setContent(html);
- $$('[data-chat-room]').forEach(x=>x.onclick=()=>{context.chatRoom=x.dataset.chatRoom;communityChatPage()});
- async function refresh(){
-  if(context.activePage!=='chat'||!current?.joined)return;
-  try{
-   const result=await api('community-chat',{query:{room:current.id,search:$('#chatSearch')?.value||''}});
-   const container=$('#chatMessages');
-   if(container){const nearBottom=container.scrollHeight-container.scrollTop-container.clientHeight<80;
-    container.innerHTML=(result.messages||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+(m.pinned?'📌 ':'')+esc(m.name)+'</strong><small> · '+esc(date(m.createdAt))+(m.editedAt?' · edited':'')+'</small><p class="hq-prose">'+esc(m.message)+'</p><div class="hq-actions">'+btn('Reply','data-chat-reply="'+esc(m.id)+'"')+(m.by===(context.me?.owner?'owner:'+context.me?.id:'member:'+context.me?.accountId)||leader()?btn('Edit','data-chat-edit="'+esc(m.id)+'"')+btn('Delete','data-chat-delete="'+esc(m.id)+'"','danger'):'')+(leader()?btn(m.pinned?'Unpin':'Pin','data-chat-pin="'+esc(m.id)+'" data-pinned="'+(!m.pinned)+'"'):'')+'</div></div></div>').join('')||'<p class="hq-muted">No messages yet.</p>';
-    $('[data-chat-reply]').forEach(b=>b.onclick=()=>{const form=$('#chatSend'),field=form?.elements?.message;if(field){field.value='↳ ';field.focus();form.dataset.replyTo=b.dataset.chatReply}});
-    $('[data-chat-edit]').forEach(b=>b.onclick=async()=>{const msg=(result.messages||[]).find(m=>m.id===b.dataset.chatEdit);const text=prompt('Edit message',msg?.message||'');if(text===null)return;try{await post('community-chat','edit',{room:active,messageId:b.dataset.chatEdit,message:text});refresh()}catch(e){flash(e.message)}});
-    $('[data-chat-delete]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Remove this message from the conversation?'))return;try{await post('community-chat','delete',{room:active,messageId:b.dataset.chatDelete});refresh()}catch(e){flash(e.message)}});
-    $('[data-chat-pin]').forEach(b=>b.onclick=async()=>{try{await post('community-chat','pin',{room:active,messageId:b.dataset.chatPin,pinned:b.dataset.pinned==='true'});refresh()}catch(e){flash(e.message)}});
-    if(nearBottom)container.scrollTop=container.scrollHeight;
-   }
-  }catch(err){if($('#chatMessages'))$('#chatMessages').textContent=err.message}
-  if(context.activePage==='chat')context.chatTimer=setTimeout(refresh,12000);
+ const room=rooms.find(r=>r.id===active);
+ const roomIcon={selc:'◈',leaders:'◇',educators:'✦',network:'◎','staff-educators':'▤'};
+ const tabs=rooms.map(r=>'<button type="button" class="messenger-room'+(r.id===active?' active':'')+'" data-chat-room="'+esc(r.id)+'" aria-current="'+(r.id===active?'true':'false')+'"><span class="messenger-room-icon">'+esc(roomIcon[r.id]||'◈')+'</span><span class="messenger-room-name">'+esc(r.name)+'</span>'+(r.unread?'<span class="messenger-unread">'+number(r.unread)+'</span>':'')+(r.joined?'<span class="messenger-joined" title="Joined">●</span>':'')+'</button>').join('');
+ const main=room?'<section class="messenger-conversation"><div class="messenger-header"><div class="messenger-room-icon">'+esc(roomIcon[room.id]||'◈')+'</div><div class="messenger-header-text"><h2>'+esc(room.name)+'</h2><p>'+esc(room.description)+'</p></div>'+(room.joined?'<button class="messenger-leave" data-chat-leave title="Leave room">Leave</button>':'')+'</div>'+
+ (room.joined?
+ '<div class="messenger-search"><input id="chatSearch" type="search" placeholder="Search this conversation" aria-label="Search messages"></div><div id="chatPinned" class="messenger-pinned" hidden></div><div id="chatMessages" class="messenger-messages" role="log" aria-live="polite" aria-relevant="additions"><div class="messenger-empty">Loading conversation…</div></div><div id="chatReplyPreview" class="messenger-reply-preview" hidden><span id="chatReplyText"></span><button type="button" id="chatCancelReply" aria-label="Cancel reply">×</button></div><form id="chatSend" class="messenger-composer"><label class="sr-only" for="chatMessage">Message</label><textarea id="chatMessage" name="message" rows="1" maxlength="1200" placeholder="Message '+esc(room.name)+'…" required></textarea><button type="submit" aria-label="Send message"><span aria-hidden="true">➤</span></button></form><p id="chatStatus" class="messenger-status" role="status"></p>':
+ '<div class="messenger-welcome"><span class="messenger-welcome-icon">'+esc(roomIcon[room.id]||'◈')+'</span><h3>'+esc(room.name)+'</h3><p>Join this conversation to see messages and participate.</p>'+btn('Join conversation','data-chat-join','primary')+'</div>')+'</section>':
+ '<div class="messenger-welcome"><h3>No conversations available</h3><p>Approved roles can join their eligible rooms.</p></div>';
+ setContent('<section class="messenger-shell" aria-label="Community conversations"><div class="messenger-intro"><span class="hq-eyebrow">SELC / CONVERSATIONS</span><h1>Messages</h1><p>Keep your teams connected, without mixing private channels.</p></div><div class="messenger-layout"><aside class="messenger-sidebar"><div class="messenger-sidebar-title">Your rooms <span>'+number(rooms.length)+'</span></div><nav class="messenger-rooms" aria-label="Chat rooms">'+tabs+'</nav></aside>'+main+'</div></section>');
+ $$('[data-chat-room]').forEach(button=>button.onclick=()=>{context.chatRoom=button.dataset.chatRoom;communityChatPage()});
+ if(!room)return;
+ if(!room.joined){$('[data-chat-join]').onclick=async()=>{try{await post('community-chat','join',{room:active});communityChatPage()}catch(error){flash(error.message)}};return}
+ $('[data-chat-leave]').onclick=async()=>{if(!confirmDecision('Leave '+room.name+'? You can join again later.'))return;try{await post('community-chat','leave',{room:active});communityChatPage()}catch(error){flash(error.message)}};
+ const form=$('#chatSend'),textarea=$('#chatMessage'),messages=$('#chatMessages'),pinned=$('#chatPinned'),search=$('#chatSearch');
+ let latest=[],lastRead='',busy=false;
+ const me=String(context.me?.accountId||context.me?.id||'');
+ const myMessage=m=>m.by==='member:'+me||m.by==='owner:'+me||m.by==='staff:'+me||(role()==='founder'&&m.by?.startsWith('owner:'));
+ const avatar=name=>'<span class="messenger-avatar" aria-hidden="true">'+esc(initials(name))+'</span>';
+ const time=at=>{const d=new Date(at);return Number.isFinite(+d)?new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit'}).format(d):''};
+ function render(all){
+  const bottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<100;
+  const index=new Map(all.map(m=>[m.id,m]));
+  messages.innerHTML=all.length?all.map((m,i)=>{
+   const mine=myMessage(m),parent=index.get(m.parentId),same=(i>0&&all[i-1].by===m.by&&Math.abs(new Date(m.createdAt)-new Date(all[i-1].createdAt))<300000);
+   return '<article class="messenger-message'+(mine?' mine':'')+(same?' grouped':'')+'" data-message-id="'+esc(m.id)+'">'+(same?'':avatar(m.name))+'<div class="messenger-bubble-wrap">'+(same?'':'<div class="messenger-sender">'+esc(m.name)+'</div>')+
+    '<div class="messenger-bubble">'+(parent?'<div class="messenger-quote">'+esc(parent.name)+': '+esc(parent.message||'Original message removed')+'</div>':'')+
+    '<p>'+esc(m.message)+'</p></div><div class="messenger-meta">'+time(m.createdAt)+(m.editedAt?' · edited':'')+(m.pinned?' · Pinned':'')+'</div>'+
+    '<div class="messenger-message-actions"><button type="button" data-chat-reply="'+esc(m.id)+'">Reply</button>'+(mine||leader()?'<button type="button" data-chat-edit="'+esc(m.id)+'">Edit</button><button type="button" data-chat-delete="'+esc(m.id)+'">Delete</button>':'')+(leader()?'<button type="button" data-chat-pin="'+esc(m.id)+'" data-pinned="'+(!m.pinned)+'">'+(m.pinned?'Unpin':'Pin')+'</button>':'')+'</div></div></article>'
+  }).join(''):'<div class="messenger-empty"><span>✦</span><h3>No messages yet</h3><p>Start the conversation.</p></div>';
+  const pins=all.filter(m=>m.pinned);
+  pinned.hidden=!pins.length;
+  pinned.innerHTML=pins.length?'<strong>Pinned</strong><span>'+pins.slice(-2).map(m=>esc(m.message.slice(0,90))).join(' · ')+'</span>':'';
+  $$('[data-chat-reply]',messages).forEach(b=>b.onclick=()=>{const m=index.get(b.dataset.chatReply);if(!m)return;form.dataset.replyTo=m.id;$('#chatReplyText').textContent='Replying to '+m.name+': '+m.message.slice(0,90);$('#chatReplyPreview').hidden=false;textarea.focus()});
+  $$('[data-chat-edit]',messages).forEach(b=>b.onclick=async()=>{const m=index.get(b.dataset.chatEdit);if(!m)return;const next=prompt('Edit message',m.message);if(next===null||next===m.message)return;try{await post('community-chat','edit',{room:active,messageId:m.id,message:next});await refresh()}catch(e){flash(e.message)}});
+  $$('[data-chat-delete]',messages).forEach(b=>b.onclick=async()=>{if(!confirmDecision('Delete this message?'))return;try{await post('community-chat','delete',{room:active,messageId:b.dataset.chatDelete});await refresh()}catch(e){flash(e.message)}});
+  $$('[data-chat-pin]',messages).forEach(b=>b.onclick=async()=>{try{await post('community-chat','pin',{room:active,messageId:b.dataset.chatPin,pinned:b.dataset.pinned==='true'});await refresh()}catch(e){flash(e.message)}});
+  if(bottom)messages.scrollTop=messages.scrollHeight;
  }
- if(current?.joined){
-  watchForm($('#chatSend'),async values=>{const form=$('#chatSend');await post('community-chat','send',{room:active,message:values.message,parentId:form.dataset.replyTo||''});form.reset();delete form.dataset.replyTo;await refresh()});
-  $('#chatSearch').oninput=()=>refresh();
-  $('[data-chat-leave]').onclick=async()=>{await post('community-chat','leave',{room:active});communityChatPage()};
-  await refresh();
- }else if(current)$('[data-chat-join]').onclick=async()=>{try{await post('community-chat','join',{room:active});communityChatPage()}catch(e){flash(e.message)}};
+ async function refresh(){
+  if(context.activePage!=='chat'||context.chatRoom!==active||busy)return;
+  busy=true;
+  try{
+   const result=await api('community-chat',{query:{room:active,search:search.value.trim()}});
+   latest=result.messages||[];render(latest);
+   const newest=latest.at(-1)?.createdAt||'';
+   if(newest&&newest!==lastRead&&!search.value.trim()){lastRead=newest;await post('community-chat','read',{room:active}).catch(()=>{})}
+  }catch(e){$('#chatStatus').textContent=e.message}finally{
+   busy=false;
+   if(context.activePage==='chat'&&context.chatRoom===active)context.chatTimer=setTimeout(refresh,12000);
+  }
+ }
+ $('#chatCancelReply').onclick=()=>{delete form.dataset.replyTo;$('#chatReplyPreview').hidden=true};
+ form.addEventListener('submit',async e=>{
+  e.preventDefault();const message=textarea.value.trim();if(!message)return;
+  const button=form.querySelector('button[type="submit"]');button.disabled=true;
+  try{await post('community-chat','send',{room:active,message,parentId:form.dataset.replyTo||''});textarea.value='';textarea.style.height='';delete form.dataset.replyTo;$('#chatReplyPreview').hidden=true;await refresh();$('#chatStatus').textContent=''}
+  catch(error){$('#chatStatus').textContent=error.message}finally{button.disabled=false}
+ });
+ textarea.oninput=()=>{textarea.style.height='auto';textarea.style.height=Math.min(120,textarea.scrollHeight)+'px'};
+ textarea.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();form.requestSubmit()}};
+ let debounce;search.oninput=()=>{clearTimeout(debounce);debounce=setTimeout(()=>refresh(),240)};
+ await refresh();
 }
 async function contentManagementPage(){
  const result=await api('selc-content'),rows=result.proposals||[];
