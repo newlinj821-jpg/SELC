@@ -35,7 +35,7 @@ async function api(service,{method='GET',query={},body,token=context.token,timeo
     response=await fetch(local,{...options,mode:'same-origin'});
    }
    let data={};try{data=await response.json()}catch{}
-   if(!response.ok){const error=new Error(data.error||('Request failed ('+response.status+')'));error.status=response.status;throw error}
+   if(!response.ok){const error=new Error(data.error||('The Portal rejected this request (HTTP '+response.status+').'));error.status=response.status;throw error}
    return data;
   }catch(e){if(e.name==='AbortError')throw new Error('The Portal did not respond in time. Try the Portal handoff or reload the page.');if(e instanceof TypeError)throw new Error('Both SELC connection routes failed. Check the Portal production deployment.');throw e}finally{clearTimeout(timer)}
 }
@@ -80,7 +80,7 @@ function startPublic(){
    $('#loginDialog').close();loginForm.reset();setStatus(loginMessage,'');
   }catch(error){
    clearAccess();
-   const message=error?.message||'Sign-in failed. Please try again.';
+   const message=error?.status===401?'That username/password was not accepted by the connected Portal, or SELC access is not yet approved. Verify that you can sign in to the Member Portal with this exact account. If you can, SELC authentication needs administrator review.':(error?.message||'Sign-in failed. Please try again.');
    setStatus(loginMessage,message);
    loginMessage.setAttribute('role','alert');
   }finally{submit.disabled=false;submit.removeAttribute('aria-busy')}
