@@ -185,6 +185,7 @@ function closeHQNav(){$('#hqSidebar').classList.remove('open');$('#hqShade').cla
 async function signOut(){try{await post('selc-auth','logout')}catch{}clearAccess();$('#headquarters').classList.add('hidden');$('#headquarters').setAttribute('aria-hidden','true');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';history.replaceState(null,'',location.pathname);scrollTo(0,0);flash('Signed out of SELC. Your Portal account remains separate.')}
 async function openPage(page){
  if(context.chatTimer){clearTimeout(context.chatTimer);context.chatTimer=null}
+ if(context.editorPickListener){removeEventListener('message',context.editorPickListener);context.editorPickListener=null}
  const allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())));
  if(!allowed)page=organizerRole(role())?'communityleaders':'home';context.activePage=page;
  $$('#hqNavigation [data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
@@ -790,7 +791,45 @@ async function contentManagementPage(){
  html+='<h2 style="margin:20px 0 10px">Change proposals</h2>';
  html+=rows.length?rows.map(p=>card('<div class="hq-row"><div class="grow"><small>'+esc(p.site.toUpperCase())+' · '+esc(p.path)+'</small><strong>'+esc(p.summary||p.original.slice(0,90))+'</strong><p><del>'+esc(p.original.slice(0,180))+'</del></p><p>'+esc(p.replacement.slice(0,180))+'</p><small>Votes: '+number(p.tally?.yes)+' support / '+number(p.tally?.needed)+' needed · '+number(p.tally?.no)+' oppose</small></div>'+tag(p.status)+btn('Review','data-content-id="'+esc(p.id)+'"')+'</div>')).join(''):empty('No changes submitted yet');
  setContent(html);
- watchForm($('#newContent'),async values=>{await post('selc-content','propose',values);flash('Sent for committee vote.');contentManagementPage()});
+ const editor=$('#newContent');
+ const action=document.createElement('div');action.className='hq-actions';
+ const picker=document.createElement('button');picker.type='button';picker.className='hq-button primary';picker.textContent='Select wording on a live page';
+ const hint=document.createElement('small');hint.className='hq-muted';hint.textContent='Choose the page, then tap the exact text you want to change.';
+ action.append(picker,hint);
+ const preview=document.createElement('div');preview.className='editor-copy-compare';
+ const current=document.createElement('section'),proposed=document.createElement('section');
+ const previousLabel=document.createElement('strong');previousLabel.textContent='Original';
+ const proposedLabel=document.createElement('strong');proposedLabel.textContent='Proposed';
+ const beforeText=document.createElement('p'),afterText=document.createElement('p');
+ current.append(previousLabel,beforeText);proposed.append(proposedLabel,afterText);preview.append(current,proposed);
+ editor.querySelector('[data-status]').before(action,preview);
+ const updatePreview=()=>{
+  beforeText.textContent=editor.elements.original.value.trim()||'Select a paragraph, heading, or button.';
+  afterText.textContent=editor.elements.replacement.value.trim()||'Your replacement text appears here.';
+ };
+ editor.addEventListener('input',updatePreview);updatePreview();
+ picker.onclick=()=>{
+  const site=editor.elements.site.value,path=editor.elements.path.value.trim();
+  const origins={hub:'https://sanctumeroshub.org',portal:'https://sanctumportal.org',selc:'https://se-selc.netlify.app'};
+  if(!/^\/[a-zA-Z0-9/_.-]*$/.test(path)||path.includes('..')){flash('Use a valid page path beginning with /.');return}
+  const origin=origins[site];if(!origin)return;
+  const target=new URL(path,origin);target.searchParams.set('selc_pick','1');
+  const popup=window.open(target.href,'_blank');
+  if(!popup){flash('The page picker was blocked. Open the page and copy the text manually.');return}
+  if(context.editorPickListener)removeEventListener('message',context.editorPickListener);
+  context.editorPickListener=e=>{
+   if(e.origin!==origin||e.source!==popup||e.data?.type!=='SELC_COPY_PICK'||e.data.site!==site||typeof e.data.text!=='string')return;
+   const selected=e.data.text.trim().slice(0,2000);
+   if(!selected)return;
+   editor.elements.original.value=selected;
+   editor.elements.path.value=String(e.data.path||path).split('?')[0].slice(0,220);
+   updatePreview();
+   flash('Wording selected. Enter the replacement and submit it for voting.');
+   editor.elements.replacement.focus();
+  };
+  addEventListener('message',context.editorPickListener);
+ };
+ watchForm(editor,async values=>{await post('selc-content','propose',values);flash('Sent for committee vote.');contentManagementPage()});
  $$('[data-content-id]').forEach(b=>b.onclick=()=>{
   const p=rows.find(x=>x.id===b.dataset.contentId);if(!p)return;
   const base=p.site==='hub'?'https://sanctumeroshub.org':p.site==='selc'?'https://se-selc.netlify.app':'https://sanctumportal.org';
