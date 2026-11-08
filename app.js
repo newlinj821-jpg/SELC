@@ -694,28 +694,33 @@ async function communityChatPage(){
  if(!rooms.some(x=>x.id===active))active=rooms[0]?.id||'';
  context.chatRoom=active;
  const current=rooms.find(x=>x.id===active);
- const tabs=rooms.map(x=>btn(x.name+(x.joined?' ✓':''),'data-chat-room="'+esc(x.id)+'"',x.id===active?'primary':'')).join('');
+ const tabs=rooms.map(x=>btn(x.name+(x.unread?' · '+x.unread:'')+(x.joined?' ✓':''),'data-chat-room="'+esc(x.id)+'"',x.id===active?'primary':'')).join('');
  let html=pageHeader('CONVERSATIONS','Community chat','Join the rooms you are eligible for. Participation is optional.')+
   card('<div class="hq-actions">'+tabs+'</div>')+
   (current?card('<h2>'+esc(current.name)+'</h2><p>'+esc(current.description)+'</p>'+
-   (current.joined?'<div id="chatMessages" class="hq-panel-list" style="max-height:370px;overflow:auto"></div><form id="chatSend" class="hq-form"><label>Message<textarea name="message" rows="3" maxlength="1200" required></textarea></label><p data-status></p><button class="hq-button primary">Send</button></form>'+btn('Leave room','data-chat-leave'):'<p>Join to read and participate.</p>'+btn('Join room','data-chat-join','primary'))):
+   (current.joined?'<label>Search conversation<input id="chatSearch" type="search" placeholder="Search messages"></label><div id="chatMessages" class="hq-panel-list" style="max-height:370px;overflow:auto"></div><form id="chatSend" class="hq-form"><label>Message<textarea name="message" rows="3" maxlength="1200" required></textarea></label><p data-status></p><button class="hq-button primary">Send</button></form>'+btn('Leave room','data-chat-leave'):'<p>Join to read and participate.</p>'+btn('Join room','data-chat-join','primary'))):
   empty('No rooms available','Approved roles unlock their corresponding rooms.'));
  setContent(html);
  $$('[data-chat-room]').forEach(x=>x.onclick=()=>{context.chatRoom=x.dataset.chatRoom;communityChatPage()});
  async function refresh(){
   if(context.activePage!=='chat'||!current?.joined)return;
   try{
-   const result=await api('community-chat',{query:{room:current.id}});
+   const result=await api('community-chat',{query:{room:current.id,search:$('#chatSearch')?.value||''}});
    const container=$('#chatMessages');
    if(container){const nearBottom=container.scrollHeight-container.scrollTop-container.clientHeight<80;
-    container.innerHTML=(result.messages||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+esc(m.name)+'</strong><small> · '+esc(date(m.createdAt))+'</small><p class="hq-prose">'+esc(m.message)+'</p></div></div>').join('')||'<p class="hq-muted">No messages yet.</p>';
+    container.innerHTML=(result.messages||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+(m.pinned?'📌 ':'')+esc(m.name)+'</strong><small> · '+esc(date(m.createdAt))+(m.editedAt?' · edited':'')+'</small><p class="hq-prose">'+esc(m.message)+'</p><div class="hq-actions">'+btn('Reply','data-chat-reply="'+esc(m.id)+'"')+(m.by===(context.me?.owner?'owner:'+context.me?.id:'member:'+context.me?.accountId)||leader()?btn('Edit','data-chat-edit="'+esc(m.id)+'"')+btn('Delete','data-chat-delete="'+esc(m.id)+'"','danger'):'')+(leader()?btn(m.pinned?'Unpin':'Pin','data-chat-pin="'+esc(m.id)+'" data-pinned="'+(!m.pinned)+'"'):'')+'</div></div></div>').join('')||'<p class="hq-muted">No messages yet.</p>';
+    $('[data-chat-reply]').forEach(b=>b.onclick=()=>{const form=$('#chatSend'),field=form?.elements?.message;if(field){field.value='↳ ';field.focus();form.dataset.replyTo=b.dataset.chatReply}});
+    $('[data-chat-edit]').forEach(b=>b.onclick=async()=>{const msg=(result.messages||[]).find(m=>m.id===b.dataset.chatEdit);const text=prompt('Edit message',msg?.message||'');if(text===null)return;try{await post('community-chat','edit',{room:active,messageId:b.dataset.chatEdit,message:text});refresh()}catch(e){flash(e.message)}});
+    $('[data-chat-delete]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Remove this message from the conversation?'))return;try{await post('community-chat','delete',{room:active,messageId:b.dataset.chatDelete});refresh()}catch(e){flash(e.message)}});
+    $('[data-chat-pin]').forEach(b=>b.onclick=async()=>{try{await post('community-chat','pin',{room:active,messageId:b.dataset.chatPin,pinned:b.dataset.pinned==='true'});refresh()}catch(e){flash(e.message)}});
     if(nearBottom)container.scrollTop=container.scrollHeight;
    }
   }catch(err){if($('#chatMessages'))$('#chatMessages').textContent=err.message}
   if(context.activePage==='chat')context.chatTimer=setTimeout(refresh,12000);
  }
  if(current?.joined){
-  watchForm($('#chatSend'),async values=>{await post('community-chat','send',{room:active,message:values.message});$('#chatSend').reset();await refresh()});
+  watchForm($('#chatSend'),async values=>{const form=$('#chatSend');await post('community-chat','send',{room:active,message:values.message,parentId:form.dataset.replyTo||''});form.reset();delete form.dataset.replyTo;await refresh()});
+  $('#chatSearch').oninput=()=>refresh();
   $('[data-chat-leave]').onclick=async()=>{await post('community-chat','leave',{room:active});communityChatPage()};
   await refresh();
  }else if(current)$('[data-chat-join]').onclick=async()=>{try{await post('community-chat','join',{room:active});communityChatPage()}catch(e){flash(e.message)}};
