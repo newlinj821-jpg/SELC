@@ -1,7 +1,7 @@
 name: SELC mobile website checks (no deployment)
 on:
   push:
-    branches: ["feature/selc-rebuild-20261107"]
+    branches: ["main", "feature/selc-rebuild-20261107"]
   workflow_dispatch:
 jobs:
   verify:
@@ -13,5 +13,10 @@ jobs:
           node-version: "24"
       - name: Parse website JavaScript
         run: node --check app.js
+      - name: Check responsive login and emblem rules
+        run: |
+          grep -q "width:clamp(118px,38%,165px)" style.css
+          grep -q "setStatus(loginMessage,message)" app.js
+          grep -q "selc-login-mobile-3" index.html
       - name: Check website structure and key workflows
         run: node --test tests/*.test.mjs
