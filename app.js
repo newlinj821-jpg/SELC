@@ -200,7 +200,9 @@ async function joinPage(){
 async function certificationPage(){
  const data=await api('selc-governance',{query:{scope:'certification'}}),assignments=data.assignments||[];
  let markup=pageHeader('SELC / REQUIRED TRAINING','SELC certification','Complete training and assessment after Founder acceptance. Your new committee privileges activate only on a verified pass.');
- if(!assignments.length){setContent(markup+empty('No outstanding certification','Accepted applications are assigned here. You cannot begin certification before acceptance.'));return}
+ const completed=data.completed||[];
+ if(completed.length)markup+=card('<h2>Your completed certifications</h2>'+completed.map(c=>'<div class="hq-row"><div class="grow"><strong>'+esc(c.type==='coordinator'?'SELC Coordinator':'SELC Representative')+' · Certified</strong><p>Completed '+esc(date(c.completedAt))+' · Version '+esc(c.version)+'</p><small>Record '+esc(c.id)+'</small></div>'+tag('Complete')+'</div>').join(''));
+ if(!assignments.length){setContent(markup+(completed.length?'':empty('No outstanding certification','Accepted applications are assigned here. You cannot begin certification before acceptance.')));return}
  const lessons=[
  ['Structure & accountability','SELC is the internal Sanctum Eros committee. Only approved SE members may apply for a seat. The Founder makes final appointments and organizational decisions. An outside Community Leader cannot vote or act as SELC Staff.'],
  ['Consent & safety','Consent is active and revocable. Stop an activity immediately when consent is withdrawn. Social participation can begin at age 18; dungeon play parties are 21+ and subject to venue rules.'],
@@ -250,8 +252,8 @@ async function applicationsPage(){
  (rows.length?rows.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.displayName)+' · '+(a.type==='coordinator'?'Coordinator advancement':'Representative application')+'</strong><p>'+esc(date(a.createdAt))+' · '+esc(a.id)+'</p></div>'+tag(a.status)+btn('Open','data-openapp="'+esc(a.id)+'"')+'</div>')).join(''):empty('No applications here','Applicants and their responses will appear when submitted.')));
  $$('[data-openapp]').forEach(b=>b.onclick=()=>{const a=rows.find(x=>x.id===b.dataset.openapp);if(!a)return;
  const answers=Object.entries(a.answers||{}).map(([k,v])=>'<div class="hq-row"><div class="grow"><strong>'+esc(k.replaceAll('_',' '))+'</strong><p class="hq-prose">'+esc(v)+'</p></div></div>').join('');
- const waiting=a.status==='Certification Pending';
- const actionButtons=owner()
+ const waiting=a.status==='Certification Pending',closed=['Approved','Declined'].includes(a.status);
+ const actionButtons=closed?'<p>'+esc(a.status==='Approved'?'Appointment active after certification.':'Application closed without appointment.')+'</p>':owner()
   ?(waiting?'<p>Accepted; awaiting certification. No new committee privileges have been granted.</p>':btn('Mark under review','data-action="review"')+btn('Accept & assign certification','data-action="appoint"','primary'))+btn(waiting?'Withdraw acceptance':'Decline','data-action="decline"','danger')
   :(waiting?'<p>Founder acceptance recorded; certification pending.</p>':btn('Mark under review','data-action="review"')+btn('Recommend','data-action="recommend"','primary')+btn('Not recommended','data-action="not-recommended"'));
  const reviewMarkup='<p>'+tag(a.status)+' Submitted '+esc(date(a.createdAt))+'</p><div class="hq-card">'+answers+'</div>'+
