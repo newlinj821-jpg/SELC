@@ -7,6 +7,49 @@
  const path=location.pathname||'/';
  const endpoint=origin+'?scope=published&site='+encodeURIComponent(site)+'&path='+encodeURIComponent(path);
  const norm=s=>String(s||'').trim();
+
+ // Visual selection is opt-in and transmits only the text the editor clicks.
+ // No tokens, fields, page HTML, private records, or automatic page scraping.
+ if(new URLSearchParams(location.search).get('selc_pick')==='1'&&window.opener){
+  const header=document.createElement('div');
+  header.id='selc-copy-picker-banner';
+  header.textContent='SELC text picker · Tap a heading, sentence or button to propose an edit. Esc to cancel.';
+  header.style.cssText='position:fixed;inset:0 0 auto;z-index:2147483647;padding:12px 18px;background:#a92e48;color:white;font:700 13px/1.45 system-ui;text-align:center;box-shadow:0 3px 16px #0008';
+  const style=document.createElement('style');
+  style.textContent='.selc-copy-picker-target{outline:2px solid #ed536b!important;outline-offset:3px!important;cursor:crosshair!important}';
+  document.head.append(style);
+  document.body.append(header);
+  let highlighted=null;
+  const candidate=node=>{
+   const el=node?.closest?.('main h1,main h2,main h3,main h4,main p,main li,main button,main a,main label,main summary,main span,main small,main strong,main em,nav a,header a,footer a');
+   return el?.closest('input,textarea,select,[contenteditable],script,style,#selc-copy-picker-banner')?null:el;
+  };
+  document.addEventListener('pointerover',e=>{
+   const target=candidate(e.target);
+   if(highlighted&&highlighted!==target)highlighted.classList.remove('selc-copy-picker-target');
+   highlighted=target;
+   highlighted?.classList.add('selc-copy-picker-target');
+  },true);
+  document.addEventListener('click',e=>{
+   const target=candidate(e.target);
+   if(!target)return;
+   const walker=document.createTreeWalker(target,NodeFilter.SHOW_TEXT);
+   let selected='';
+   while(walker.nextNode()){
+    const node=walker.currentNode;
+    if(!node.parentElement?.closest('script,style,noscript,[data-content-editor-ignore]')&&norm(node.nodeValue)){
+     selected=norm(node.nodeValue);
+     break;
+    }
+   }
+   if(!selected)return;
+   e.preventDefault();e.stopImmediatePropagation();
+   window.opener.postMessage({type:'SELC_COPY_PICK',site,path,text:selected.slice(0,2000)},'https://se-selc.netlify.app');
+   header.textContent='Selected text sent to SELC. Return to your editor tab.';
+  },true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'){const u=new URL(location.href);u.searchParams.delete('selc_pick');location.replace(u.toString())}});
+ }
+
  let edits=[],running=false,queued=false;
  function apply(){
   if(running||!edits.length)return;
