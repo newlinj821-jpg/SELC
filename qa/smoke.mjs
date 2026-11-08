@@ -19,7 +19,7 @@ assert.match(home,/<a[^>]+href="\/community-leaders\/"[^>]*>COMMUNITY LEADERS &a
 assert.match(home,/href="\/purpose\/">GET TO KNOW US/);
 assert.match(home,/href="https:\/\/sanctumportal\.org\/ecosystem-connect\.html\?app=selc"/);
 assert.match(home,/login-handoff/);
-assert.match(home,/selc-leaders-7/);
+assert.match(home,/selc-leaders-8/);
 assert.match(css,/\.login-handoff>\.button/);
 assert.match(css,/max-height:calc\(100dvh - 20px\)/);
 assert.match(app,/\$\$\('\[data-leader-review\]'\)\.forEach/);
@@ -63,4 +63,11 @@ assert.doesNotMatch(app,/(^|[^$])\$\('[^']+'\)\.forEach/, 'A single-element sele
 for(const selector of ['[data-educator-review]','[data-handover]','[data-claim-shift],[data-release-shift]','[data-leader-review]','[data-share-approve],[data-share-decline]']){
  assert.ok(app.includes("$$('"+selector+"').forEach"),'Multi-button handler must use the collection selector: '+selector);
 }
+
+assert.match(home,/SELC certification before your committee appointment/);
+assert.match(home,/Community Leaders is an independently approved network/);
+assert.match(purpose,/followed by SELC certification/);
+assert.match(app,/async function certificationPage\(\)/);
+assert.match(app,/action.*complete_certification|complete_certification/);
+assert.match(app,/\['certification','✓','SELC certification'/);
 console.log('SELC public route, branding, login UI, Community Leaders and gateway source checks passed.');
