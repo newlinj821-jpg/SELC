@@ -3,7 +3,7 @@
  */
 (()=>{'use strict';
 const $=selector=>document.querySelector(selector);
-const tokenKey='selc.session.v1',base='/.netlify/functions/portal-gateway?service=';
+const tokenKey='selc.session.v1',portal='https://sanctumportal.org/.netlify/functions/';
 let token=sessionStorage.getItem(tokenKey)||'',current=null;
 const status=(root,message,good=false)=>{const node=root?.querySelector('[data-leader-status]')||$('#applyStatus');if(!node)return;node.textContent=message;node.style.color=good?'#b5e4c1':'#ffc0ce'};
 const plain=v=>String(v??'').trim();
@@ -17,9 +17,15 @@ async function call(service,method='GET',body,access=token){
   const headers={'accept':'application/json'};
   if(body!==undefined)headers['content-type']='application/json';
   if(access)headers.authorization='Bearer '+access;
-  const response=await fetch(base+encodeURIComponent(service),{method,headers,body:body===undefined?undefined:JSON.stringify(body),cache:'no-store',signal:control.signal});
+  // SELC identity, registration and applications use the same canonical
+  // Portal service as Headquarters. The recovery-only relay intentionally
+  // cannot verify credentials or grant a session.
+  const destination=service==='member-auth'
+    ?'/.netlify/functions/portal-gateway?service=member-auth'
+    :portal+encodeURIComponent(service);
+  const response=await fetch(destination,{method,mode:service==='member-auth'?'same-origin':'cors',credentials:'omit',headers,body:body===undefined?undefined:JSON.stringify(body),cache:'no-store',signal:control.signal});
   let data={};try{data=await response.json()}catch{}
-  if(!response.ok)throw new Error(data.error||'The service could not complete your request.');
+  if(!response.ok){const err=new Error((data.error||'The service could not complete your request.')+(data.requestId?' Reference: '+data.requestId:''));err.code=data.code||'';err.status=response.status;throw err}
   return data;
  }catch(e){if(e.name==='AbortError')throw new Error('The Portal did not respond. Try again.');throw e}finally{clearTimeout(timer)}
 }
