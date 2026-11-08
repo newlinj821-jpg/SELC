@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFile,stat} from 'node:fs/promises';
 import {join,resolve,extname,sep} from 'node:path';
-import {chromium} from 'playwright';
+import {chromium,webkit} from 'playwright';
 const root=resolve('.');
 const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.json':'application/json'};
 const server=createServer(async(req,res)=>{
@@ -18,7 +18,7 @@ const server=createServer(async(req,res)=>{
 });
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const base='http://127.0.0.1:'+server.address().port;
-const browser=await chromium.launch({headless:true});
+const browser=await (process.env.QA_BROWSER==='webkit'?webkit:chromium).launch({headless:true});
 let role='member',certified=false,assessments=0;
 const answers={'r-role':'b','r-consent':'a','r-privacy':'c','r-evidence':'b','r-conflict':'a','r-network':'c','r-admission':'b','r-safety':'a'};
 const questions=[
