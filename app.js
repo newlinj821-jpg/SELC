@@ -672,10 +672,11 @@ async function founderDeskPage(){
   ['Member applications','generalapps','Membership and role decisions'],
   ['Committee proposals','proposals','Review votes and recommendations']
  ];
- const results=await Promise.allSettled([api('selc-content'),api('event-readiness'),api('community-chat')]);
+ const results=await Promise.allSettled([api('selc-content'),api('event-readiness'),api('community-chat'),api('founder-weekly-pulse')]);
  const content=results[0].status==='fulfilled'?results[0].value:{proposals:[]};
  const readiness=results[1].status==='fulfilled'?results[1].value:{events:[],needsAttention:0};
  const chats=results[2].status==='fulfilled'?results[2].value:{rooms:[]};
+ const digest=results[3].status==='fulfilled'?results[3].value:null;
  const pending=(content.proposals||[]).filter(x=>x.status==='Awaiting Founder').length;
  const unread=(chats.rooms||[]).reduce((n,x)=>n+Number(x.unread||0),0);
  setContent(pageHeader('FOUNDER & CHAIR','Founder command center','One place for decisions and operational oversight without crowding the workspace.')+
@@ -684,7 +685,12 @@ async function founderDeskPage(){
   card('<span class="hq-eyebrow">Event readiness</span><h2>'+number(readiness.needsAttention)+'</h2><p>Upcoming events requiring attention</p>'+btn('Review events','data-go="readiness"'))+
   card('<span class="hq-eyebrow">Conversations</span><h2>'+number(unread)+'</h2><p>Unread chat messages in joined rooms</p>'+btn('Open messages','data-go="chat"'))+
   card('<span class="hq-eyebrow">Oversight</span><h2>Activity</h2><p>Committee, safety and staffing workflows</p>'+btn('Review operations','data-go="volunteer"'))+'</div>'+
+  '<details class="hq-card" style="margin-top:18px"><summary style="cursor:pointer;font-weight:800">Weekly organization digest</summary>'+
+  (digest?'<p class="hq-muted">Last 7 days · '+esc(date(digest.weekStart))+' – '+esc(date(digest.weekEnd))+'</p><div class="hq-stats">'+(digest.sections||[]).map(r=>'<div class="hq-card"><strong>'+number(r.value)+'</strong><p>'+esc(r.label)+'</p></div>').join('')+'</div>'+btn('Copy weekly summary','data-copy-digest'):
+  '<p>The weekly summary is unavailable right now.</p>')+'</details>'+
   '<div class="hq-grid" style="margin-top:20px">'+sections.map(([title,target,desc])=>'<button type="button" class="hq-card" data-go="'+esc(target)+'" style="text-align:left;cursor:pointer"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p></button>').join('')+'</div>');
+ if(digest)$('[data-copy-digest]').onclick=async()=>{const text='Sanctum Eros · Founder weekly summary\n'+(digest.sections||[]).map(x=>x.label+': '+x.value).join('\n');try{await navigator.clipboard.writeText(text);flash('Weekly summary copied.')}catch(e){flash('Unable to copy summary on this device.')}};
+
  $$('[data-go]').forEach(el=>el.onclick=()=>openPage(el.dataset.go));
 }
 async function eventReadinessPage(){
