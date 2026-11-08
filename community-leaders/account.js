@@ -35,6 +35,7 @@ function updateState(data){
  current=data;
  const el=$('#leaderAccountState'),application=$('#leaderApplication');
  if(!token){el.innerHTML='<h3>Your application</h3><p>Create or sign into a verified account before applying. Sanctum Eros membership is not required.</p>';application.hidden=true;return}
+ if(data.emailVerified===false){el.innerHTML='<h3>Verify your existing SE account email</h3><p>Your existing login works. To apply for Community Leaders, connect and verify an email in your Portal account first. Then return here; no additional Community Leaders account is needed.</p><p><a class="cta" href="https://sanctumportal.org/member.html#account" rel="noopener noreferrer">Verify email in the Portal</a></p>';application.hidden=true;return}
  const own=(data.ownApplications||[]).slice().sort((a,b)=>String(b.submittedAt).localeCompare(String(a.submittedAt)))[0];
  const approved=data.approvedLeader||data.role==='founder';
  if(approved){
