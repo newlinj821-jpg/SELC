@@ -7,6 +7,13 @@ const purpose=read('purpose/index.html'),education=read('education/index.html');
 const leaders=read('community-leaders/index.html'),gateway=read('netlify/functions/portal-gateway.mjs');
 for(const p of ['purpose','education','community-leaders'])assert.ok(existsSync(p+'/index.html'),p+' route missing');
 assert.match(home,/<a href="\/community-leaders\/">Community Leaders<\/a>/);
+assert.match(home,/SANCTUM EROS LEADERSHIP COMMITTEE/);
+assert.doesNotMatch(home,/SE-SELC/i);
+for(const doc of [home,purpose,education,leaders]){
+ assert.match(doc,/https:\/\/sanctumportal\.org/, 'Use canonical Portal domain');
+ assert.match(doc,/https:\/\/sanctumeroshub\.org\/community\//, 'Use canonical Hub community destination');
+}
+
 assert.match(home,/<section class="section community-network"/);
 assert.match(home,/<a[^>]+href="\/community-leaders\/"[^>]*>COMMUNITY LEADERS &amp; APPLICATION|href="\/community-leaders\/">COMMUNITY LEADERS & APPLICATION/);
 assert.match(home,/href="\/purpose\/">GET TO KNOW US/);
