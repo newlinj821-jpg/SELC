@@ -210,7 +210,7 @@ async function certificationPage(){
  markup+=card('<h2>Read before assessment</h2><p>A score of '+esc(data.passPercent)+'% is required. Review and retry missed questions. Your completion is recorded against the accepted application.</p>'+lessons.map(([t,p],i)=>'<div class="hq-row"><div class="grow"><strong>'+(i+1)+'. '+esc(t)+'</strong><p class="hq-prose">'+esc(p)+'</p></div></div>').join(''));
  markup+=assignments.map(a=>card('<span class="hq-eyebrow">'+esc(a.type==='coordinator'?'COORDINATOR ADVANCEMENT':'REPRESENTATIVE ENTRY')+'</span><h2>'+esc(a.type==='coordinator'?'Coordinator certification':'Representative certification')+'</h2><form class="hq-form" data-cert-form="'+esc(a.id)+'">'+a.questions.map((q,i)=>'<fieldset><legend>'+(i+1)+'. '+esc(q.prompt)+'</legend>'+q.options.map(o=>'<label class="checkline"><input type="radio" name="'+esc(q.id)+'" value="'+esc(o.value)+'" required> '+esc(o.label)+'</label>').join('')+'</fieldset>').join('')+'<label class="checkline"><input type="checkbox" name="acknowledge" value="yes" required> I will uphold SELC consent, confidentiality, nonretaliation, impartiality and access-control rules.</label><p data-status class="hq-form-status" role="status"></p><button type="submit" class="hq-button primary">Submit certification assessment</button></form>')).join('');
  setContent(markup);
- $('[data-cert-form]').forEach(form=>watchForm(form,async(values,el)=>{
+ document.querySelectorAll('[data-cert-form]').forEach(form=>watchForm(form,async(values,el)=>{
   const acknowledge=el.querySelector('[name="acknowledge"]').checked;
   const answers={...values};delete answers.acknowledge;
   const result=await post('selc-governance','complete_certification',{id:el.dataset.certForm,answers,acknowledge});
