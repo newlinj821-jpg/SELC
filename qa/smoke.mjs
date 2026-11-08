@@ -17,14 +17,14 @@ for(const doc of [home,purpose,education,leaders]){
 assert.match(home,/<section class="section community-network"/);
 assert.match(home,/<a[^>]+href="\/community-leaders\/"[^>]*>COMMUNITY LEADERS &amp; APPLICATION|href="\/community-leaders\/">COMMUNITY LEADERS & APPLICATION/);
 assert.match(home,/href="\/purpose\/">GET TO KNOW US/);
-assert.match(home,/href="https:\/\/sanctumportal\.org\/ecosystem-connect\.html\?app=selc"/);
+assert.match(home,/href="https:\/\/sanctumportal\.org\/selc-connect\.html"/);
 assert.match(home,/login-handoff/);
-assert.match(home,/selc-login-10/);
+assert.match(home,/selc-unified-11/);
 assert.match(css,/\.login-handoff>\.button/);
 assert.match(css,/max-height:calc\(100dvh - 20px\)/);
 assert.match(app,/\$\$\('\[data-leader-review\]'\)\.forEach/);
 assert.match(app,/if\(!response\.ok\)/);
-assert.match(app,/error\?\.status===401/);
+assert.match(app,/error\?\.requestId/);
 assert.match(leaders,/id="leaderApplication"/);
 const organizerJS=read('community-leaders/account.js');
 const organizerCSS=read('editorial.css');
@@ -71,3 +71,9 @@ assert.match(app,/async function certificationPage\(\)/);
 assert.match(app,/action.*complete_certification|complete_certification/);
 assert.match(app,/\['certification','✓','SELC certification'/);
 console.log('SELC public route, branding, login UI, Community Leaders and gateway source checks passed.');
+
+assert.match(app,/const response=await fetch\(url,options\)/);
+assert.doesNotMatch(app,/fetch\(local,\{\.\.\.options/,'No credential retry through a second gateway');
+assert.match(app,/portal_connection/);
+assert.match(app,/requestId/);
+assert.doesNotMatch(home,/CONTINUE WITH MEMBER PORTAL|CONTINUE WITH OWNER PORTAL/);
