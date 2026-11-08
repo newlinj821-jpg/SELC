@@ -126,7 +126,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:()=>requestsPage('education'),generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,myaccount:accountPage};
+  const pages={home:homePage,join:joinPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),educators:educationProgramsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -279,6 +279,23 @@ async function proposalPage(){
   $$('[data-chair]',d).forEach(x=>x.onclick=async()=>{const reason=prompt('Give a reason or brief summary for this decision:')||'';if(!reason)return;try{await post('selc-governance','decide_proposal',{id:p.id,decision:x.dataset.chair,reason});d.close();proposalPage()}catch(e){flash(e.message)}});
  });
 }
+async function educationProgramsPage(){
+ const [data]=await Promise.all([api('education-programs')]),plans=data.plans||[];
+ let markup=pageHeader('LEARN / TEACH / SHARE','Community Education Program','Work with educators to shape practical workshops. No class becomes a published event until Eros approves its scheduling.',btn('Education conversations','data-page-link="requests"'));
+ markup+='<div class="hq-stats">'+[['WORKSHOP IDEAS',plans.length],['UNDER SELC REVIEW',plans.filter(p=>p.status==='SELC Review').length],['AWAITING FOUNDER',plans.filter(p=>p.status==='Ready for Founder').length],['APPROVED TO SCHEDULE',plans.filter(p=>p.status==='Approved for Scheduling').length]].map(([label,n])=>'<div class="hq-stat"><small>'+label+'</small><strong>'+number(n)+'</strong></div>').join('')+'</div>';
+ markup+=plans.length?plans.map(p=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(p.educatorName||'Community Educator')+'</span><h2>'+esc(p.title)+'</h2><p>'+esc(p.summary||p.objectives||'Workshop proposal')+'</p><p class="hq-micro">Updated '+esc(date(p.updatedAt))+'</p></div>'+tag(p.status)+btn('Review plan','data-edu-plan="'+esc(p.requestId)+'"')+'</div>')).join(''):empty('Start building your education calendar','Educators can propose workshops in their Member Portal. Approved plans appear here for review, mentoring, and scheduling.');
+ setContent(markup);bindPageLinks();
+ $$('[data-edu-plan]').forEach(b=>b.onclick=()=>{
+  const p=plans.find(x=>x.requestId===b.dataset.eduPlan);if(!p)return;
+  const body='<p>'+tag(p.status)+' · '+esc(p.educatorName||'Educator')+'</p><h3>Learning objectives</h3><p class="hq-prose">'+esc(p.objectives||'To be developed')+'</p><h3>Course outline</h3><p class="hq-prose">'+esc(p.outline||'To be developed')+'</p><h3>Consent and safety</h3><p class="hq-prose">'+esc(p.consentSafety||'To be developed')+'</p><h3>Equipment & accessibility</h3><p class="hq-prose">'+esc(p.equipment||'Not specified')+'</p><p class="hq-prose">'+esc(p.accessibility||'Not specified')+'</p><h3>Mentorship and notes</h3><p class="hq-prose">'+esc(p.mentorRequest||'No mentor requested')+'</p>'+(p.notes||[]).map(n=>'<div class="hq-row"><div class="grow"><strong>'+esc(n.by)+'</strong><p class="hq-prose">'+esc(n.text)+'</p></div></div>').join('')+
+  '<form class="hq-form" id="eduReview"><label>Review outcome</label><select name="status"><option value="Development">Keep in development</option><option value="Changes Requested">Request changes</option><option value="Ready for Founder">Ready for Founder review</option></select><label>Notes for the educator</label><textarea name="note" minlength="15" required rows="4"></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Send review</button></form>'+
+  (owner()?'<form class="hq-form" id="eduFounder"><h3>Founder decision</h3><label>Decision</label><select name="decision"><option value="approve">Approve for scheduling</option><option value="return">Return for revision</option><option value="decline">Decline proposal</option><option value="complete">Mark completed after the workshop</option></select><label>Reason</label><textarea name="note" minlength="15" required></textarea><p data-status class="hq-form-status"></p><button class="hq-button primary" type="submit">Record decision</button></form>':'');
+  const dlg=modal(p.title,body);
+  watchForm($('#eduReview',dlg),async vals=>{await post('education-programs','review',{requestId:p.requestId,...vals});dlg.close();flash('Workshop review saved.');educationProgramsPage()});
+  watchForm($('#eduFounder',dlg),async vals=>{if(!confirmDecision('Record the Founder decision? This does not automatically publish an event.'))return;await post('education-programs','decision',{requestId:p.requestId,...vals});dlg.close();flash('Education decision recorded.');educationProgramsPage()});
+ });
+}
+
 async function requestsPage(filter='all'){
  const d=await api('community-requests'),rows=(d.requests||[]).filter(r=>filter==='education'?r.kind?.startsWith('educator_')||r.kind==='member_class_request':true);
  const title=filter==='education'?'Education & workshops':'Community conversations';
