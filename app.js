@@ -145,6 +145,7 @@ async function beginHeadquarters(){
 }
 const NAV=[
  ['home','⌂','Overview','Your work',u=>!organizerRole(u)],
+ ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
  ['join','✎','Apply to SELC','Your work',u=>u==='member'],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
@@ -154,6 +155,8 @@ const NAV=[
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
  ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
  ['proposals','◉','Proposals & votes','Committee',u=>committeeRole(u)],
+ ['content','✎','Website content','Committee',u=>committeeRole(u)],
+ ['chat','▤','Community chat','Community',u=>!['community-applicant'].includes(u)],
  ['requests','↗','Community conversations','Committee',u=>committeeRole(u)],
  ['communityleaders','◇','Community Leaders network','Partnerships'],
  ['applyeducator','✦','Become a Community Educator','Education',u=>!organizerRole(u)],
@@ -164,6 +167,7 @@ const NAV=[
  ['volunteer','✋','Volunteer shifts','Event operations',u=>committeeRole(u)],
  ['door','⌗','Check-in & tickets','Event operations',u=>committeeRole(u)],
  ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
+ ['banhistory','⌛','Ban history','Safety',u=>committeeRole(u)],
  ['appeals','⚖','Access appeals','Safety',u=>u==='coordinator'||u==='founder'],
  ['myaccount','◎','My account','Your work']
 ];
@@ -179,6 +183,7 @@ function setupHQNav(){
 function closeHQNav(){$('#hqSidebar').classList.remove('open');$('#hqShade').classList.remove('open');$('#hqMenu').setAttribute('aria-expanded','false')}
 async function signOut(){try{await post('selc-auth','logout')}catch{}clearAccess();$('#headquarters').classList.add('hidden');$('#headquarters').setAttribute('aria-hidden','true');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';history.replaceState(null,'',location.pathname);scrollTo(0,0);flash('Signed out of SELC. Your Portal account remains separate.')}
 async function openPage(page){
+ if(context.chatTimer){clearTimeout(context.chatTimer);context.chatTimer=null}
  const allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())));
  if(!allowed)page=organizerRole(role())?'communityleaders':'home';context.activePage=page;
  $$('#hqNavigation [data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
@@ -186,7 +191,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -231,8 +236,8 @@ async function certificationPage(){
  const lessons=[
  ['Structure & accountability','SELC is the internal Sanctum Eros committee. Only approved SE members may apply for a seat. The Founder makes final appointments and organizational decisions. An outside Community Leader cannot vote or act as SELC Staff.'],
  ['Consent & safety','Consent is active and revocable. Stop an activity immediately when consent is withdrawn. Social participation can begin at age 18; dungeon play parties are 21+ and subject to venue rules.'],
- ['Confidentiality & reports','Membership and incident records are private and accessible only for approved purposes. An allegation is not a finding. Preserve records in approved systems, disclose conflicts, avoid gossip and retaliation, and use the appropriate review process.'],
- ['Collaboration & escalation','Community Leaders share limited information through controlled channels. Outside notices do not automatically trigger an SE ban. Representatives do not act beyond their permissions. Coordinators must respect appeals, evidence, recusal and the Founder’s final authority.']
+ ['Confidentiality & reports','Keep member and incident information confidential. Use the established reporting process.'],
+ ['Collaboration & escalation','Coordinate community programs, discuss concerns through the appropriate channels, and refer final decisions to the Founder.']
  ];
  markup+=card('<h2>Read before assessment</h2><p>A score of '+esc(data.passPercent)+'% is required. Review and retry missed questions. Your completion is recorded against the accepted application.</p>'+lessons.map(([t,p],i)=>'<div class="hq-row"><div class="grow"><strong>'+(i+1)+'. '+esc(t)+'</strong><p class="hq-prose">'+esc(p)+'</p></div></div>').join(''));
  markup+=assignments.map(a=>card('<span class="hq-eyebrow">'+esc(a.type==='coordinator'?'COORDINATOR ADVANCEMENT':'REPRESENTATIVE ENTRY')+'</span><h2>'+esc(a.type==='coordinator'?'Coordinator certification':'Representative certification')+'</h2><form class="hq-form" data-cert-form="'+esc(a.id)+'">'+a.questions.map((q,i)=>'<fieldset><legend>'+(i+1)+'. '+esc(q.prompt)+'</legend>'+q.options.map(o=>'<label class="checkline"><input type="radio" name="'+esc(q.id)+'" value="'+esc(o.value)+'" required> '+esc(o.label)+'</label>').join('')+'</fieldset>').join('')+'<label class="checkline"><input type="checkbox" name="acknowledge" value="yes" required> I will uphold SELC consent, confidentiality, nonretaliation, impartiality and access-control rules.</label><p data-status class="hq-form-status" role="status"></p><button type="submit" class="hq-button primary">Submit certification assessment</button></form>')).join('');
@@ -428,20 +433,21 @@ async function requestsPage(filter='all'){
  });
 }
 async function generalAppsPage(){
- const [apps,members]=await Promise.all([api('applications'),api('members',{query:{status:'pending'}})]),roles=apps.applications||[],memberRows=members.members||[];
+ const [apps,members]=await Promise.all([api('applications'),api('members',{query:{status:'pending'}})]),all=apps.applications||[],roles=all.filter(a=>a.type!=='admission_assistance'),assistance=all.filter(a=>a.type==='admission_assistance'&&!a.eventArchived&&['Pending','Under Review','Approved'].includes(a.status)),reviewable=[...roles,...assistance],memberRows=members.members||[];
  let markup=pageHeader('MEMBERS & OPPORTUNITIES','Applications','SELC Representatives can help review routine membership and role applications. Elevated IA Staff appointments receive additional review.');
- markup+='<div class="hq-tabs"><button class="active" data-app-tab="membership">Membership ('+memberRows.length+')</button><button data-app-tab="roles">Roles & educators ('+roles.length+')</button></div>';
+ markup+='<div class="hq-tabs"><button class="active" data-app-tab="membership">Membership ('+memberRows.length+')</button><button data-app-tab="roles">Roles & educators ('+roles.length+')</button><button data-app-tab="assistance">Admission Assistance ('+assistance.length+')</button></div>';
  markup+='<section id="membershipTab">'+(memberRows.length?memberRows.map(m=>card('<div class="hq-row"><div class="grow"><strong>'+esc(m.name||'Applicant')+'</strong><p>'+esc(m.fetlife?'@'+m.fetlife:m.loginEmail)+' · '+esc(date(m.createdAt))+'</p></div>'+tag(m.status)+btn('Review','data-member-app="'+esc(m.id)+'"')+'</div>')).join(''):empty('No pending memberships'))+'</section>';
  markup+='<section id="roleTab" hidden>'+(roles.length?roles.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.name||'Applicant')+'</strong><p>'+esc((a.type||'').replaceAll('_',' '))+' · '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+btn('Review','data-role-app="'+esc(a.id)+'"')+'</div>')).join(''):empty('No role applications'))+'</section>';
+ markup+='<section id="assistanceTab" hidden>'+(assistance.length?assistance.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.name||'Applicant')+'</strong><p>Event: '+esc(a.eventTitle||a.event||'Unknown event')+' · '+esc(date(a.eventStart))+'</p><p>'+esc(a.requestType||'Admission Assistance')+'</p></div>'+tag(a.status)+btn('Review','data-role-app="'+esc(a.id)+'"')+'</div>')).join(''):empty('No current Admission Assistance requests','Requests for previous events are retained in Portal history but no longer appear in this queue.'))+'</section>';
  setContent(markup);
- $$('[data-app-tab]').forEach(b=>b.onclick=()=>{$$('[data-app-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#membershipTab').hidden=b.dataset.appTab!=='membership';$('#roleTab').hidden=b.dataset.appTab!=='roles'});
+ $$('[data-app-tab]').forEach(b=>b.onclick=()=>{$$('[data-app-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#membershipTab').hidden=b.dataset.appTab!=='membership';$('#roleTab').hidden=b.dataset.appTab!=='roles';$('#assistanceTab').hidden=b.dataset.appTab!=='assistance'});
  $$('[data-member-app]').forEach(b=>b.onclick=()=>{const m=memberRows.find(x=>x.id===b.dataset.memberApp);if(!m)return;
   const details=['name','fetlife','loginEmail','generalArea','about','experience','limits','whyJoin','communityConflict','adminNotes','reviewAssist'].filter(k=>m[k]).map(k=>'<div class="hq-row"><div class="grow"><strong>'+esc(k)+'</strong><p class="hq-prose">'+esc(typeof m[k]==='object'?JSON.stringify(m[k]):m[k])+'</p></div></div>').join('');
   const dlg=modal('Membership application','<div class="hq-card">'+details+'</div><form class="hq-form" id="memberReview"><label>Private review notes</label><textarea name="adminNotes" rows="4"></textarea><p data-status class="hq-form-status"></p><div class="hq-actions">'+btn('Approve','data-membership-decision="approved"','primary')+btn('Decline','data-membership-decision="denied"','danger')+btn('Keep pending','data-membership-decision="pending"')+'</div></form>');
   $$('[data-membership-decision]',dlg).forEach(x=>x.onclick=async()=>{if(!confirmDecision('Record this membership decision?'))return;try{await api('members',{method:'POST',body:{adminAction:x.dataset.membershipDecision,id:m.id,...formValues($('#memberReview',dlg))}});dlg.close();flash('Membership updated.');generalAppsPage()}catch(e){setStatus($('[data-status]',dlg),e.message)}});
  });
- $$('[data-role-app]').forEach(b=>b.onclick=()=>{const a=roles.find(x=>x.id===b.dataset.roleApp);if(!a)return;const details=Object.entries(a).filter(([k,v])=>!['passwordHash','salt','securityAnswerHash'].includes(k)&&v!==null&&typeof v!=='object').slice(0,25).map(([k,v])=>'<div class="hq-row"><div class="grow"><strong>'+esc(k)+'</strong><p class="hq-prose">'+esc(v)+'</p></div></div>').join('');
-  const dlg=modal('Role application','<div class="hq-card">'+details+'</div><form class="hq-form" id="roleReview"><label>Internal notes</label><textarea name="adminNotes"></textarea><label>Message for applicant</label><textarea name="memberResponse"></textarea><p data-status class="hq-form-status"></p><div class="hq-actions">'+btn('Approve','data-role-decision="Approved"','primary')+btn('Decline','data-role-decision="Declined"','danger')+btn('Under review','data-role-decision="Under Review"')+'</div></form>');
+ $$('[data-role-app]').forEach(b=>b.onclick=()=>{const a=reviewable.find(x=>x.id===b.dataset.roleApp);if(!a)return;const details=Object.entries(a).filter(([k,v])=>!['passwordHash','salt','securityAnswerHash'].includes(k)&&v!==null&&typeof v!=='object').slice(0,25).map(([k,v])=>'<div class="hq-row"><div class="grow"><strong>'+esc(k)+'</strong><p class="hq-prose">'+esc(v)+'</p></div></div>').join('');
+  const dlg=modal(a.type==='admission_assistance'?'Admission Assistance · '+(a.eventTitle||a.event||'Event'):'Role application','<div class="hq-card">'+(a.type==='admission_assistance'?'<h3>Event: '+esc(a.eventTitle||a.event||'Unknown event')+'</h3><p>'+esc(date(a.eventStart))+'</p>':'')+details+'</div><form class="hq-form" id="roleReview">'+(a.type==='admission_assistance'?'<label>Admission option</label><select name="approvedAdmissionType"><option value="free">Free admission</option><option value="discounted">Reduced admission</option><option value="barter">Barter</option></select><label>Approved amount (if reduced)</label><input type="number" min="0" name="approvedAmount">':'')+'<label>Internal notes</label><textarea name="adminNotes"></textarea><label>Message for applicant</label><textarea name="memberResponse"></textarea><p data-status class="hq-form-status"></p><div class="hq-actions">'+btn('Approve','data-role-decision="Approved"','primary')+btn('Decline','data-role-decision="Declined"','danger')+btn('Under review','data-role-decision="Under Review"')+'</div></form>');
   $$('[data-role-decision]',dlg).forEach(x=>x.onclick=async()=>{try{await api('applications',{method:'POST',body:{adminAction:'review',id:a.id,status:x.dataset.roleDecision,...formValues($('#roleReview',dlg))}});dlg.close();flash('Application updated.');generalAppsPage()}catch(e){setStatus($('[data-status]',dlg),e.message)}});
  });
 }
@@ -458,7 +464,7 @@ async function volunteerPage(){
    return '<div class="hq-row"><div class="grow"><strong>'+esc(slot.label)+(slot.role==='dm'?' · Certified DM':'')+'</strong><p>'+esc(slot.description||'Help make this event run smoothly.')+'</p><p class="hq-micro">'+slot.filled+'/'+slot.count+' filled'+(slot.claims.length?' · '+slot.claims.map(c=>esc(c.mine?'You':c.name)).join(', '):'')+'</p></div>'+
     (owner()?'':own?btn('Release','data-release-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','danger'):slot.open>0&&me.certified&&me.linked&&(slot.role!=='dm'||me.dm)?btn('Volunteer','data-claim-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','primary'):tag(slot.open>0?'Requires qualification':'Full'))+'</div>';
   }).join('');
-  return card(head+'<div class="hq-panel-list">'+shifts+'</div>'+btn('Event handover notes','data-handover="'+esc(e.event.id)+'"'));
+  return card(head+'<div class="hq-panel-list">'+shifts+'</div><div class="hq-actions">'+btn('Event handover notes','data-handover="'+esc(e.event.id)+'"')+(owner()?btn('Manage volunteer positions','data-manage-shifts="'+esc(e.event.id)+'"','primary'):'')+'</div>');
  }).join('');
  if(!events.length)html+=empty('No upcoming volunteer shifts','Positions will appear automatically when an event is published.');
  setContent(html);
@@ -467,6 +473,28 @@ async function volunteerPage(){
   const entries=notes.map(n=>'<div class="hq-row"><div class="grow"><strong>'+esc(n.by)+' · '+esc(n.kind)+'</strong><p class="hq-prose">'+esc(n.text)+'</p><small>'+esc(date(n.at))+'</small></div></div>').join('');
   const dlg=modal('Shift handover · '+(d.event?.title||'Event'),'<p class="hq-muted">Share operational updates, staffing changes and equipment checks. Private investigations belong in the separate IA workflow.</p>'+entries+'<form id="handoverForm" class="hq-form"><label>Type</label><select name="kind">'+['arrival','equipment','support','staffing','closing','general'].map(k=>'<option value="'+k+'">'+esc(k)+'</option>').join('')+'</select><label>What does the incoming team need to know?</label><textarea name="text" minlength="15" rows="4" required></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Save handover</button></form>');
   watchForm($('#handoverForm',dlg),async vals=>{await post('shifts','handoff',{eventId,...vals});dlg.close();flash('Handover note saved.');volunteerPage()});
+  }catch(e){flash(e.message)}
+ });
+ $$('[data-manage-shifts]').forEach(button=>button.onclick=async()=>{
+  const eventId=button.dataset.manageShifts;
+  try{
+   const data=await api('shifts',{query:{eventId}}),slots=data.slots||[];
+   const form='<form id="manageShiftForm" class="hq-form">'+slots.map((slot,i)=>
+    '<fieldset class="hq-card"><legend>'+esc(slot.label)+'</legend><input type="hidden" name="id'+i+'" value="'+esc(slot.id)+'"><label>Position<select name="role'+i+'"><option value="staff" '+(slot.role==='staff'?'selected':'')+'>Staff</option><option value="dm" '+(slot.role==='dm'?'selected':'')+'>Dungeon Monitor</option></select></label><label>Shift name<input name="label'+i+'" value="'+esc(slot.label)+'" required></label><label>Positions needed<input type="number" name="count'+i+'" min="1" max="20" value="'+number(slot.count)+'"></label><label>Description<input name="description'+i+'" value="'+esc(slot.description||'')+'"></label>'+
+    slot.claims.map(c=>'<div class="hq-row"><span>'+esc(c.name)+'</span>'+btn('Remove volunteer','data-remove-volunteer="'+esc(eventId)+'|'+esc(slot.id)+'|'+esc(c.staffId||'')+'"','danger')+'</div>').join('')+'</fieldset>').join('')+
+    '<fieldset class="hq-card"><legend>Add another position (optional)</legend><label>Type<select name="newRole"><option value="staff">Staff</option><option value="dm">Dungeon Monitor</option></select></label><label>Title<input name="newLabel" placeholder="Setup / Door / DM"></label><label>Number needed<input type="number" name="newCount" min="1" max="20" value="1"></label></fieldset><p data-status></p><button class="hq-button primary">Save volunteer positions</button></form>';
+   const dlg=modal('Volunteer management · '+esc(data.event.title),form);
+   watchForm($('#manageShiftForm',dlg),async values=>{
+    const result=slots.map((x,i)=>({id:values['id'+i],role:values['role'+i],label:values['label'+i],count:Number(values['count'+i]),description:values['description'+i]}));
+    if(values.newLabel)result.push({role:values.newRole,label:values.newLabel,count:Number(values.newCount)||1});
+    await post('shifts','set_slots',{eventId,slots:result});
+    dlg.close();flash('Volunteer positions saved.');volunteerPage();
+   });
+   $('[data-remove-volunteer]',dlg).forEach(b=>b.onclick=async()=>{
+    const [ev,slotId,staffId]=b.dataset.removeVolunteer.split('|');
+    if(!staffId||!confirmDecision('Remove this volunteer from the shift?'))return;
+    try{await post('shifts','remove_claim',{eventId:ev,slotId,staffId});dlg.close();flash('Volunteer removed.');volunteerPage()}catch(error){flash(error.message)}
+   });
   }catch(e){flash(e.message)}
  });
  $$('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
@@ -592,8 +620,8 @@ async function communityLeadersPage(){
   const directory=d.directory||[];
   markup+=card('<h2>Message Community Leaders, SELC or Eros</h2><p>Messages are visible only to the selected recipients. Other Sanctum Eros Staff do not receive Community Leaders messages.</p><form id="communityMessage" class="hq-form"><label>Send to</label><select name="audience" id="communityAudience"><option value="network">All approved organizers and SELC</option><option value="committee">SELC committee</option><option value="founder">Founder / Eros only</option><option value="leader">One Community Leader</option></select><div id="communityRecipientWrap" hidden><label>Choose an approved organizer</label><select name="recipientId"><option value="">Select a recipient</option>'+directory.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.organization||p.name||'Community Leader')+'</option>').join('')+'</select></div><label>Subject</label><input name="topic" minlength="5" maxlength="140" required><label>Your message</label><textarea name="message" rows="5" minlength="20" maxlength="5000" required></textarea><p data-status></p><button class="hq-button primary">Send message</button></form>');
   markup+=card('<h2>Conversations</h2>'+((d.messages||[]).length?(d.messages||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+esc(m.topic)+'</strong><p class="hq-prose">'+esc(m.message)+'</p><small>'+esc(m.organization||'Organizer')+' · '+esc(m.by||'Leader')+' · '+esc(m.audience==='network'?'Network':m.audience==='committee'?'SELC committee':m.audience==='founder'?'Founder only':'Direct leader')+' · '+esc(date(m.at))+'</small></div></div>').join(''):empty('No conversations yet','Start a message with the network, SELC, Eros or another approved organizer.')));
-  markup+=card('<h2>Reviewed safety notices</h2><p>These are source-organization statements, not automatic Sanctum Eros findings. Only minimized, Founder-approved notices appear here.</p>'+((d.sharedSafety||[]).length?d.sharedSafety.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.title)+'</strong><p class="hq-prose">'+esc(x.summary)+'</p><small>'+esc(x.sourceOrganization||'Source')+' · '+esc(x.sourceDisposition||'Reported')+' · '+esc(date(x.at))+'</small></div></div>').join(''):empty('No shared notices','Private IA case files and member records do not appear here.')));
-  markup+=card('<h2>Propose a reviewed safety notice</h2><p>Only the Founder can authorize sharing. Identify the source status accurately, exclude raw evidence, and document a lawful disclosure basis. An allegation is not a finding.</p><form id="communitySafety" class="hq-form"><label>Category</label><select name="category"><option value="incident">Incident report</option><option value="restriction">Organization restriction</option><option value="ban">Organization-issued ban</option><option value="practice">Policy guidance</option></select><label>Status at source organization</label><select name="sourceDisposition"><option value="Reported">Reported, unverified</option><option value="Under Review">Under review</option><option value="Organization Restriction">Organization restriction</option><option value="Organization Ban">Organization ban</option><option value="Organizational Guidance">Organizational guidance</option></select><label>Notice title</label><input name="title" minlength="5" maxlength="140" required><label>Subject name (only if necessary and legally appropriate)</label><input name="subjectName" maxlength="140"><label>Minimized factual summary</label><textarea name="summary" minlength="80" maxlength="3500" rows="5" required></textarea><label>Documented consent or other lawful disclosure basis</label><textarea name="disclosureBasis" minlength="50" maxlength="1500" rows="3" required></textarea><label><input name="acknowledgeSensitive" type="checkbox" required> I have removed raw IA evidence, unnecessary identities, and unsupported allegations.</label><p data-status></p><button class="hq-button">Request Founder review</button></form>');
+  markup+=card('<h2>Reviewed safety notices</h2><p>Updates approved for the Community Leaders network.</p>'+((d.sharedSafety||[]).length?d.sharedSafety.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.title)+'</strong><p class="hq-prose">'+esc(x.summary)+'</p><small>'+esc(x.sourceOrganization||'Source')+' · '+esc(x.sourceDisposition||'Reported')+' · '+esc(date(x.at))+'</small></div></div>').join(''):empty('No shared notices','Approved network notices appear here.')));
+  markup+=card('<h2>Propose a reviewed safety notice</h2><p>Submit a brief notice for Founder review.</p><form id="communitySafety" class="hq-form"><label>Category</label><select name="category"><option value="incident">Incident report</option><option value="restriction">Organization restriction</option><option value="ban">Organization-issued ban</option><option value="practice">Policy guidance</option></select><label>Status at source organization</label><select name="sourceDisposition"><option value="Reported">Reported, unverified</option><option value="Under Review">Under review</option><option value="Organization Restriction">Organization restriction</option><option value="Organization Ban">Organization ban</option><option value="Organizational Guidance">Organizational guidance</option></select><label>Notice title</label><input name="title" minlength="5" maxlength="140" required><label>Subject name (only if necessary and legally appropriate)</label><input name="subjectName" maxlength="140"><label>Minimized factual summary</label><textarea name="summary" minlength="80" maxlength="3500" rows="5" required></textarea><label>Documented consent or other lawful disclosure basis</label><textarea name="disclosureBasis" minlength="50" maxlength="1500" rows="3" required></textarea><label><input name="acknowledgeSensitive" type="checkbox" required> I have removed raw IA evidence, unnecessary identities, and unsupported allegations.</label><p data-status></p><button class="hq-button">Request Founder review</button></form>');
  }
  if(d.canReview){
   markup+=card('<h2>Community Leader applications</h2>'+((d.applications||[]).length?d.applications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.organization)+' · '+esc(a.leaderName)+'</strong><p>'+esc(a.experience)+'</p><p>'+esc(a.motivation)+'</p><small>'+esc(a.status)+' · '+esc(date(a.submittedAt))+'</small></div>'+btn('Review','data-leader-review="'+esc(a.id)+'"')+'</div>').join(''):empty('No applications','Applications from other organizations appear here.')));
@@ -627,6 +655,88 @@ async function communityLeadersPage(){
   const id=button.dataset.shareApprove||button.dataset.shareDecline,decision=button.dataset.shareApprove?'Approved':'Declined';
   if(!await confirmDecision('Record '+decision+' for this inter-organizational safety summary? This action is auditable.'))return;
   try{await post('community-leaders','approve_safety_share',{id,decision});communityLeadersPage()}catch(e){flash(e.message)}
+ });
+}
+
+
+async function founderDeskPage(){
+ if(!owner())return openPage('home');
+ const links=[
+  ['Website changes','content','Review proposed Hub, Portal and SELC wording'],
+  ['Community chat','chat','Join the rooms you oversee'],
+  ['Ban history','banhistory','Current, expired and lifted restrictions'],
+  ['Volunteer management','volunteer','Review event coverage and shifts'],
+  ['Committee & educator applications','applications','Approve appointments and invitations'],
+  ['Rules, votes & proposals','proposals','Review committee recommendations'],
+  ['Events & RSVPs','events','Event operations and roster'],
+  ['Member & role applications','generalapps','Membership and staff approvals']
+ ];
+ setContent(pageHeader('FOUNDER & CHAIR','Founder desk','Focused oversight across SELC, operations and community programs.')+
+  '<div class="hq-stats">'+links.map(([title,target,desc])=>'<button class="hq-card" data-go="'+esc(target)+'" style="text-align:left;cursor:pointer"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p></button>').join('')+'</div>');
+ $$('[data-go]').forEach(el=>el.onclick=()=>openPage(el.dataset.go));
+}
+async function banHistoryPage(){
+ const d=await api('ban-history'),rows=d.records||[];
+ let filter='all',search='';
+ function render(){
+  const visible=rows.filter(x=>(filter==='all'||x.status===filter)&&(!search||[x.name,x.fetlife,...(x.aliases||[])].join(' ').toLowerCase().includes(search)));
+  const stats='<p class="hq-muted">'+rows.length+' historical and current records · '+rows.filter(x=>['Active','Temporary'].includes(x.status)).length+' currently in force</p>';
+  $('#banRows').innerHTML=stats+(visible.length?visible.map(x=>card('<div class="hq-row"><div class="grow"><strong>'+esc(x.name)+'</strong><p>'+esc(x.fetlife?'@'+x.fetlife:'')+' · '+esc(x.kind)+' · '+esc(date(x.bannedAt))+'</p><p>'+esc(x.reason||'No public-facing reason recorded')+'</p><small>'+(x.liftedAt?'Lifted '+esc(date(x.liftedAt))+' · ':'')+(x.expiredAt?'Expired '+esc(date(x.expiredAt))+' · ':'')+(x.expiresAt?'End '+esc(date(x.expiresAt)):'')+'</small></div>'+tag(x.status)+'</div>')).join(''):empty('No matching records','Change the filter or search.'));
+ }
+ setContent(pageHeader('RESTRICTION HISTORY','Current & previous bans','Search the complete Sanctum Eros restriction ledger. Decisions and investigation records remain separate.')+
+  card('<div class="hq-form-grid"><label>Search<input id="banSearch" type="search" placeholder="Name or username"></label><label>Status<select id="banFilter"><option value="all">All statuses</option><option>Active</option><option>Temporary</option><option>Lifted</option><option>Expired</option><option>Inactive</option></select></label></div>')+'<div id="banRows"></div>');
+ $('#banSearch').oninput=e=>{search=e.target.value.toLowerCase();render()};
+ $('#banFilter').onchange=e=>{filter=e.target.value;render()};render();
+}
+async function communityChatPage(){
+ const d=await api('community-chat'),rooms=d.rooms||[];
+ let active=context.chatRoom||rooms.find(x=>x.joined)?.id||rooms[0]?.id||'';
+ if(!rooms.some(x=>x.id===active))active=rooms[0]?.id||'';
+ context.chatRoom=active;
+ const current=rooms.find(x=>x.id===active);
+ const tabs=rooms.map(x=>btn(x.name+(x.joined?' ✓':''),'data-chat-room="'+esc(x.id)+'"',x.id===active?'primary':'')).join('');
+ let html=pageHeader('CONVERSATIONS','Community chat','Join the rooms you are eligible for. Participation is optional.')+
+  card('<div class="hq-actions">'+tabs+'</div>')+
+  (current?card('<h2>'+esc(current.name)+'</h2><p>'+esc(current.description)+'</p>'+
+   (current.joined?'<div id="chatMessages" class="hq-panel-list" style="max-height:370px;overflow:auto"></div><form id="chatSend" class="hq-form"><label>Message<textarea name="message" rows="3" maxlength="1200" required></textarea></label><p data-status></p><button class="hq-button primary">Send</button></form>'+btn('Leave room','data-chat-leave'):'<p>Join to read and participate.</p>'+btn('Join room','data-chat-join','primary'))):
+  empty('No rooms available','Approved roles unlock their corresponding rooms.'));
+ setContent(html);
+ $$('[data-chat-room]').forEach(x=>x.onclick=()=>{context.chatRoom=x.dataset.chatRoom;communityChatPage()});
+ async function refresh(){
+  if(context.activePage!=='chat'||!current?.joined)return;
+  try{
+   const result=await api('community-chat',{query:{room:current.id}});
+   const container=$('#chatMessages');
+   if(container){const nearBottom=container.scrollHeight-container.scrollTop-container.clientHeight<80;
+    container.innerHTML=(result.messages||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+esc(m.name)+'</strong><small> · '+esc(date(m.createdAt))+'</small><p class="hq-prose">'+esc(m.message)+'</p></div></div>').join('')||'<p class="hq-muted">No messages yet.</p>';
+    if(nearBottom)container.scrollTop=container.scrollHeight;
+   }
+  }catch(err){if($('#chatMessages'))$('#chatMessages').textContent=err.message}
+  if(context.activePage==='chat')context.chatTimer=setTimeout(refresh,12000);
+ }
+ if(current?.joined){
+  watchForm($('#chatSend'),async values=>{await post('community-chat','send',{room:active,message:values.message});$('#chatSend').reset();await refresh()});
+  $('[data-chat-leave]').onclick=async()=>{await post('community-chat','leave',{room:active});communityChatPage()};
+  await refresh();
+ }else if(current)$('[data-chat-join]').onclick=async()=>{try{await post('community-chat','join',{room:active});communityChatPage()}catch(e){flash(e.message)}};
+}
+async function contentManagementPage(){
+ const result=await api('selc-content'),rows=result.proposals||[];
+ const choices=[['hub','Hub'],['portal','Member Portal'],['selc','SELC website']];
+ let html=pageHeader('WEBSITE EDITOR','Website & content management','Edit written content, review the committee vote and publish only after Founder approval.')+
+  card('<h2>Propose a change</h2><form id="newContent" class="hq-form"><div class="hq-form-grid"><label>Website<select name="site">'+choices.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('')+'</select></label><label>Page path<input name="path" placeholder="/about/" value="/" required></label></div><label>Exact existing text<textarea name="original" rows="3" required maxlength="2000"></textarea></label><label>Replacement text<textarea name="replacement" rows="4" required maxlength="2000"></textarea></label><label>Reason or context<input name="summary" maxlength="400"></label><p class="hq-muted">This changes displayed wording only. It cannot change code, calculations, permissions or payments. Multiple identical matches on a page will all update.</p><p data-status></p><button class="hq-button primary">Send to committee vote</button></form>');
+ html+='<h2 style="margin:20px 0 10px">Change proposals</h2>';
+ html+=rows.length?rows.map(p=>card('<div class="hq-row"><div class="grow"><small>'+esc(p.site.toUpperCase())+' · '+esc(p.path)+'</small><strong>'+esc(p.summary||p.original.slice(0,90))+'</strong><p><del>'+esc(p.original.slice(0,180))+'</del></p><p>'+esc(p.replacement.slice(0,180))+'</p><small>Votes: '+number(p.tally?.yes)+' support / '+number(p.tally?.needed)+' needed · '+number(p.tally?.no)+' oppose</small></div>'+tag(p.status)+btn('Review','data-content-id="'+esc(p.id)+'"')+'</div>')).join(''):empty('No changes submitted yet');
+ setContent(html);
+ watchForm($('#newContent'),async values=>{await post('selc-content','propose',values);flash('Sent for committee vote.');contentManagementPage()});
+ $$('[data-content-id]').forEach(b=>b.onclick=()=>{
+  const p=rows.find(x=>x.id===b.dataset.contentId);if(!p)return;
+  const base=p.site==='hub'?'https://sanctumeroshub.org':p.site==='selc'?'https://se-selc.netlify.app':'https://sanctumportal.org';
+  const votes=p.status==='Voting'&&!owner()?'<h3>Vote</h3><div class="hq-actions">'+btn('Support','data-content-vote="yes"','primary')+btn('Oppose','data-content-vote="no"')+btn('Abstain','data-content-vote="abstain"')+'</div>':'';
+  const founder=owner()?'<h3>Founder review</h3><div class="hq-actions">'+(p.tally?.passed&&['Voting','Awaiting Founder'].includes(p.status)?btn('Approve & publish','data-content-decision="approve"','primary'):'')+(p.status==='Published'?btn('Rollback change','data-content-decision="rollback"'):'')+(p.status==='Voting'||p.status==='Awaiting Founder'?btn('Return for edits','data-content-decision="return"')+btn('Decline','data-content-decision="decline"','danger'):'')+'</div>':'';
+  const dialog=modal('Review website text','<p><a target="_blank" rel="noopener noreferrer" href="'+base+esc(p.path)+'">View affected page ↗</a></p><h3>Current wording</h3>'+card('<p class="hq-prose">'+esc(p.original)+'</p>')+'<h3>Proposed wording</h3>'+card('<p class="hq-prose">'+esc(p.replacement)+'</p>')+'<p>'+tag(p.status)+' · '+number(p.tally?.yes)+' support · '+number(p.tally?.needed)+' required</p>'+votes+founder);
+  $('[data-content-vote]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','vote',{id:p.id,vote:x.dataset.contentVote});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
+  $('[data-content-decision]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','decide',{id:p.id,decision:x.dataset.contentDecision,reason:''});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
  });
 }
 
