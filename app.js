@@ -865,7 +865,7 @@ async function memberDeskPage(){
  markup+='<div class="hq-stats"><div class="hq-stat"><small>CONVERSATIONS</small><strong>'+rows.length+'</strong></div><div class="hq-stat"><small>NEED REVIEW</small><strong>'+Number(d.counts?.new||0)+'</strong></div></div>';
  markup+=rows.length?rows.map((r,i)=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(r.kind==='incident'?'Opted-in IA report':r.type==='complaint'?'Complaint':r.type==='portal_problem'?'Portal issue':'Member message')+'</span><h2>'+esc(r.subject||'Message')+'</h2><p>'+esc(String(r.message||'').slice(0,180))+'</p><p class="hq-micro">'+esc(r.username||r.caseNumber||'Member')+' · '+esc(date(r.updatedAt||r.createdAt))+'</p></div>'+tag(r.status)+btn('Open conversation','data-member-msg="'+i+'"','primary')+'</div>')).join(''):empty('No shared messages right now','Opted-in member conversations and reports appear here.');
  setContent(markup);
- $('[data-member-msg]').forEach(el=>el.onclick=()=>{
+ $$('[data-member-msg]').forEach(el=>el.onclick=()=>{
   const r=rows[Number(el.dataset.memberMsg)],dialog=modal(r.subject||'Member conversation',
    '<p class="hq-micro">'+esc(r.kind==='incident'?'Private report':r.type==='complaint'?'Complaint':'Message')+' · '+esc(r.status||'Submitted')+'</p>'+
    '<section class="hq-case-message"><h3>Full member message / question</h3><p style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(r.message||'')+'</p>'+(r.kind==='incident'&&r.requestedFollowUp?'<h4>Follow-up requested</h4><p style="white-space:pre-wrap">'+esc(r.requestedFollowUp)+'</p>':'')+'</section>'+deskThreadHtml(r)+
@@ -880,7 +880,7 @@ async function suggestionsDeskPage(){
  let markup=pageHeader('COMMUNITY IDEAS','Suggestions to review','Ideas are submitted through the Member Portal. Review them, reply where permitted, or promote an idea to a committee proposal.');
  markup+=rows.length?rows.map((s,i)=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc((s.category||'other').replaceAll('_',' '))+'</span><h2>'+esc(s.title)+'</h2><p>'+esc((s.details||'').slice(0,190))+'</p><p class="hq-micro">'+esc(s.name||'Anonymous')+' · '+esc(date(s.createdAt))+(s.proposalId?' · Linked committee proposal':'')+'</p></div>'+tag(s.status)+btn('Review','data-suggestion="'+i+'"','primary')+'</div>')).join(''):empty('No suggestions yet','Member suggestions appear here after submission.');
  setContent(markup);
- $('[data-suggestion]').forEach(el=>el.onclick=()=>{
+ $$('[data-suggestion]').forEach(el=>el.onclick=()=>{
   const row=rows[Number(el.dataset.suggestion)];
   const dialog=modal(row.title,
    '<p>'+esc(row.details||'').replaceAll('\n','<br>')+'</p>'+(row.link?'<p><a href="'+esc(row.link)+'" target="_blank" rel="noopener noreferrer">Reference link ↗</a></p>':'')+
@@ -900,7 +900,7 @@ async function feedbackDeskPage(){
  let markup=pageHeader('EVENT EXPERIENCE','Event feedback review','Member ratings and opted-in private feedback. Only explicitly approved public comments can appear on the 30-day community board.');
  markup+=rows.length?rows.map((r,i)=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(r.eventTitle)+'</span><h2>'+Number(r.rating||0)+'/5 · '+esc(r.reviewStatus||'New')+'</h2>'+(r.publicReview?'<p>Public comment: '+esc(r.publicReview).slice(0,180)+'</p>':'')+(r.privateFeedback?'<p>Private: '+esc(r.privateFeedback).slice(0,180)+'</p>':'')+'<p class="hq-micro">'+esc(date(r.updatedAt||r.createdAt))+' · '+(r.publicConsent?'Approved by member for possible publication':'No publication consent')+'</p></div>'+tag(r.showOnBoard?'On public board':r.reviewStatus)+btn('Review','data-event-feedback="'+i+'"','primary')+'</div>')).join(''):empty('No feedback ready for review','Submitted event feedback appears here when members choose to share it with SELC.');
  setContent(markup);
- $('[data-event-feedback]').forEach(el=>el.onclick=()=>{
+ $$('[data-event-feedback]').forEach(el=>el.onclick=()=>{
   const r=rows[Number(el.dataset.eventFeedback)];
   const dialog=modal('Event feedback — '+r.eventTitle,'<p><strong>Rating:</strong> '+r.rating+'/5</p><p><strong>Public comment:</strong> '+esc(r.publicReview||'None').replaceAll('\n','<br>')+'</p><p><strong>Private feedback:</strong> '+esc(r.privateFeedback||'Not shared').replaceAll('\n','<br>')+'</p>'+
    '<form class="hq-form" id="reviewFeedback"><label>Review decision</label><select name="status">'+[['Reviewed','Reviewed'],['For Discussion','For discussion'],['Closed','Closed']].map(([v,l])=>'<option value="'+v+'"'+(r.reviewStatus===v?' selected':'')+'>'+l+'</option>').join('')+'</select>'+
