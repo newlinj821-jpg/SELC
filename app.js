@@ -165,6 +165,7 @@ const NAV=[
  ['generalapps','▧','Member & role applications','Event operations',u=>committeeRole(u)],
  ['events','▦','Events & RSVPs','Event operations',u=>committeeRole(u)],
  ['volunteer','✋','Volunteer shifts','Event operations',u=>committeeRole(u)],
+ ['readiness','▣','Event readiness','Event operations',u=>committeeRole(u)],
  ['door','⌗','Check-in & tickets','Event operations',u=>committeeRole(u)],
  ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
  ['banhistory','⌛','Ban history','Safety',u=>committeeRole(u)],
@@ -184,6 +185,7 @@ function closeHQNav(){$('#hqSidebar').classList.remove('open');$('#hqShade').cla
 async function signOut(){try{await post('selc-auth','logout')}catch{}clearAccess();$('#headquarters').classList.add('hidden');$('#headquarters').setAttribute('aria-hidden','true');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';history.replaceState(null,'',location.pathname);scrollTo(0,0);flash('Signed out of SELC. Your Portal account remains separate.')}
 async function openPage(page){
  if(context.chatTimer){clearTimeout(context.chatTimer);context.chatTimer=null}
+ if(context.editorPickListener){removeEventListener('message',context.editorPickListener);context.editorPickListener=null}
  const allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())));
  if(!allowed)page=organizerRole(role())?'communityleaders':'home';context.activePage=page;
  $$('#hqNavigation [data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
@@ -191,7 +193,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -661,19 +663,44 @@ async function communityLeadersPage(){
 
 async function founderDeskPage(){
  if(!owner())return openPage('home');
- const links=[
-  ['Website changes','content','Review proposed Hub, Portal and SELC wording'],
-  ['Community chat','chat','Join the rooms you oversee'],
-  ['Ban history','banhistory','Current, expired and lifted restrictions'],
-  ['Volunteer management','volunteer','Review event coverage and shifts'],
-  ['Committee & educator applications','applications','Approve appointments and invitations'],
-  ['Rules, votes & proposals','proposals','Review committee recommendations'],
-  ['Events & RSVPs','events','Event operations and roster'],
-  ['Member & role applications','generalapps','Membership and staff approvals']
+ const sections=[
+  ['Website approvals','content','Review and publish voted changes'],
+  ['Event readiness','readiness','Identify staffing and operational gaps'],
+  ['Community messages','chat','Oversee participating rooms'],
+  ['Volunteer management','volunteer','Manage positions, claims and coverage'],
+  ['Education programs','educators','Review workshop planning'],
+  ['Ban history','banhistory','Review current and prior restrictions'],
+  ['Member applications','generalapps','Membership and role decisions'],
+  ['Committee proposals','proposals','Review votes and recommendations']
  ];
- setContent(pageHeader('FOUNDER & CHAIR','Founder desk','Focused oversight across SELC, operations and community programs.')+
-  '<div class="hq-stats">'+links.map(([title,target,desc])=>'<button class="hq-card" data-go="'+esc(target)+'" style="text-align:left;cursor:pointer"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p></button>').join('')+'</div>');
+ const results=await Promise.allSettled([api('selc-content'),api('event-readiness'),api('community-chat'),api('founder-weekly-pulse')]);
+ const content=results[0].status==='fulfilled'?results[0].value:{proposals:[]};
+ const readiness=results[1].status==='fulfilled'?results[1].value:{events:[],needsAttention:0};
+ const chats=results[2].status==='fulfilled'?results[2].value:{rooms:[]};
+ const digest=results[3].status==='fulfilled'?results[3].value:null;
+ const pending=(content.proposals||[]).filter(x=>x.status==='Awaiting Founder').length;
+ const unread=(chats.rooms||[]).reduce((n,x)=>n+Number(x.unread||0),0);
+ setContent(pageHeader('FOUNDER & CHAIR','Founder command center','One place for decisions and operational oversight without crowding the workspace.')+
+  '<div class="hq-stats">'+
+  card('<span class="hq-eyebrow">Approval queue</span><h2>'+number(pending)+'</h2><p>Content changes awaiting your decision</p>'+btn('Review decisions','data-go="content"','primary'))+
+  card('<span class="hq-eyebrow">Event readiness</span><h2>'+number(readiness.needsAttention)+'</h2><p>Upcoming events requiring attention</p>'+btn('Review events','data-go="readiness"'))+
+  card('<span class="hq-eyebrow">Conversations</span><h2>'+number(unread)+'</h2><p>Unread chat messages in joined rooms</p>'+btn('Open messages','data-go="chat"'))+
+  card('<span class="hq-eyebrow">Oversight</span><h2>Activity</h2><p>Committee, safety and staffing workflows</p>'+btn('Review operations','data-go="volunteer"'))+'</div>'+
+  '<details class="hq-card" style="margin-top:18px"><summary style="cursor:pointer;font-weight:800">Weekly organization digest</summary>'+
+  (digest?'<p class="hq-muted">Last 7 days · '+esc(date(digest.weekStart))+' – '+esc(date(digest.weekEnd))+'</p><div class="hq-stats">'+(digest.sections||[]).map(r=>'<div class="hq-card"><strong>'+number(r.value)+'</strong><p>'+esc(r.label)+'</p></div>').join('')+'</div>'+btn('Copy weekly summary','data-copy-digest'):
+  '<p>The weekly summary is unavailable right now.</p>')+'</details>'+
+  '<div class="hq-grid" style="margin-top:20px">'+sections.map(([title,target,desc])=>'<button type="button" class="hq-card" data-go="'+esc(target)+'" style="text-align:left;cursor:pointer"><strong>'+esc(title)+'</strong><p>'+esc(desc)+'</p></button>').join('')+'</div>');
+ if(digest)$('[data-copy-digest]').onclick=async()=>{const text='Sanctum Eros · Founder weekly summary\n'+(digest.sections||[]).map(x=>x.label+': '+x.value).join('\n');try{await navigator.clipboard.writeText(text);flash('Weekly summary copied.')}catch(e){flash('Unable to copy summary on this device.')}};
+
  $$('[data-go]').forEach(el=>el.onclick=()=>openPage(el.dataset.go));
+}
+async function eventReadinessPage(){
+ const d=await api('event-readiness'),events=d.events||[];
+ const rows=events.map(ev=>card('<div class="hq-row"><div class="grow"><strong>'+esc(ev.title)+'</strong><p>'+esc(date(ev.start))+' · '+(ev.ready?'Ready':number(ev.outstanding)+' items need attention')+'</p>'+
+ '<div class="hq-panel-list">'+(ev.checks||[]).map(check=>'<div class="hq-row"><span>'+esc(check.complete?'✓':'○')+' '+esc(check.label)+'</span>'+tag(check.complete?'Complete':'Needs attention')+(check.detail?'<small>'+esc(check.detail)+'</small>':'')+'</div>').join('')+'</div></div></div>')).join('');
+ setContent(pageHeader('EVENT OPERATIONS','Event readiness','Review staffing, handovers, schedule and admission configuration before doors open.')+
+ card('<div class="hq-row"><strong>'+number(d.ready||0)+' ready</strong><strong>'+number(d.needsAttention||0)+' need attention</strong></div>')+
+ (events.length?rows:empty('No upcoming events','Published future events will appear here.')));
 }
 async function banHistoryPage(){
  const d=await api('ban-history'),rows=d.records||[];
@@ -689,36 +716,72 @@ async function banHistoryPage(){
  $('#banFilter').onchange=e=>{filter=e.target.value;render()};render();
 }
 async function communityChatPage(){
- const d=await api('community-chat'),rooms=d.rooms||[];
- let active=context.chatRoom||rooms.find(x=>x.joined)?.id||rooms[0]?.id||'';
- if(!rooms.some(x=>x.id===active))active=rooms[0]?.id||'';
+ const data=await api('community-chat'),rooms=data.rooms||[];
+ let active=context.chatRoom||rooms.find(r=>r.joined)?.id||rooms[0]?.id||'';
+ if(!rooms.some(r=>r.id===active))active=rooms[0]?.id||'';
  context.chatRoom=active;
- const current=rooms.find(x=>x.id===active);
- const tabs=rooms.map(x=>btn(x.name+(x.joined?' ✓':''),'data-chat-room="'+esc(x.id)+'"',x.id===active?'primary':'')).join('');
- let html=pageHeader('CONVERSATIONS','Community chat','Join the rooms you are eligible for. Participation is optional.')+
-  card('<div class="hq-actions">'+tabs+'</div>')+
-  (current?card('<h2>'+esc(current.name)+'</h2><p>'+esc(current.description)+'</p>'+
-   (current.joined?'<div id="chatMessages" class="hq-panel-list" style="max-height:370px;overflow:auto"></div><form id="chatSend" class="hq-form"><label>Message<textarea name="message" rows="3" maxlength="1200" required></textarea></label><p data-status></p><button class="hq-button primary">Send</button></form>'+btn('Leave room','data-chat-leave'):'<p>Join to read and participate.</p>'+btn('Join room','data-chat-join','primary'))):
-  empty('No rooms available','Approved roles unlock their corresponding rooms.'));
- setContent(html);
- $$('[data-chat-room]').forEach(x=>x.onclick=()=>{context.chatRoom=x.dataset.chatRoom;communityChatPage()});
- async function refresh(){
-  if(context.activePage!=='chat'||!current?.joined)return;
-  try{
-   const result=await api('community-chat',{query:{room:current.id}});
-   const container=$('#chatMessages');
-   if(container){const nearBottom=container.scrollHeight-container.scrollTop-container.clientHeight<80;
-    container.innerHTML=(result.messages||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+esc(m.name)+'</strong><small> · '+esc(date(m.createdAt))+'</small><p class="hq-prose">'+esc(m.message)+'</p></div></div>').join('')||'<p class="hq-muted">No messages yet.</p>';
-    if(nearBottom)container.scrollTop=container.scrollHeight;
-   }
-  }catch(err){if($('#chatMessages'))$('#chatMessages').textContent=err.message}
-  if(context.activePage==='chat')context.chatTimer=setTimeout(refresh,12000);
+ const room=rooms.find(r=>r.id===active);
+ const roomIcon={selc:'◈',leaders:'◇',educators:'✦',network:'◎','staff-educators':'▤'};
+ const tabs=rooms.map(r=>'<button type="button" class="messenger-room'+(r.id===active?' active':'')+'" data-chat-room="'+esc(r.id)+'" aria-current="'+(r.id===active?'true':'false')+'"><span class="messenger-room-icon">'+esc(roomIcon[r.id]||'◈')+'</span><span class="messenger-room-name">'+esc(r.name)+'</span>'+(r.unread?'<span class="messenger-unread">'+number(r.unread)+'</span>':'')+(r.joined?'<span class="messenger-joined" title="Joined">●</span>':'')+'</button>').join('');
+ const main=room?'<section class="messenger-conversation"><div class="messenger-header"><div class="messenger-room-icon">'+esc(roomIcon[room.id]||'◈')+'</div><div class="messenger-header-text"><h2>'+esc(room.name)+'</h2><p>'+esc(room.description)+'</p></div>'+(room.joined?'<button class="messenger-leave" data-chat-leave title="Leave room">Leave</button>':'')+'</div>'+
+ (room.joined?
+ '<div class="messenger-search"><input id="chatSearch" type="search" placeholder="Search this conversation" aria-label="Search messages"></div><div id="chatPinned" class="messenger-pinned" hidden></div><div id="chatMessages" class="messenger-messages" role="log" aria-live="polite" aria-relevant="additions"><div class="messenger-empty">Loading conversation…</div></div><div id="chatReplyPreview" class="messenger-reply-preview" hidden><span id="chatReplyText"></span><button type="button" id="chatCancelReply" aria-label="Cancel reply">×</button></div><form id="chatSend" class="messenger-composer"><label class="sr-only" for="chatMessage">Message</label><textarea id="chatMessage" name="message" rows="1" maxlength="1200" placeholder="Message '+esc(room.name)+'…" required></textarea><button type="submit" aria-label="Send message"><span aria-hidden="true">➤</span></button></form><p id="chatStatus" class="messenger-status" role="status"></p>':
+ '<div class="messenger-welcome"><span class="messenger-welcome-icon">'+esc(roomIcon[room.id]||'◈')+'</span><h3>'+esc(room.name)+'</h3><p>Join this conversation to see messages and participate.</p>'+btn('Join conversation','data-chat-join','primary')+'</div>')+'</section>':
+ '<div class="messenger-welcome"><h3>No conversations available</h3><p>Approved roles can join their eligible rooms.</p></div>';
+ setContent('<section class="messenger-shell" aria-label="Community conversations"><div class="messenger-intro"><span class="hq-eyebrow">SELC / CONVERSATIONS</span><h1>Messages</h1><p>Keep your teams connected, without mixing private channels.</p></div><div class="messenger-layout"><aside class="messenger-sidebar"><div class="messenger-sidebar-title">Your rooms <span>'+number(rooms.length)+'</span></div><nav class="messenger-rooms" aria-label="Chat rooms">'+tabs+'</nav></aside>'+main+'</div></section>');
+ $$('[data-chat-room]').forEach(button=>button.onclick=()=>{context.chatRoom=button.dataset.chatRoom;communityChatPage()});
+ if(!room)return;
+ if(!room.joined){$('[data-chat-join]').onclick=async()=>{try{await post('community-chat','join',{room:active});communityChatPage()}catch(error){flash(error.message)}};return}
+ $('[data-chat-leave]').onclick=async()=>{if(!confirmDecision('Leave '+room.name+'? You can join again later.'))return;try{await post('community-chat','leave',{room:active});communityChatPage()}catch(error){flash(error.message)}};
+ const form=$('#chatSend'),textarea=$('#chatMessage'),messages=$('#chatMessages'),pinned=$('#chatPinned'),search=$('#chatSearch');
+ let latest=[],lastRead='',busy=false;
+ const me=String(context.me?.accountId||context.me?.id||'');
+ const myMessage=m=>m.by==='member:'+me||m.by==='owner:'+me||m.by==='staff:'+me||(role()==='founder'&&m.by?.startsWith('owner:'));
+ const avatar=name=>'<span class="messenger-avatar" aria-hidden="true">'+esc(initials(name))+'</span>';
+ const time=at=>{const d=new Date(at);return Number.isFinite(+d)?new Intl.DateTimeFormat('en-US',{hour:'numeric',minute:'2-digit'}).format(d):''};
+ function render(all){
+  const bottom=messages.scrollHeight-messages.scrollTop-messages.clientHeight<100;
+  const index=new Map(all.map(m=>[m.id,m]));
+  messages.innerHTML=all.length?all.map((m,i)=>{
+   const mine=myMessage(m),parent=index.get(m.parentId),same=(i>0&&all[i-1].by===m.by&&Math.abs(new Date(m.createdAt)-new Date(all[i-1].createdAt))<300000);
+   return '<article class="messenger-message'+(mine?' mine':'')+(same?' grouped':'')+'" data-message-id="'+esc(m.id)+'">'+(same?'':avatar(m.name))+'<div class="messenger-bubble-wrap">'+(same?'':'<div class="messenger-sender">'+esc(m.name)+'</div>')+
+    '<div class="messenger-bubble">'+(parent?'<div class="messenger-quote">'+esc(parent.name)+': '+esc(parent.message||'Original message removed')+'</div>':'')+
+    '<p>'+esc(m.message)+'</p></div><div class="messenger-meta">'+time(m.createdAt)+(m.editedAt?' · edited':'')+(m.pinned?' · Pinned':'')+'</div>'+
+    '<div class="messenger-message-actions"><button type="button" data-chat-reply="'+esc(m.id)+'">Reply</button>'+(mine||leader()?'<button type="button" data-chat-edit="'+esc(m.id)+'">Edit</button><button type="button" data-chat-delete="'+esc(m.id)+'">Delete</button>':'')+(leader()?'<button type="button" data-chat-pin="'+esc(m.id)+'" data-pinned="'+(!m.pinned)+'">'+(m.pinned?'Unpin':'Pin')+'</button>':'')+'</div></div></article>'
+  }).join(''):'<div class="messenger-empty"><span>✦</span><h3>No messages yet</h3><p>Start the conversation.</p></div>';
+  const pins=all.filter(m=>m.pinned);
+  pinned.hidden=!pins.length;
+  pinned.innerHTML=pins.length?'<strong>Pinned</strong><span>'+pins.slice(-2).map(m=>esc(m.message.slice(0,90))).join(' · ')+'</span>':'';
+  $$('[data-chat-reply]',messages).forEach(b=>b.onclick=()=>{const m=index.get(b.dataset.chatReply);if(!m)return;form.dataset.replyTo=m.id;$('#chatReplyText').textContent='Replying to '+m.name+': '+m.message.slice(0,90);$('#chatReplyPreview').hidden=false;textarea.focus()});
+  $$('[data-chat-edit]',messages).forEach(b=>b.onclick=async()=>{const m=index.get(b.dataset.chatEdit);if(!m)return;const next=prompt('Edit message',m.message);if(next===null||next===m.message)return;try{await post('community-chat','edit',{room:active,messageId:m.id,message:next});await refresh()}catch(e){flash(e.message)}});
+  $$('[data-chat-delete]',messages).forEach(b=>b.onclick=async()=>{if(!confirmDecision('Delete this message?'))return;try{await post('community-chat','delete',{room:active,messageId:b.dataset.chatDelete});await refresh()}catch(e){flash(e.message)}});
+  $$('[data-chat-pin]',messages).forEach(b=>b.onclick=async()=>{try{await post('community-chat','pin',{room:active,messageId:b.dataset.chatPin,pinned:b.dataset.pinned==='true'});await refresh()}catch(e){flash(e.message)}});
+  if(bottom)messages.scrollTop=messages.scrollHeight;
  }
- if(current?.joined){
-  watchForm($('#chatSend'),async values=>{await post('community-chat','send',{room:active,message:values.message});$('#chatSend').reset();await refresh()});
-  $('[data-chat-leave]').onclick=async()=>{await post('community-chat','leave',{room:active});communityChatPage()};
-  await refresh();
- }else if(current)$('[data-chat-join]').onclick=async()=>{try{await post('community-chat','join',{room:active});communityChatPage()}catch(e){flash(e.message)}};
+ async function refresh(){
+  if(context.activePage!=='chat'||context.chatRoom!==active||busy)return;
+  busy=true;
+  try{
+   const result=await api('community-chat',{query:{room:active,search:search.value.trim()}});
+   latest=result.messages||[];render(latest);
+   const newest=latest.at(-1)?.createdAt||'';
+   if(newest&&newest!==lastRead&&!search.value.trim()){lastRead=newest;await post('community-chat','read',{room:active}).catch(()=>{})}
+  }catch(e){$('#chatStatus').textContent=e.message}finally{
+   busy=false;
+   if(context.activePage==='chat'&&context.chatRoom===active)context.chatTimer=setTimeout(refresh,12000);
+  }
+ }
+ $('#chatCancelReply').onclick=()=>{delete form.dataset.replyTo;$('#chatReplyPreview').hidden=true};
+ form.addEventListener('submit',async e=>{
+  e.preventDefault();const message=textarea.value.trim();if(!message)return;
+  const button=form.querySelector('button[type="submit"]');button.disabled=true;
+  try{await post('community-chat','send',{room:active,message,parentId:form.dataset.replyTo||''});textarea.value='';textarea.style.height='';delete form.dataset.replyTo;$('#chatReplyPreview').hidden=true;await refresh();$('#chatStatus').textContent=''}
+  catch(error){$('#chatStatus').textContent=error.message}finally{button.disabled=false}
+ });
+ textarea.oninput=()=>{textarea.style.height='auto';textarea.style.height=Math.min(120,textarea.scrollHeight)+'px'};
+ textarea.onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();form.requestSubmit()}};
+ let debounce;search.oninput=()=>{clearTimeout(debounce);debounce=setTimeout(()=>refresh(),240)};
+ await refresh();
 }
 async function contentManagementPage(){
  const result=await api('selc-content'),rows=result.proposals||[];
@@ -728,7 +791,45 @@ async function contentManagementPage(){
  html+='<h2 style="margin:20px 0 10px">Change proposals</h2>';
  html+=rows.length?rows.map(p=>card('<div class="hq-row"><div class="grow"><small>'+esc(p.site.toUpperCase())+' · '+esc(p.path)+'</small><strong>'+esc(p.summary||p.original.slice(0,90))+'</strong><p><del>'+esc(p.original.slice(0,180))+'</del></p><p>'+esc(p.replacement.slice(0,180))+'</p><small>Votes: '+number(p.tally?.yes)+' support / '+number(p.tally?.needed)+' needed · '+number(p.tally?.no)+' oppose</small></div>'+tag(p.status)+btn('Review','data-content-id="'+esc(p.id)+'"')+'</div>')).join(''):empty('No changes submitted yet');
  setContent(html);
- watchForm($('#newContent'),async values=>{await post('selc-content','propose',values);flash('Sent for committee vote.');contentManagementPage()});
+ const editor=$('#newContent');
+ const action=document.createElement('div');action.className='hq-actions';
+ const picker=document.createElement('button');picker.type='button';picker.className='hq-button primary';picker.textContent='Select wording on a live page';
+ const hint=document.createElement('small');hint.className='hq-muted';hint.textContent='Choose the page, then tap the exact text you want to change.';
+ action.append(picker,hint);
+ const preview=document.createElement('div');preview.className='editor-copy-compare';
+ const current=document.createElement('section'),proposed=document.createElement('section');
+ const previousLabel=document.createElement('strong');previousLabel.textContent='Original';
+ const proposedLabel=document.createElement('strong');proposedLabel.textContent='Proposed';
+ const beforeText=document.createElement('p'),afterText=document.createElement('p');
+ current.append(previousLabel,beforeText);proposed.append(proposedLabel,afterText);preview.append(current,proposed);
+ editor.querySelector('[data-status]').before(action,preview);
+ const updatePreview=()=>{
+  beforeText.textContent=editor.elements.original.value.trim()||'Select a paragraph, heading, or button.';
+  afterText.textContent=editor.elements.replacement.value.trim()||'Your replacement text appears here.';
+ };
+ editor.addEventListener('input',updatePreview);updatePreview();
+ picker.onclick=()=>{
+  const site=editor.elements.site.value,path=editor.elements.path.value.trim();
+  const origins={hub:'https://sanctumeroshub.org',portal:'https://sanctumportal.org',selc:'https://se-selc.netlify.app'};
+  if(!/^\/[a-zA-Z0-9/_.-]*$/.test(path)||path.includes('..')){flash('Use a valid page path beginning with /.');return}
+  const origin=origins[site];if(!origin)return;
+  const target=new URL(path,origin);target.searchParams.set('selc_pick','1');
+  const popup=window.open(target.href,'_blank');
+  if(!popup){flash('The page picker was blocked. Open the page and copy the text manually.');return}
+  if(context.editorPickListener)removeEventListener('message',context.editorPickListener);
+  context.editorPickListener=e=>{
+   if(e.origin!==origin||e.source!==popup||e.data?.type!=='SELC_COPY_PICK'||e.data.site!==site||typeof e.data.text!=='string')return;
+   const selected=e.data.text.trim().slice(0,2000);
+   if(!selected)return;
+   editor.elements.original.value=selected;
+   editor.elements.path.value=String(e.data.path||path).split('?')[0].slice(0,220);
+   updatePreview();
+   flash('Wording selected. Enter the replacement and submit it for voting.');
+   editor.elements.replacement.focus();
+  };
+  addEventListener('message',context.editorPickListener);
+ };
+ watchForm(editor,async values=>{await post('selc-content','propose',values);flash('Sent for committee vote.');contentManagementPage()});
  $$('[data-content-id]').forEach(b=>b.onclick=()=>{
   const p=rows.find(x=>x.id===b.dataset.contentId);if(!p)return;
   const base=p.site==='hub'?'https://sanctumeroshub.org':p.site==='selc'?'https://se-selc.netlify.app':'https://sanctumportal.org';
@@ -740,6 +841,6 @@ async function contentManagementPage(){
  });
 }
 
-async function accountPage(){const external=organizerRole(role());setContent(pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is the identity behind your authorized SELC access.')+card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div><p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal is available for eligible events, courses, tickets, and account settings.')+'</p><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html" rel="noopener noreferrer">Open Member Portal ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>'));$('[data-signout]').onclick=signOut}
+async function accountPage(){const external=organizerRole(role());const shared=await api('workspace-profile').catch(()=>null);setContent(pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is the identity behind your authorized SELC access.')+card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal is available for eligible events, courses, tickets, and account settings.')+'</p><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html" rel="noopener noreferrer">Open Member Portal ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>'));$('[data-signout]').onclick=signOut}
 addEventListener('DOMContentLoaded',startPublic);
 })();

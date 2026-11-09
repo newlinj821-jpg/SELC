@@ -62,6 +62,7 @@ async function mockPortal(route){
     role==='representative'?[{id:'selc',name:'SELC',description:'Committee room',joined:true},{id:'leaders',name:'Community Leaders',description:'Leaders',joined:false}]:[]};
  }
  else if(service==='selc-content')data={proposals:[],canPublish:role==='founder'};
+ else if(service==='event-readiness')data={events:[{id:'event1',title:'Test Event',start:'2026-11-20T17:00:00Z',ready:false,outstanding:1,checks:[{id:'staff',label:'Volunteer coverage',complete:false,detail:'1 of 2 filled'}]}],ready:0,needsAttention:1};
  else if(service==='ban-history')data={records:[{id:'historic',name:'Synthetic Previous Ban',status:'Lifted',kind:'temporary',bannedAt:'2026-10-01',liftedAt:'2026-10-15',reason:'Synthetic test only'}]};
  else if(service==='shifts')data={events:[],me:{linked:true,certified:true,dm:false}};
  else if(service==='applications')data={applications:[]};
@@ -131,11 +132,11 @@ try{
  assert.equal(await founderPage.locator('#hqNavigation [data-page="applications"]').count(),1);
  assert.equal(await founderPage.locator('#hqNavigation [data-page="work"]').count(),1);
  assert.equal(await founderPage.locator('#hqNavigation [data-page="founderdesk"]').count(),1);
- for(const section of ['founderdesk','content','chat','banhistory','volunteer']){
+ for(const section of ['founderdesk','content','chat','readiness','banhistory','volunteer']){
   await founderPage.locator('#hqMenu').click();
   await founderPage.locator('#hqNavigation [data-page="'+section+'"]').click();
   await founderPage.waitForFunction(name=>document.querySelector('#hqContent')?.textContent?.includes(name),{
-   founderdesk:'Founder desk',content:'Website & content management',chat:'Community chat',banhistory:'Current & previous bans',volunteer:'Volunteer for an event'
+   founderdesk:'Founder command center',content:'Website & content management',chat:'Messages',readiness:'Event readiness',banhistory:'Current & previous bans',volunteer:'Volunteer for an event'
   }[section],{timeout:12000});
  }
  assert.equal(founderErrors.length,0,'Founder browser JavaScript errors: '+founderErrors.join('; '));
