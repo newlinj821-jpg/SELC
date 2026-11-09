@@ -156,8 +156,12 @@ const NAV=[
  ['ballots','✓','Coordinator election','Your work',u=>u==='representative'||u==='coordinator'],
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
  ['leader','◈','Leadership & appointments','Leadership',u=>u==='founder'||u==='coordinator'||u==='representative'],
+ ['availability','◷','My availability','Your work',u=>committeeRole(u)&&u!=='founder'],
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
  ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
+ ['memberdesk','✉','Member messages & complaints','Committee',u=>committeeRole(u)],
+ ['suggestionsdesk','◇','Member suggestions','Committee',u=>committeeRole(u)],
+ ['feedbackdesk','▤','Event feedback review','Committee',u=>committeeRole(u)],
  ['proposals','◉','Proposals & votes','Committee',u=>committeeRole(u)],
  ['content','✎','Website content','Committee',u=>committeeRole(u)],
  ['chat','▤','Community chat','Community',u=>!['community-applicant'].includes(u)],
@@ -197,7 +201,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -217,7 +221,7 @@ async function homePage(){
   ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
   ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',activeSELCEvents(staff?.events).length,'events']
  ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
- card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Applications','generalapps'],['Volunteer shifts','volunteer'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
+ card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Member messages','memberdesk'],['Suggestions','suggestionsdesk'],['Event feedback','feedbackdesk'],['Applications','generalapps'],['Volunteer shifts','volunteer'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
  if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
  setContent(markup);bindPageLinks();
 }
@@ -354,7 +358,7 @@ async function leaderPage(){
  const data=await api('selc-governance',{query:{scope:'members'}}),people=data.members||[];
  let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Representative seats, including no more than two Coordinators. Members keep one committee vote regardless of title.');
  markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.length+' / 5</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div></div>';
- markup+=card('<h2>Committee members</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role)+'</p></div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
+ markup+=card('<h2>Committee members</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role)+' · '+esc(p.availability?.status||'Available')+(p.availability?.until?' through '+esc(p.availability.until):'')+'</p>'</div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
  if(owner())markup+=card('<h2>Lead the appointment process</h2><p>Review and appoint Representatives or Coordinators from applications. Coordinator appointments require a successful committee vote.</p>'+btn('Review SELC applications','data-page-link="applications"','primary'));
  setContent(markup);bindPageLinks();$$('[data-remove]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Remove this SELC leadership appointment? Their regular membership remains separate.'))return;try{await post('selc-governance','remove',{accountId:b.dataset.remove});flash('Appointment ended.');leaderPage()}catch(e){flash(e.message)}});
 }
@@ -843,6 +847,77 @@ async function contentManagementPage(){
   $('[data-content-vote]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','vote',{id:p.id,vote:x.dataset.contentVote});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
   $('[data-content-decision]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','decide',{id:p.id,decision:x.dataset.contentDecision,reason:''});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
  });
+}
+
+
+/* -----------------------------------------------------------------
+   Shared member correspondence, idea review and volunteer availability.
+   These screens read and write the Portal's one authoritative datastore.
+------------------------------------------------------------------ */
+const deskRoleLabel=()=>RANK[role()]||'SELC Representative';
+function deskThreadHtml(row){
+ const thread=row.kind==='incident'?[{from:'member',text:row.message||'',at:row.createdAt},...(row.thread||[])]:row.thread||[{from:'member',text:row.message||'',at:row.createdAt}];
+ return '<div class="desk-conversation">'+thread.map(m=>'<div class="hq-message '+(m.from==='member'?'hq-member-message':'hq-selc-message')+'"><p>'+esc(m.text||'').replaceAll('\n','<br>')+'</p><small>'+esc(m.from==='member'?'Member':(m.by||'Sanctum Eros')+' — '+(m.role||deskRoleLabel()))+' · '+esc(date(m.at))+'</small></div>').join('')+'</div>';
+}
+async function memberDeskPage(){
+ const d=await api('committee-desk',{query:{scope:'messages'}}),rows=d.messages||[];
+ let markup=pageHeader('MEMBER CORRESPONDENCE','Messages & complaints','A shared inbox for communications members have authorized SELC to see. Eros-only conversations stay private.');
+ markup+='<div class="hq-stats"><div class="hq-stat"><small>CONVERSATIONS</small><strong>'+rows.length+'</strong></div><div class="hq-stat"><small>NEED REVIEW</small><strong>'+Number(d.counts?.new||0)+'</strong></div></div>';
+ markup+=rows.length?rows.map((r,i)=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(r.kind==='incident'?'Opted-in IA report':r.type==='complaint'?'Complaint':r.type==='portal_problem'?'Portal issue':'Member message')+'</span><h2>'+esc(r.subject||'Message')+'</h2><p>'+esc(String(r.message||'').slice(0,180))+'</p><p class="hq-micro">'+esc(r.username||r.caseNumber||'Member')+' · '+esc(date(r.updatedAt||r.createdAt))+'</p></div>'+tag(r.status)+btn('Open conversation','data-member-msg="'+i+'"','primary')+'</div>')).join(''):empty('No shared messages right now','Opted-in member conversations and reports appear here.');
+ setContent(markup);
+ $('[data-member-msg]').forEach(el=>el.onclick=()=>{
+  const r=rows[Number(el.dataset.memberMsg)],dialog=modal(r.subject||'Member conversation',
+   '<p class="hq-micro">'+esc(r.kind==='incident'?'Private report':r.type==='complaint'?'Complaint':'Message')+' · '+esc(r.status||'Submitted')+'</p>'+deskThreadHtml(r)+
+   '<div class="hq-actions">'+btn('Mark reviewed','data-mark-message','')+'</div>'+
+   '<form class="hq-form" id="deskReplyForm"><label>Reply as '+esc(context.me.displayName)+' — '+esc(deskRoleLabel())+'</label><textarea name="message" rows="5" maxlength="6000" required placeholder="Write a reply to this member…"></textarea><p data-status></p><button class="hq-button primary" type="submit">Send reply</button></form>');
+  dialog.querySelector('[data-mark-message]').onclick=async()=>{try{await post('committee-desk','review_message',{kind:r.kind,id:r.id,accountId:r.accountId});dialog.close();flash('Marked reviewed.');await memberDeskPage()}catch(e){flash(e.message)}};
+  watchForm(dialog.querySelector('#deskReplyForm'),async values=>{await post('committee-desk','reply_message',{kind:r.kind,id:r.id,accountId:r.accountId,message:values.message});dialog.close();flash('Reply sent to member Portal.');await memberDeskPage()});
+ });
+}
+async function suggestionsDeskPage(){
+ const d=await api('committee-desk',{query:{scope:'suggestions'}}),rows=d.suggestions||[];
+ let markup=pageHeader('COMMUNITY IDEAS','Suggestions to review','Ideas are submitted through the Member Portal. Review them, reply where permitted, or promote an idea to a committee proposal.');
+ markup+=rows.length?rows.map((s,i)=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc((s.category||'other').replaceAll('_',' '))+'</span><h2>'+esc(s.title)+'</h2><p>'+esc((s.details||'').slice(0,190))+'</p><p class="hq-micro">'+esc(s.name||'Anonymous')+' · '+esc(date(s.createdAt))+(s.proposalId?' · Linked committee proposal':'')+'</p></div>'+tag(s.status)+btn('Review','data-suggestion="'+i+'"','primary')+'</div>')).join(''):empty('No suggestions yet','Member suggestions appear here after submission.');
+ setContent(markup);
+ $('[data-suggestion]').forEach(el=>el.onclick=()=>{
+  const row=rows[Number(el.dataset.suggestion)];
+  const dialog=modal(row.title,
+   '<p>'+esc(row.details||'').replaceAll('\n','<br>')+'</p>'+(row.link?'<p><a href="'+esc(row.link)+'" target="_blank" rel="noopener noreferrer">Reference link ↗</a></p>':'')+
+   (row.thread?.length?'<h3>Replies</h3>'+row.thread.map(m=>'<div class="hq-message"><p>'+esc(m.text)+'</p><small>'+esc(m.by||'SELC')+' — '+esc(m.role||'SELC Representative')+'</small></div>').join(''):'')+
+   '<form class="hq-form" id="ideaStatus"><label>Review status</label><select name="status">'+[['reviewed','Reviewed'],['considering','Considering'],['planned','Planned'],['done','Completed'],['not_now','Not right now']].map(([id,label])=>'<option value="'+id+'"'+(row.status===id?' selected':'')+'>'+label+'</option>').join('')+'</select><p data-status></p><button class="hq-button" type="submit">Save review</button></form>'+
+   (row.replyAllowed?'<form class="hq-form" id="ideaReply"><label>Reply to the member</label><textarea name="message" rows="4" maxlength="6000" required></textarea><p data-status></p><button class="hq-button" type="submit">Send reply</button></form>':'<p class="hq-micro">The sender has not enabled Portal replies.</p>')+
+   (row.proposalId?'<p class="hq-micro">Already forwarded to committee voting.</p>':btn('Move into committee proposals','data-promote-suggestion','primary')));
+  watchForm(dialog.querySelector('#ideaStatus'),async x=>{await post('committee-desk','review_suggestion',{id:row.id,status:x.status});dialog.close();flash('Suggestion reviewed.');await suggestionsDeskPage()});
+  if(row.replyAllowed)watchForm(dialog.querySelector('#ideaReply'),async x=>{await post('committee-desk','reply_suggestion',{id:row.id,message:x.message});dialog.close();flash('Reply sent.');await suggestionsDeskPage()});
+  dialog.querySelector('[data-promote-suggestion]')?.addEventListener('click',async()=>{
+   try{await post('committee-desk','promote_suggestion',{id:row.id});dialog.close();flash('Added to committee proposals. Voting and final Chair approval happen there.');await suggestionsDeskPage()}catch(e){flash(e.message)}
+  });
+ });
+}
+async function feedbackDeskPage(){
+ const d=await api('committee-desk',{query:{scope:'feedback'}}),rows=d.reviews||[];
+ let markup=pageHeader('EVENT EXPERIENCE','Event feedback review','Member ratings and opted-in private feedback. Only explicitly approved public comments can appear on the 30-day community board.');
+ markup+=rows.length?rows.map((r,i)=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(r.eventTitle)+'</span><h2>'+Number(r.rating||0)+'/5 · '+esc(r.reviewStatus||'New')+'</h2>'+(r.publicReview?'<p>Public comment: '+esc(r.publicReview).slice(0,180)+'</p>':'')+(r.privateFeedback?'<p>Private: '+esc(r.privateFeedback).slice(0,180)+'</p>':'')+'<p class="hq-micro">'+esc(date(r.updatedAt||r.createdAt))+' · '+(r.publicConsent?'Approved by member for possible publication':'No publication consent')+'</p></div>'+tag(r.showOnBoard?'On public board':r.reviewStatus)+btn('Review','data-event-feedback="'+i+'"','primary')+'</div>')).join(''):empty('No feedback ready for review','Submitted event feedback appears here when members choose to share it with SELC.');
+ setContent(markup);
+ $('[data-event-feedback]').forEach(el=>el.onclick=()=>{
+  const r=rows[Number(el.dataset.eventFeedback)];
+  const dialog=modal('Event feedback — '+r.eventTitle,'<p><strong>Rating:</strong> '+r.rating+'/5</p><p><strong>Public comment:</strong> '+esc(r.publicReview||'None').replaceAll('\n','<br>')+'</p><p><strong>Private feedback:</strong> '+esc(r.privateFeedback||'Not shared').replaceAll('\n','<br>')+'</p>'+
+   '<form class="hq-form" id="reviewFeedback"><label>Review decision</label><select name="status">'+[['Reviewed','Reviewed'],['For Discussion','For discussion'],['Closed','Closed']].map(([v,l])=>'<option value="'+v+'"'+(r.reviewStatus===v?' selected':'')+'>'+l+'</option>').join('')+'</select>'+
+   '<label>Public feedback board</label><select name="boardAction"><option value="">Do not change</option>'+(r.publicConsent&&r.publicReview?'<option value="publish">Publish anonymously for 30 days</option>':'')+'<option value="remove">Remove from public board</option></select>'+
+   '<p class="hq-micro">Board removal retains the internal review record, ratings and audit history.</p><p data-status></p><button class="hq-button primary" type="submit">Save review</button></form>');
+  watchForm(dialog.querySelector('#reviewFeedback'),async x=>{await post('committee-desk','review_feedback',{id:r.id,status:x.status,boardAction:x.boardAction});dialog.close();flash('Event feedback updated.');await feedbackDeskPage()});
+ });
+}
+async function availabilityPage(){
+ const [home,d]=await Promise.all([api('selc-governance',{query:{scope:'home'}}),api('selc-governance',{query:{scope:'members'}})]);
+ const me=(d.members||[]).find(x=>x.accountId===home.me?.accountId);
+ if(!me)return setContent(empty('No active committee appointment','Only active SELC Representatives and Coordinators can change availability.'));
+ const current=me.availability||{status:'Available',note:'',until:''};
+ let markup=pageHeader('YOUR PARTICIPATION','Availability','Set when you can take new committee assignments. Other SELC members can see your status and optional return date.');
+ markup+=card('<h2>Your status</h2><form class="hq-form" id="availabilityForm"><label>Status</label><select name="status">'+['Available','Busy','Away','Unavailable'].map(x=>'<option value="'+x+'"'+(current.status===x?' selected':'')+'>'+x+'</option>').join('')+'</select><label>Note (optional)</label><input type="text" name="note" maxlength="180" value="'+esc(current.note||'')+'" placeholder="For example, unavailable for event setup this week"><label>Until (optional)</label><input type="date" name="until" value="'+esc(current.until||'')+'"><p data-status></p><button class="hq-button primary" type="submit">Save availability</button></form>');
+ markup+=card('<h2>Team availability</h2>'+(d.members||[]).map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.displayName)+'</strong><p>'+esc(x.availability?.note||'')+(x.availability?.until?' · Through '+esc(x.availability.until):'')+'</p></div>'+tag(x.availability?.status||'Available')+'</div>').join(''));
+ setContent(markup);
+ watchForm($('#availabilityForm'),async x=>{await post('selc-governance','update_availability',x);flash('Availability updated.');await availabilityPage()});
 }
 
 async function accountPage(){const external=organizerRole(role());const shared=await api('workspace-profile').catch(()=>null);setContent(pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is the identity behind your authorized SELC access.')+card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal is available for eligible events, courses, tickets, and account settings.')+'</p><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html" rel="noopener noreferrer">Open Member Portal ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>'));$('[data-signout]').onclick=signOut}
