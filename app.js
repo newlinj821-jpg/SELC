@@ -10,6 +10,10 @@ const plain=x=>String(x??'').trim(),date=x=>{if(!x)return 'Not specified';const 
 const number=x=>Number(x||0).toLocaleString('en-US');const initials=x=>String(x||'SE').split(/\s+/).map(w=>w[0]).join('').slice(0,2).toUpperCase();
 const context={token:'',me:null,activePage:'home',data:{},eventId:'',lastScan:null,stream:null};
 const TOKEN_KEY='selc.session.v1';
+// Discontinued Sanctum Eros events should not be offered in live SELC operations.
+// This is a display safeguard; the Portal remains the authoritative event store.
+const isDiscontinuedEvent=e=>/\bkink\s+n\s+drinks\b/i.test(String(e?.event?.title||e?.title||e?.name||'').replace(/[^a-z0-9]+/gi,' ').trim());
+const activeSELCEvents=events=>(Array.isArray(events)?events:[]).filter(e=>!isDiscontinuedEvent(e));
 const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator',representative:'SELC Representative',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
 const committeeRole=u=>['founder','coordinator','representative'].includes(u);
 const organizerRole=u=>['community-applicant','community-leader'].includes(u);
@@ -211,7 +215,7 @@ async function homePage(){
  markup+='<div class="hq-stats">'+cards.map(([label,value])=>'<div class="hq-stat"><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>').join('')+'</div>';
  markup+='<div class="hq-grid">'+card('<h2>Where your attention can help</h2>'+[
   ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
-  ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',staff?.events?.length||0,'events']
+  ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',activeSELCEvents(staff?.events).length,'events']
  ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
  card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Applications','generalapps'],['Volunteer shifts','volunteer'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
  if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
@@ -454,7 +458,7 @@ async function generalAppsPage(){
  });
 }
 async function volunteerPage(){
- const data=await api('shifts'),events=data.events||[],me=data.me||{},mine=events.reduce((n,e)=>n+e.slots.reduce((x,s)=>x+s.claims.filter(c=>c.mine).length,0),0);
+ const data=await api('shifts'),events=activeSELCEvents(data.events),me=data.me||{},mine=events.reduce((n,e)=>n+e.slots.reduce((x,s)=>x+s.claims.filter(c=>c.mine).length,0),0);
  let html=pageHeader('EVENT OPERATIONS','Volunteer for an event','Upcoming events offer volunteer shifts automatically. Choose where you can help; Eros can still adjust the positions when needed.');
  html+='<div class="hq-stats"><div class="hq-stat"><small>YOUR SHIFTS</small><strong>'+mine+'</strong></div><div class="hq-stat"><small>EVENTS WITH SHIFTS</small><strong>'+events.length+'</strong></div></div>';
  if(!owner()&&!me.linked)html+=card('<h2>Connect your membership</h2><p>Your Staff profile must be linked to an approved Portal member account before volunteering.</p><a class="hq-button" href="'+PORTAL+'/member.html">Go to Member Portal</a>');
@@ -507,7 +511,7 @@ async function volunteerPage(){
 }
 
 async function eventPage(){
- const data=await api('staff-portal'),evs=data.events||[];
+ const data=await api('staff-portal'),evs=activeSELCEvents(data.events);
  let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','The same RSVP decisions, assignments and guest lists as the Sanctum Eros Portal.',btn('Open check-in','data-page-link="door"'));
  markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+btn('Check in','data-event-door="'+esc(e.id)+'"')+'</div>')).join(''):empty('No upcoming events','New events will appear as they are scheduled.');
  setContent(markup);bindPageLinks();
@@ -530,7 +534,7 @@ async function rsvpPage(eventId){
  });
 }
 async function doorPage(){
- stopCamera();const data=await api('staff-portal'),events=data.events||[];
+ stopCamera();const data=await api('staff-portal'),events=activeSELCEvents(data.events);
  if(!events.length){setContent(pageHeader('EVENT OPERATIONS','Check-in & tickets','All authorized event admission tools are available here.')+empty('No upcoming events','Your guest lists will appear when an event is scheduled.'));return}
  const ev=events.find(e=>e.id===context.eventId)||events[0];context.eventId=ev.id;
  let markup=pageHeader('EVENT OPERATIONS','Check-in & tickets','Look up a guest, scan their unique code, or check them in manually.');
@@ -574,7 +578,7 @@ async function addBanAttendeePicker(dialog,form){
  form.prepend(panel);const eventSelect=$('#banPickerEvent',panel),personSelect=$('#banPickerPerson',panel);
  try{
   const d=await api('staff-portal');
-  eventSelect.innerHTML='<option value="">Choose an event</option>'+(d.events||[]).map(ev=>'<option value="'+esc(ev.id)+'">'+esc(ev.title)+' · '+esc(date(ev.start))+'</option>').join('');
+  eventSelect.innerHTML='<option value="">Choose an event</option>' +activeSELCEvents(d.events).map(ev=>'<option value="'+esc(ev.id)+'">'+esc(ev.title)+' · '+esc(date(ev.start))+'</option>').join('');
   eventSelect.onchange=async()=>{personSelect.innerHTML='<option value="">Loading guest list…</option>';if(!eventSelect.value)return;
    try{const d=await api('rsvps',{query:{eventId:eventSelect.value,detail:'door'}});const options=[];for(const r of d.rsvps||[]){if(['cancelled','declined'].includes(r.rsvpStatus))continue;options.push({id:r.id,who:'primary',name:r.name||'Attendee',memberId:r.memberId||''});if(Number(r.partySize)===2)options.push({id:r.id,who:'guest',name:r.guestName||'Partner',memberId:r.guestMemberId||''})}panel._targets=options;personSelect.innerHTML='<option value="">Choose the person involved</option>'+options.map((t,i)=>'<option value="'+i+'">'+esc(t.name)+(t.who==='guest'?' (partner)':'')+'</option>').join('')}catch(e){flash(e.message);personSelect.innerHTML='<option value="">Unable to load guest list</option>'}
   };
@@ -695,11 +699,11 @@ async function founderDeskPage(){
  $$('[data-go]').forEach(el=>el.onclick=()=>openPage(el.dataset.go));
 }
 async function eventReadinessPage(){
- const d=await api('event-readiness'),events=d.events||[];
+ const d=await api('event-readiness'),events=activeSELCEvents(d.events);
  const rows=events.map(ev=>card('<div class="hq-row"><div class="grow"><strong>'+esc(ev.title)+'</strong><p>'+esc(date(ev.start))+' · '+(ev.ready?'Ready':number(ev.outstanding)+' items need attention')+'</p>'+
  '<div class="hq-panel-list">'+(ev.checks||[]).map(check=>'<div class="hq-row"><span>'+esc(check.complete?'✓':'○')+' '+esc(check.label)+'</span>'+tag(check.complete?'Complete':'Needs attention')+(check.detail?'<small>'+esc(check.detail)+'</small>':'')+'</div>').join('')+'</div></div></div>')).join('');
  setContent(pageHeader('EVENT OPERATIONS','Event readiness','Review staffing, handovers, schedule and admission configuration before doors open.')+
- card('<div class="hq-row"><strong>'+number(d.ready||0)+' ready</strong><strong>'+number(d.needsAttention||0)+' need attention</strong></div>')+
+ card('<div class="hq-row"><strong>'+number(events.filter(ev=>ev.ready).length)+' ready</strong><strong>'+number(events.filter(ev=>!ev.ready).length)+' need attention</strong></div>')+
  (events.length?rows:empty('No upcoming events','Published future events will appear here.')));
 }
 async function banHistoryPage(){
