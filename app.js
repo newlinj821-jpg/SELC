@@ -138,7 +138,7 @@ async function loadPublicLeadership(){
   const data=await api('selc-public',{token:'',timeout:5000});
   const host=$('#publicDirectory');if(!host)return;
   const people=Array.isArray(data.people)?data.people:[];
-  const bySeat=new Map(people.map(p=>[Number(p.seat),p]));
+  const bySeat=new Map(people.filter(p=>p.role!=='coordinator').map(p=>[Number(p.seat),p]));
   const coordinators=people.filter(p=>p.role==='coordinator').slice(0,2);
   const coordinatorHost=$('#publicCoordinators');
   if(coordinatorHost)coordinatorHost.innerHTML=[0,1].map(n=>{
