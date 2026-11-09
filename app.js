@@ -137,8 +137,18 @@ function startPublic(){
 async function loadPublicLeadership(){
   const data=await api('selc-public',{token:'',timeout:5000});
   const host=$('#publicDirectory');if(!host)return;
-  const bySeat=new Map((data.people||[]).map(p=>[Number(p.seat),p]));
-  host.innerHTML=[1,2,3,4,5].map(n=>{const person=bySeat.get(n);return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+esc(person?.role==='coordinator'?'Coordinator & Representative':person?'SELC Representative':n<=3?'Venue + online':'Online-first')+'</small></div>'}).join('');
+  const people=Array.isArray(data.people)?data.people:[];
+  const bySeat=new Map(people.map(p=>[Number(p.seat),p]));
+  const coordinators=people.filter(p=>p.role==='coordinator').slice(0,2);
+  const coordinatorHost=$('#publicCoordinators');
+  if(coordinatorHost)coordinatorHost.innerHTML=[0,1].map(n=>{
+    const person=coordinators[n];
+    return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Coordinator')+'</strong><small>'+esc(person?'SELC Coordinator':'Position available')+'</small></div>';
+  }).join('');
+  host.innerHTML=[1,2,3,4,5].map(n=>{
+    const person=bySeat.get(n);
+    return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+esc(person?.publicParticipation||'SELC Representative')+'</small></div>';
+  }).join('');
 }
 async function beginHeadquarters(){
  const session=await api('selc-auth');
