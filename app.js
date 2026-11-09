@@ -923,40 +923,26 @@ async function availabilityPage(){
 
 async function accountPage(){
  const external=organizerRole(role());
- const [shared,home,members]=await Promise.all([
+ const [shared,committee]=await Promise.all([
   api('workspace-profile').catch(()=>null),
-  external?Promise.resolve(null):api('selc-governance',{query:{scope:'home'}}).catch(()=>null),
   committeeRole(role())?api('selc-governance',{query:{scope:'members'}}).catch(()=>null):Promise.resolve(null)
  ]);
- const mine=(members?.members||[]).find(x=>x.accountId===home?.me?.accountId);
- const screenName=mine?.screenName||mine?.displayName||context.me.screenName||context.me.displayName;
- let html=pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is the identity behind your authorized SELC access.');
- html+=card('<div class="hq-row"><div class="grow"><strong>'+esc(screenName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div>'+
- (shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+
- '<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal is available for eligible events, courses, tickets, and account settings.')+'</p><div class="hq-actions">'+
- (external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html" rel="noopener noreferrer">Open Member Portal ↗</a>')+
- btn('Sign out of SELC','data-signout','danger')+'</div>');
- if(mine&&['representative','coordinator'].includes(role())){
-   html+=card('<h2>Public-facing SELC name</h2><p>Choose the screen name members see on your replies and on the SELC website. This does not change your private Portal account or login name.</p>'+
-    '<form id="selcScreenName" class="hq-form"><label>Public-facing name</label><input name="screenName" maxlength="60" minlength="2" required value="'+esc(screenName)+'" placeholder="Your chosen name">'+
-    '<p class="hq-micro">Saving makes your chosen name visible in the SELC leadership directory and committee correspondence.</p><p data-status></p><button class="hq-button primary" type="submit">Save my screen name</button></form>');
+ const me=(committee?.members||[]).find(p=>p.accountId===context.data?.home?.me?.accountId)||null;
+ let markup=pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is linked to your SELC appointment, but your public screen name can be different.');
+ markup+=card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal handles your member profile, password, tickets and course records. A SELC screen name does not change your login.')+'</p>');
+ if(me&&role()!=='founder'){
+  markup+=card('<h2>Public-facing SELC name</h2><p>Choose the name that appears in the committee directory and SELC replies. Your account name and sign-in stay unchanged.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Your SELC screen name</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile?'checked':'')+'> Show my name and committee position on the public SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
  }
- setContent(html);
+ markup+=card('<h2>Connected account</h2><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html#account" rel="noopener noreferrer">Manage member account ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>');
+ setContent(markup);
  $('[data-signout]').onclick=signOut;
- if(mine){
-  context.me.screenName=screenName;
-  $('#hqUserName').textContent=screenName;
-  $('#hqInitials').textContent=initials(screenName);
- }
- watchForm($('#selcScreenName'),async values=>{
-  const updated=await post('selc-governance','update_public_name',{screenName:values.screenName});
-  const name=updated.member?.screenName||values.screenName;
-  context.me.screenName=name;
-  $('#hqUserName').textContent=name;
-  $('#hqInitials').textContent=initials(name);
-  flash('Your public SELC name has been updated.');
-  loadPublicLeadership().catch(()=>{});
-  await accountPage();
+ const f=$('#selcIdentityForm');
+ if(f)watchForm(f,async(values,form)=>{
+  const data=await post('selc-governance','update_public_identity',{publicName:values.publicName,publicProfile:form.querySelector('[name=publicProfile]').checked});
+  const name=data.member?.screenName||values.publicName;
+  setStatus(form.querySelector('[data-status]'),'Saved. Your SELC screen name is '+name+'.');
+  flash('SELC name updated.');
+  await loadPublicLeadership().catch(()=>{});
  });
 }
 addEventListener('DOMContentLoaded',startPublic);
