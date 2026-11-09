@@ -484,20 +484,20 @@ async function volunteerPage(){
  }).join('');
  if(!events.length)html+=empty('No upcoming volunteer shifts','Positions will appear automatically when an event is published.');
  setContent(html);
- $('[data-position-toggle]').forEach(button=>button.onclick=async()=>{
+ $$('[data-position-toggle]').forEach(button=>button.onclick=async()=>{
   const [eventId,slotId,mode]=button.dataset.positionToggle.split('|');
   button.disabled=true;
   try{await post('shifts','set_position_status',{eventId,slotId,closed:mode==='closed'});flash(mode==='closed'?'Position closed to new volunteers.':'Position reopened.');await volunteerPage()}
   catch(error){flash(error.message);button.disabled=false}
  });
- $('[data-event-recruitment]').forEach(button=>button.onclick=async()=>{
+ $$('[data-event-recruitment]').forEach(button=>button.onclick=async()=>{
   const [eventId,mode]=button.dataset.eventRecruitment.split('|');
   if(mode==='closed'&&!confirmDecision('Close all new volunteer sign-ups for this event? Existing assignments will remain.'))return;
   button.disabled=true;
   try{await post('shifts','set_event_recruitment',{eventId,closed:mode==='closed'});flash(mode==='closed'?'Volunteer sign-ups closed.':'Volunteer sign-ups reopened.');await volunteerPage()}
   catch(error){flash(error.message);button.disabled=false}
  });
- $('[data-handover]').forEach(b=>b.onclick=async()=>{
+ $$('[data-handover]').forEach(b=>b.onclick=async()=>{
   try{const eventId=b.dataset.handover,d=await api('shifts',{query:{eventId}}),notes=d.handoffs||[];
   const entries=notes.map(n=>'<div class="hq-row"><div class="grow"><strong>'+esc(n.by)+' · '+esc(n.kind)+'</strong><p class="hq-prose">'+esc(n.text)+'</p><small>'+esc(date(n.at))+'</small></div></div>').join('');
   const dlg=modal('Shift handover · '+(d.event?.title||'Event'),'<p class="hq-muted">Share operational updates, staffing changes and equipment checks. Private investigations belong in the separate IA workflow.</p>'+entries+'<form id="handoverForm" class="hq-form"><label>Type</label><select name="kind">'+['arrival','equipment','support','staffing','closing','general'].map(k=>'<option value="'+k+'">'+esc(k)+'</option>').join('')+'</select><label>What does the incoming team need to know?</label><textarea name="text" minlength="15" rows="4" required></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Save handover</button></form>');
