@@ -867,9 +867,10 @@ async function memberDeskPage(){
  setContent(markup);
  $('[data-member-msg]').forEach(el=>el.onclick=()=>{
   const r=rows[Number(el.dataset.memberMsg)],dialog=modal(r.subject||'Member conversation',
-   '<p class="hq-micro">'+esc(r.kind==='incident'?'Private report':r.type==='complaint'?'Complaint':'Message')+' · '+esc(r.status||'Submitted')+'</p>'+deskThreadHtml(r)+
+   '<p class="hq-micro">'+esc(r.kind==='incident'?'Private report':r.type==='complaint'?'Complaint':'Message')+' · '+esc(r.status||'Submitted')+'</p>'+
+   '<section class="hq-case-message"><h3>Full member message / question</h3><p style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(r.message||'')+'</p>'+(r.kind==='incident'&&r.requestedFollowUp?'<h4>Follow-up requested</h4><p style="white-space:pre-wrap">'+esc(r.requestedFollowUp)+'</p>':'')+'</section>'+deskThreadHtml(r)+
    '<div class="hq-actions">'+btn('Mark reviewed','data-mark-message','')+'</div>'+
-   '<form class="hq-form" id="deskReplyForm"><label>Reply as '+esc(context.me.displayName)+' — '+esc(deskRoleLabel())+'</label><textarea name="message" rows="5" maxlength="6000" required placeholder="Write a reply to this member…"></textarea><p data-status></p><button class="hq-button primary" type="submit">Send reply</button></form>');
+   '<form class="hq-form" id="deskReplyForm"><label>Reply as '+esc(context.me.screenName||context.me.displayName)+' — '+esc(deskRoleLabel())+'</label><textarea name="message" rows="5" maxlength="6000" required placeholder="Write a reply to this member…"></textarea><p data-status></p><button class="hq-button primary" type="submit">Send reply</button></form>');
   dialog.querySelector('[data-mark-message]').onclick=async()=>{try{await post('committee-desk','review_message',{kind:r.kind,id:r.id,accountId:r.accountId});dialog.close();flash('Marked reviewed.');await memberDeskPage()}catch(e){flash(e.message)}};
   watchForm(dialog.querySelector('#deskReplyForm'),async values=>{await post('committee-desk','reply_message',{kind:r.kind,id:r.id,accountId:r.accountId,message:values.message});dialog.close();flash('Reply sent to member Portal.');await memberDeskPage()});
  });
@@ -920,6 +921,43 @@ async function availabilityPage(){
  watchForm($('#availabilityForm'),async x=>{await post('selc-governance','update_availability',x);flash('Availability updated.');await availabilityPage()});
 }
 
-async function accountPage(){const external=organizerRole(role());const shared=await api('workspace-profile').catch(()=>null);setContent(pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is the identity behind your authorized SELC access.')+card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal is available for eligible events, courses, tickets, and account settings.')+'</p><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html" rel="noopener noreferrer">Open Member Portal ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>'));$('[data-signout]').onclick=signOut}
+async function accountPage(){
+ const external=organizerRole(role());
+ const [shared,home,members]=await Promise.all([
+  api('workspace-profile').catch(()=>null),
+  external?Promise.resolve(null):api('selc-governance',{query:{scope:'home'}}).catch(()=>null),
+  committeeRole(role())?api('selc-governance',{query:{scope:'members'}}).catch(()=>null):Promise.resolve(null)
+ ]);
+ const mine=(members?.members||[]).find(x=>x.accountId===home?.me?.accountId);
+ const screenName=mine?.screenName||mine?.displayName||context.me.screenName||context.me.displayName;
+ let html=pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is the identity behind your authorized SELC access.');
+ html+=card('<div class="hq-row"><div class="grow"><strong>'+esc(screenName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div>'+
+ (shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+
+ '<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal is available for eligible events, courses, tickets, and account settings.')+'</p><div class="hq-actions">'+
+ (external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html" rel="noopener noreferrer">Open Member Portal ↗</a>')+
+ btn('Sign out of SELC','data-signout','danger')+'</div>');
+ if(mine&&['representative','coordinator'].includes(role())){
+   html+=card('<h2>Public-facing SELC name</h2><p>Choose the screen name members see on your replies and on the SELC website. This does not change your private Portal account or login name.</p>'+
+    '<form id="selcScreenName" class="hq-form"><label>Public-facing name</label><input name="screenName" maxlength="60" minlength="2" required value="'+esc(screenName)+'" placeholder="Your chosen name">'+
+    '<p class="hq-micro">Saving makes your chosen name visible in the SELC leadership directory and committee correspondence.</p><p data-status></p><button class="hq-button primary" type="submit">Save my screen name</button></form>');
+ }
+ setContent(html);
+ $('[data-signout]').onclick=signOut;
+ if(mine){
+  context.me.screenName=screenName;
+  $('#hqUserName').textContent=screenName;
+  $('#hqInitials').textContent=initials(screenName);
+ }
+ watchForm($('#selcScreenName'),async values=>{
+  const updated=await post('selc-governance','update_public_name',{screenName:values.screenName});
+  const name=updated.member?.screenName||values.screenName;
+  context.me.screenName=name;
+  $('#hqUserName').textContent=name;
+  $('#hqInitials').textContent=initials(name);
+  flash('Your public SELC name has been updated.');
+  loadPublicLeadership().catch(()=>{});
+  await accountPage();
+ });
+}
 addEventListener('DOMContentLoaded',startPublic);
 })();
