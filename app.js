@@ -923,15 +923,16 @@ async function availabilityPage(){
 
 async function accountPage(){
  const external=organizerRole(role());
- const [shared,committee]=await Promise.all([
+ const [shared,home,committee]=await Promise.all([
   api('workspace-profile').catch(()=>null),
+  committeeRole(role())?api('selc-governance',{query:{scope:'home'}}).catch(()=>null):Promise.resolve(null),
   committeeRole(role())?api('selc-governance',{query:{scope:'members'}}).catch(()=>null):Promise.resolve(null)
  ]);
- const me=(committee?.members||[]).find(p=>p.accountId===context.data?.home?.me?.accountId)||null;
+ const me=(committee?.members||[]).find(p=>p.accountId===home?.me?.accountId)||null;
  let markup=pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is linked to your SELC appointment, but your public screen name can be different.');
  markup+=card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal handles your member profile, password, tickets and course records. A SELC screen name does not change your login.')+'</p>');
  if(me&&role()!=='founder'){
-  markup+=card('<h2>Public-facing SELC name</h2><p>Choose the name that appears in the committee directory and SELC replies. Your account name and sign-in stay unchanged.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Your SELC screen name</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile?'checked':'')+'> Show my name and committee position on the public SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
+  markup+=card('<h2>Public-facing SELC name</h2><p>Choose the name that appears in the committee directory and SELC replies. Your account name and sign-in stay unchanged.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Your SELC screen name</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile||!me.publicNameUpdatedAt?'checked':'')+'> Show my name and committee position on the public SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
  }
  markup+=card('<h2>Connected account</h2><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html#account" rel="noopener noreferrer">Manage member account ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>');
  setContent(markup);
