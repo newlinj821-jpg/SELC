@@ -4,7 +4,7 @@
  */
 const PRIMARY='https://sanctumportal.org';
 const ORIGIN='https://se-selc.netlify.app';
-const ALLOWED=new Set(['selc-auth','member-auth','selc-governance','selc-public','ecosystem-session','staff-portal','rsvps','community-requests','community-leaders','educator-applications','education-programs','ban-reports','shifts','leadership-library','leadership-queue','safety-appeal-review','applications','leadership-briefing','selc-system-health']);
+const ALLOWED=new Set(['selc-auth','member-auth','selc-governance','committee-desk','selc-public','ecosystem-session','staff-portal','rsvps','community-requests','community-leaders','educator-applications','education-programs','ban-reports','shifts','leadership-library','leadership-queue','safety-appeal-review','applications','leadership-briefing','selc-system-health']);
 export default async function handler(request){
  const cors={'content-type':'application/json','cache-control':'no-store','x-content-type-options':'nosniff'};
  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
