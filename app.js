@@ -137,8 +137,18 @@ function startPublic(){
 async function loadPublicLeadership(){
   const data=await api('selc-public',{token:'',timeout:5000});
   const host=$('#publicDirectory');if(!host)return;
-  const bySeat=new Map((data.people||[]).map(p=>[Number(p.seat),p]));
-  host.innerHTML=[1,2,3,4,5].map(n=>{const person=bySeat.get(n);return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+esc(person?.role==='coordinator'?'Coordinator & Representative':person?'SELC Representative':n<=3?'Venue + online':'Online-first')+'</small></div>'}).join('');
+  const people=Array.isArray(data.people)?data.people:[];
+  const bySeat=new Map(people.map(p=>[Number(p.seat),p]));
+  const coordinators=people.filter(p=>p.role==='coordinator').slice(0,2);
+  const coordinatorHost=$('#publicCoordinators');
+  if(coordinatorHost)coordinatorHost.innerHTML=[0,1].map(n=>{
+    const person=coordinators[n];
+    return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Coordinator')+'</strong><small>'+esc(person?'SELC Coordinator':'Position available')+'</small></div>';
+  }).join('');
+  host.innerHTML=[1,2,3,4,5].map(n=>{
+    const person=bySeat.get(n);
+    return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+esc(person?.publicParticipation||'SELC Representative')+'</small></div>';
+  }).join('');
 }
 async function beginHeadquarters(){
  const session=await api('selc-auth');
@@ -274,7 +284,7 @@ const COORDFIELDS=[
 async function coordinatorPage(){
  if(role()!=='representative'){setContent(pageHeader('LEADERSHIP ADVANCEMENT','Coordinator application','Only active SELC Representatives can apply.')+empty('This advancement is for Representatives','Join the committee first.'));return}
  const draftKey='selc.coord.draft.'+(context.me?.displayName||'user'),draft=JSON.parse(sessionStorage.getItem(draftKey)||'{}');let markup=pageHeader('LEADERSHIP ADVANCEMENT','Apply for Coordinator','A more detailed application for the responsibilities of operational leadership. Save your progress as you go; drafts remain on this device for this session.');
- markup+=card('<div class="hq-stats"><div class="hq-stat"><small>SECTIONS</small><strong>08</strong></div><div class="hq-stat"><small>COORDINATOR LIMIT</small><strong>02</strong></div></div><p>All active Representatives may apply. Candidates do not vote on themselves. The committee votes first; Eros gives final appointment approval.</p>');
+ markup+=card('<div class="hq-stats"><div class="hq-stat"><small>SECTIONS</small><strong>08</strong></div><div class="hq-stat"><small>COORDINATOR LIMIT</small><strong>02</strong></div></div><p>All active Representatives may apply. Candidates do not vote on themselves. The committee votes first; Eros gives final approval. During early formation, Eros may document a limited exception when fewer than two other Representatives can vote.</p>');
  markup+=card('<form id="coordForm" class="hq-form">'+COORDFIELDS.map(([id,title,fields],i)=>'<fieldset><legend>'+(i+1)+' / '+esc(title)+'</legend>'+fields.map(f=>textfield(f,draft[f[0]]||'',f[0]!=='final')).join('')+'</fieldset>').join('')+'<label class="checkline"><input type="checkbox" name="truthful" required> I understand the expectations of confidentiality, responsibility, and accurate reporting.</label><p data-status class="hq-form-status"></p><button class="hq-button primary" type="submit">Send my Coordinator application</button></form>');
  setContent(markup);const form=$('#coordForm');form.addEventListener('input',()=>{const values=formValues(form);delete values.truthful;sessionStorage.setItem(draftKey,JSON.stringify(values))});
  watchForm(form,async(values,form)=>{if(!values.truthful)throw new Error('Confirm the acknowledgment first.');const answers={...values};delete answers.truthful;if(answers.motivation.length<80||answers.experience.length<80)throw new Error('Expand your motivation and experience to at least 80 characters each.');await post('selc-governance','apply_coordinator',{answers});sessionStorage.removeItem(draftKey);flash('Coordinator application submitted to SELC leadership.');openPage('home')});
@@ -296,14 +306,20 @@ async function applicationsPage(){
  const actionButtons=closed?'<p>'+esc(a.status==='Approved'?'Appointment active after certification.':'Application closed without appointment.')+'</p>':owner()
   ?(waiting?'<p>Accepted; awaiting certification. No new committee privileges have been granted.</p>':btn('Mark under review','data-action="review"')+btn('Accept & assign certification','data-action="appoint"','primary'))+btn(waiting?'Withdraw acceptance':'Decline','data-action="decline"','danger')
   :(waiting?'<p>Founder acceptance recorded; certification pending.</p>':btn('Mark under review','data-action="review"')+btn('Recommend','data-action="recommend"','primary')+btn('Not recommended','data-action="not-recommended"'));
+ const exceptionAvailable=owner()&&a.type==='coordinator'&&a.founderOverrideEligible===true&&!waiting&&!closed;
+ const exceptionMarkup=exceptionAvailable?
+   '<section class="hq-card"><h3>Early committee appointment exception</h3><p>There are '+number(a.eligibleVoters||0)+' other active eligible Representatives. Eros may authorize the Coordinator advancement while the committee is forming. Certification is still mandatory.</p>'+
+   '<label class="checkline"><input type="checkbox" name="founderOverride"> Use the Founder exception instead of a successful vote</label>'+
+   '<label>Reason (at least 20 characters)<textarea name="founderOverrideReason" rows="3" placeholder="Explain why a normal vote is not yet practical."></textarea></label></section>':
+   (a.type==='coordinator'&&owner()&&!waiting&&!closed?'<p class="hq-micro">A successful Representative vote is required while two or more other eligible voters are active.</p>':'');
  const reviewMarkup='<p>'+tag(a.status)+' Submitted '+esc(date(a.createdAt))+'</p><div class="hq-card">'+answers+'</div>'+
   '<form class="hq-form" id="appReviewForm"><label>Notes for review</label><textarea name="notes" rows="4">'+esc(a.reviewNotes||'')+'</textarea>'+
   '<label>Public display name (optional)</label><input name="publicName" value="'+esc(a.displayName||'')+'">'+
-  '<label class="checkline"><input type="checkbox" name="publicProfile"> Show this person’s name publicly with their consent</label>'+
+  '<label class="checkline"><input type="checkbox" name="publicProfile"> Show this person’s name publicly with their consent</label>'+exceptionMarkup+
   '<div class="hq-actions">'+actionButtons+'</div><p data-status class="hq-form-status"></p></form>';
  const d=modal(a.displayName+' · '+a.type,reviewMarkup);
  $$('[data-action]',d).forEach(btnEl=>btnEl.onclick=async()=>{const vals=formValues($('#appReviewForm',d)),action=btnEl.dataset.action;try{
-  if(action==='appoint'){if(!confirmDecision('Accept this application and assign SELC certification? Appointment privileges activate only after a passing assessment.'))return;await post('selc-governance','appoint',{id:a.id,...vals,publicProfile:!!$('#appReviewForm input[name=publicProfile]',d).checked})}
+  if(action==='appoint'){const override=!!$('#appReviewForm input[name=founderOverride]',d)?.checked;if(override&&String(vals.founderOverrideReason||'').trim().length<20)throw new Error('Document the Founder exception with at least 20 characters.');if(!confirmDecision(override?'Record the Founder exception and assign certification?':'Accept this application and assign SELC certification? Appointment privileges activate only after a passing assessment.'))return;await post('selc-governance','appoint',{id:a.id,...vals,founderOverride:override,founderOverrideReason:override?vals.founderOverrideReason:'',publicProfile:!!$('#appReviewForm input[name=publicProfile]',d).checked})}
   else if(action==='decline')await post('selc-governance','decline',{id:a.id,notes:vals.notes});
   else await post('selc-governance','review_application',{id:a.id,status:action==='review'?'Under Review':action==='recommend'?'Recommended':'Not Recommended',notes:vals.notes});
   d.close();flash(action==='appoint'?'Application accepted; certification assigned.':'Application updated.');applicationsPage()
@@ -359,7 +375,7 @@ async function leaderPage(){
  let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Representative seats, including no more than two Coordinators. Members keep one committee vote regardless of title.');
  markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.length+' / 5</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div></div>';
  markup+=card('<h2>Committee members</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role)+' · '+esc(p.availability?.status||'Available')+(p.availability?.until?' through '+esc(p.availability.until):'')+'</p></div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
- if(owner())markup+=card('<h2>Lead the appointment process</h2><p>Review and appoint Representatives or Coordinators from applications. Coordinator appointments require a successful committee vote.</p>'+btn('Review SELC applications','data-page-link="applications"','primary'));
+ if(owner())markup+=card('<h2>Lead the appointment process</h2><p>Review and appoint Representatives or Coordinators from applications. Coordinator appointments normally require a committee vote. During early formation, Eros may document a limited exception when fewer than two other Representatives can vote.</p>'+btn('Review SELC applications','data-page-link="applications"','primary'));
  setContent(markup);bindPageLinks();$$('[data-remove]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Remove this SELC leadership appointment? Their regular membership remains separate.'))return;try{await post('selc-governance','remove',{accountId:b.dataset.remove});flash('Appointment ended.');leaderPage()}catch(e){flash(e.message)}});
 }
 async function proposalPage(){
@@ -468,16 +484,29 @@ async function volunteerPage(){
  if(!owner()&&!me.linked)html+=card('<h2>Connect your membership</h2><p>Your Staff profile must be linked to an approved Portal member account before volunteering.</p><a class="hq-button" href="'+PORTAL+'/member.html">Go to Member Portal</a>');
  else if(!owner()&&!me.certified)html+=card('<h2>Complete your Staff certification first</h2><p>Event shifts involve actual responsibilities. Current Staff certification is required, and Dungeon Monitor shifts separately require DM certification.</p><a class="hq-button" href="'+PORTAL+'/staff.html#cert">Open certification</a>');
  html+=events.map(e=>{
-  const coverage=e.coverage||{},head='<div class="hq-row"><div class="grow"><h2>'+esc(e.event.title)+'</h2><p>'+esc(date(e.event.start))+' · '+coverage.filled+'/'+coverage.needed+' roles filled</p></div>'+tag(coverage.complete?'Fully covered':'Open positions')+'</div>';
+  const coverage=e.coverage||{},head='<div class="hq-row"><div class="grow"><h2>'+esc(e.event.title)+'</h2><p>'+esc(date(e.event.start))+' · '+coverage.filled+'/'+coverage.needed+' roles filled</p></div>'+tag(e.recruitmentClosed?'Sign-ups closed':coverage.complete?'Fully covered':'Open positions')+'</div>';
   const shifts=e.slots.map(slot=>{
    const own=slot.claims.some(c=>c.mine);
-   return '<div class="hq-row"><div class="grow"><strong>'+esc(slot.label)+(slot.role==='dm'?' · Certified DM':'')+'</strong><p>'+esc(slot.description||'Help make this event run smoothly.')+'</p><p class="hq-micro">'+slot.filled+'/'+slot.count+' filled'+(slot.claims.length?' · '+slot.claims.map(c=>esc(c.mine?'You':c.name)).join(', '):'')+'</p></div>'+
-    (owner()?'':own?btn('Release','data-release-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','danger'):slot.open>0&&me.certified&&me.linked&&(slot.role!=='dm'||me.dm)?btn('Volunteer','data-claim-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','primary'):tag(slot.open>0?'Requires qualification':'Full'))+'</div>';
+   return '<div class="hq-row"><div class="grow"><strong>'+esc(slot.label)+(slot.role==='dm'?' · Certified DM':'')+'</strong><p>'+esc(slot.description||'Help make this event run smoothly.')+'</p><p class="hq-micro">'+slot.filled+'/'+slot.count+' filled'+(slot.closed?' · Closed to new volunteers':'')+(slot.claims.length?' · '+slot.claims.map(c=>esc(c.mine?'You':c.name)).join(', '):'')+'</p></div>'+
+    (owner()?btn(slot.positionClosed?'Reopen':'Close','data-position-toggle="'+esc(e.event.id)+'|'+esc(slot.id)+'|'+(slot.positionClosed?'open':'closed')+'"'):own?btn('Release','data-release-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','danger'):slot.closed?tag('Closed'):slot.open>0&&me.certified&&me.linked&&(slot.role!=='dm'||me.dm)?btn('Volunteer','data-claim-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','primary'):tag(slot.open>0?'Requires qualification':'Full'))+'</div>';
   }).join('');
-  return card(head+'<div class="hq-panel-list">'+shifts+'</div><div class="hq-actions">'+btn('Event handover notes','data-handover="'+esc(e.event.id)+'"')+(owner()?btn('Manage volunteer positions','data-manage-shifts="'+esc(e.event.id)+'"','primary'):'')+'</div>');
+  return card(head+'<div class="hq-panel-list">'+shifts+'</div><div class="hq-actions">'+btn('Event handover notes','data-handover="'+esc(e.event.id)+'"')+(owner()?btn(e.recruitmentClosed?'Reopen all sign-ups':'Close all sign-ups','data-event-recruitment="'+esc(e.event.id)+'|'+(e.recruitmentClosed?'open':'closed')+'"')+btn('Manage volunteer positions','data-manage-shifts="'+esc(e.event.id)+'"','primary'):'')+'</div>');
  }).join('');
  if(!events.length)html+=empty('No upcoming volunteer shifts','Positions will appear automatically when an event is published.');
  setContent(html);
+ $$('[data-position-toggle]').forEach(button=>button.onclick=async()=>{
+  const [eventId,slotId,mode]=button.dataset.positionToggle.split('|');
+  button.disabled=true;
+  try{await post('shifts','set_position_status',{eventId,slotId,closed:mode==='closed'});flash(mode==='closed'?'Position closed to new volunteers.':'Position reopened.');await volunteerPage()}
+  catch(error){flash(error.message);button.disabled=false}
+ });
+ $$('[data-event-recruitment]').forEach(button=>button.onclick=async()=>{
+  const [eventId,mode]=button.dataset.eventRecruitment.split('|');
+  if(mode==='closed'&&!confirmDecision('Close all new volunteer sign-ups for this event? Existing assignments will remain.'))return;
+  button.disabled=true;
+  try{await post('shifts','set_event_recruitment',{eventId,closed:mode==='closed'});flash(mode==='closed'?'Volunteer sign-ups closed.':'Volunteer sign-ups reopened.');await volunteerPage()}
+  catch(error){flash(error.message);button.disabled=false}
+ });
  $$('[data-handover]').forEach(b=>b.onclick=async()=>{
   try{const eventId=b.dataset.handover,d=await api('shifts',{query:{eventId}}),notes=d.handoffs||[];
   const entries=notes.map(n=>'<div class="hq-row"><div class="grow"><strong>'+esc(n.by)+' · '+esc(n.kind)+'</strong><p class="hq-prose">'+esc(n.text)+'</p><small>'+esc(date(n.at))+'</small></div></div>').join('');
@@ -490,12 +519,12 @@ async function volunteerPage(){
   try{
    const data=await api('shifts',{query:{eventId}}),slots=data.slots||[];
    const form='<form id="manageShiftForm" class="hq-form">'+slots.map((slot,i)=>
-    '<fieldset class="hq-card"><legend>'+esc(slot.label)+'</legend><input type="hidden" name="id'+i+'" value="'+esc(slot.id)+'"><label>Position<select name="role'+i+'"><option value="staff" '+(slot.role==='staff'?'selected':'')+'>Staff</option><option value="dm" '+(slot.role==='dm'?'selected':'')+'>Dungeon Monitor</option></select></label><label>Shift name<input name="label'+i+'" value="'+esc(slot.label)+'" required></label><label>Positions needed<input type="number" name="count'+i+'" min="1" max="20" value="'+number(slot.count)+'"></label><label>Description<input name="description'+i+'" value="'+esc(slot.description||'')+'"></label>'+
+    '<fieldset class="hq-card"><legend>'+esc(slot.label)+'</legend><input type="hidden" name="id'+i+'" value="'+esc(slot.id)+'"><label>Position<select name="role'+i+'"><option value="staff" '+(slot.role==='staff'?'selected':'')+'>Staff</option><option value="dm" '+(slot.role==='dm'?'selected':'')+'>Dungeon Monitor</option></select></label><label>Shift name<input name="label'+i+'" value="'+esc(slot.label)+'" required></label><label>Positions needed<input type="number" name="count'+i+'" min="1" max="20" value="'+number(slot.count)+'"></label><label>Description<input name="description'+i+'" value="'+esc(slot.description||'')+'"></label><label class="checkline"><input type="checkbox" name="closed'+i+'" '+(slot.positionClosed?'checked':'')+'> Close this position to new volunteers</label>'+
     slot.claims.map(c=>'<div class="hq-row"><span>'+esc(c.name)+'</span>'+btn('Remove volunteer','data-remove-volunteer="'+esc(eventId)+'|'+esc(slot.id)+'|'+esc(c.staffId||'')+'"','danger')+'</div>').join('')+'</fieldset>').join('')+
     '<fieldset class="hq-card"><legend>Add another position (optional)</legend><label>Type<select name="newRole"><option value="staff">Staff</option><option value="dm">Dungeon Monitor</option></select></label><label>Title<input name="newLabel" placeholder="Setup / Door / DM"></label><label>Number needed<input type="number" name="newCount" min="1" max="20" value="1"></label></fieldset><p data-status></p><button class="hq-button primary">Save volunteer positions</button></form>';
    const dlg=modal('Volunteer management · '+esc(data.event.title),form);
    watchForm($('#manageShiftForm',dlg),async values=>{
-    const result=slots.map((x,i)=>({id:values['id'+i],role:values['role'+i],label:values['label'+i],count:Number(values['count'+i]),description:values['description'+i]}));
+    const result=slots.map((x,i)=>({id:values['id'+i],role:values['role'+i],label:values['label'+i],count:Number(values['count'+i]),description:values['description'+i],closed:values['closed'+i]==='on'}));
     if(values.newLabel)result.push({role:values.newRole,label:values.newLabel,count:Number(values.newCount)||1});
     await post('shifts','set_slots',{eventId,slots:result});
     dlg.close();flash('Volunteer positions saved.');volunteerPage();
@@ -932,14 +961,14 @@ async function accountPage(){
  let markup=pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is linked to your SELC appointment, but your public screen name can be different.');
  markup+=card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(RANK[role()]||role())+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal handles your member profile, password, tickets and course records. A SELC screen name does not change your login.')+'</p>');
  if(me&&role()!=='founder'){
-  markup+=card('<h2>Public-facing SELC name</h2><p>Choose the name that appears in the committee directory and SELC replies. Your account name and sign-in stay unchanged.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Your SELC screen name</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile||!me.publicNameUpdatedAt?'checked':'')+'> Show my name and committee position on the public SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
+  markup+=card('<h2>Public-facing SELC name</h2><p>Choose the name that appears in the committee directory and SELC replies. Your account name and sign-in stay unchanged.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Your SELC screen name</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label for="selcParticipation">Public participation label</label><select id="selcParticipation" name="publicParticipation"><option value="">SELC Representative (default)</option><option value="Venue + online" '+(me.publicParticipation==='Venue + online'?'selected':'')+'>Venue + online</option><option value="Online-first" '+(me.publicParticipation==='Online-first'?'selected':'')+'>Online-first</option><option value="Online + venue support" '+(me.publicParticipation==='Online + venue support'?'selected':'')+'>Online + venue support</option><option value="Community outreach" '+(me.publicParticipation==='Community outreach'?'selected':'')+'>Community outreach</option><option value="Education" '+(me.publicParticipation==='Education'?'selected':'')+'>Education</option></select><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile||!me.publicNameUpdatedAt?'checked':'')+'> Show my name and committee position on the public SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
  }
  markup+=card('<h2>Connected account</h2><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html#account" rel="noopener noreferrer">Manage member account ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>');
  setContent(markup);
  $('[data-signout]').onclick=signOut;
  const f=$('#selcIdentityForm');
  if(f)watchForm(f,async(values,form)=>{
-  const data=await post('selc-governance','update_public_identity',{publicName:values.publicName,publicProfile:form.querySelector('[name=publicProfile]').checked});
+  const data=await post('selc-governance','update_public_identity',{publicName:values.publicName,publicParticipation:values.publicParticipation,publicProfile:form.querySelector('[name=publicProfile]').checked});
   const name=data.member?.screenName||values.publicName;
   setStatus(form.querySelector('[data-status]'),'Saved. Your SELC screen name is '+name+'.');
   flash('SELC name updated.');
