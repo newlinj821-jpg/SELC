@@ -1,0 +1,38 @@
+name: Verify all four deployed SE websites
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/verify-four-live-sites.yml]
+  workflow_dispatch:
+jobs:
+  live-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify production pages contain current release content
+        shell: bash
+        run: |
+          set -uo pipefail
+          failed=0
+          verify() {
+            local name="$1" url="$2" marker="$3" path="$4" status
+            echo "::group::Checking $name"
+            status=$(curl --retry 2 --retry-delay 2 --connect-timeout 10 --max-time 25 -sSL -o "$path" -w "%{http_code}" "$url") || status="network-error"
+            echo "$name => HTTP $status ($url)"
+            if [[ "$status" != 200 ]]; then
+              echo "::error::$name website not returning 200 ($status)"
+              failed=1
+            elif grep -Fq "$marker" "$path"; then
+              echo "$name: VERIFIED release marker ($marker)"
+            else
+              echo "::error::$name is online but missing expected release marker: $marker"
+              head -c 350 "$path" || true
+              failed=1
+            fi
+            echo "::endgroup::"
+          }
+          verify "Portal" "https://sanctumportal.org/se-education-preview.html" "Teacher Materials" /tmp/portal.html
+          verify "Hub" "https://sanctumeroshub.org/" "SE Education is brewing" /tmp/hub.html
+          verify "SELC" "https://se-selc.netlify.app/education/" "selc-education-2026-11-10-deploy" /tmp/selc.html
+          verify "SE Education" "https://seeducation.netlify.app/" "se-education-2026-11-10-deploy" /tmp/education.html
+          exit "$failed"
