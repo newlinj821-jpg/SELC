@@ -433,7 +433,7 @@ async function educationProgramsPage(){
  markup+=catalog.unavailable?card('<p>The live class catalog is temporarily unavailable. Workshop proposals remain accessible above.</p>'):courses.length?courses.map(x=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(x.level||'Workshop')+' · '+esc(x.duration||'')+'</span><h2>'+esc(x.title)+'</h2><p>'+esc(x.summary||'')+'</p><p class="hq-micro">'+esc(x.resourceCount||0)+' lesson modules · Version '+esc(x.version||0)+'</p></div>'+tag(x.status||'Development')+btn('Review class','data-se-course="'+esc(x.id)+'"')+'</div>')).join(''):empty('No class records imported yet','The founder can import the prepared drafts. Approved educators can then build out lessons through the Classroom Builder.');
  setContent(markup);bindPageLinks();
  $('[data-edu-import]')?.addEventListener('click',async()=>{
-  if(!confirmDecision('Load the twelve prepared classes as unpublished drafts? Existing courses will not be overwritten.'))return;
+  if(!(await confirmDecision('Load the twelve prepared classes as unpublished drafts? Existing courses will not be overwritten.')))return;
   try{const r=await post('se-education-courses','import_prepared',{});flash('Imported '+(r.added||[]).length+' courses; '+(r.skipped||[]).length+' already existed.');educationProgramsPage()}catch(e){flash(e.message)}
  });
  $('[data-se-course]').forEach(b=>b.onclick=async()=>{
@@ -447,7 +447,7 @@ async function educationProgramsPage(){
   $('[data-edu-decision]',dlg).forEach(btnEl=>btnEl.addEventListener('click',async()=>{
    const choice=btnEl.dataset.eduDecision;
    const actions={changes:{action:'review',outcome:'Changes Requested'},ready:{action:'review',outcome:'Ready for Founder'},publish:{action:'publish'},unpublish:{action:'unpublish'}};
-   if(!confirmDecision('Record '+choice+' for '+course.title+'?'))return;
+   if(!(await confirmDecision('Record '+choice+' for '+course.title+'?')))return;
    try{await post('se-education-courses',actions[choice].action,{courseId:id,...(actions[choice].outcome?{outcome:actions[choice].outcome}:{})});dlg.close();flash('SE Education class updated.');educationProgramsPage()}catch(e){flash(e.message)}
   }));
  });
