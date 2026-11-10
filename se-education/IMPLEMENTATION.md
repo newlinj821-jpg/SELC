@@ -48,11 +48,16 @@ Every 90-minute lesson should include:
 9. Instructor skill prerequisites and notes for guest speakers.
 10. Participant take-home summary and feedback prompts.
 
+## Teaching scope exclusions
+- No standalone rope-tying, fire-play, choking-technique or first-aid class is planned.
+- Introductory risk recognition for restraint pressure, hazardous anatomy, choking/neck compression and emergency escalation is included where relevant, without practical instruction in these high-risk methods.
+- Impact Play Foundations remains a full safety-led workshop.
+
 ## First curriculum sequence
 1. BDSM 101 — terminology and cultural diversity; consent; roles; risks; introductory negotiation; first-event etiquette; aftercare.
 2. Consent & Negotiation — affirmative agreements, changeability, capacity, safewords, nonverbal signaling, case-based exercises.
 3. Impact Play Foundations — anatomy-aware risks, equipment inspection, communication, basic sensation demonstrations by an approved educator, aftercare.
-4. Restraint Foundations — risks of nerve damage/circulation, escape access, emergency releases, non-suspension practice only for introductory class.
+4. Psychological Play & Emotional Safety — negotiated topics and language, stop signals, distress recognition, de-role, follow-up.
 5. Power Exchange — autonomy, authority, responsibilities, healthy limits, maintenance and renegotiation.
 6. Aftercare & Drop — planning and follow-up; avoid framing trauma processing as treatment.
 
