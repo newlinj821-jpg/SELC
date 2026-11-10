@@ -83,7 +83,7 @@ async function learner(){
    form.addEventListener('submit',async e=>{
     e.preventDefault();submit.disabled=true;resultText.textContent='Checking answers…';
     try{const res=await endpoint({}, {action:'grade',courseId:selectedCourse,eventId:selectedEvent,answers});resultText.textContent='Score: '+res.score+' / '+res.total+'. '+(res.passed?'Knowledge check complete.':'Review the content and try again.');
-      const feedback=element('ul');res.feedback.forEach(x=>line(feedback,'li',(x.correct?'Correct. ':'Review needed. ')+x.explanation));resultText.append(feedback);
+      const feedback=element('ul');res.feedback.forEach(x=>line(feedback,'li','Question '+x.id+': '+x.result));resultText.append(feedback);
     }catch(err){resultText.textContent=err.message}finally{submit.disabled=false}
    });
    root.append(form);
