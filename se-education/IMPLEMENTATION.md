@@ -2,7 +2,7 @@
 Status: **foundation only; do not deploy or advertise enrollment until the backend passes acceptance tests.**
 
 ## Netlify deployment identity
-- Dedicated public website: **https://seeducational.netlify.app/** (proposed URL, not yet verified as deployed).
+- Dedicated public website: **https://seeducation.netlify.app/** (proposed URL, not yet verified as deployed).
 - In Netlify, use SELC repository with **base directory `se-education`**, **publish directory `public`**, and no automatic production deployment until the integration release gate passes.
 - Configure the Portal connected-app target `education` with this precise origin.
 
