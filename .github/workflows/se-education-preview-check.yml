@@ -1,0 +1,22 @@
+name: SE Education standalone site checks
+on:
+  pull_request:
+    paths:
+      - 'se-education/**'
+      - '.github/workflows/se-education-preview-check.yml'
+  push:
+    branches:
+      - 'feature/se-education-foundation-2026-11'
+    paths:
+      - 'se-education/**'
+      - '.github/workflows/se-education-preview-check.yml'
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Verify private drafts are excluded and site scripts compile
+        run: node --test se-education/qa/build-check.mjs
