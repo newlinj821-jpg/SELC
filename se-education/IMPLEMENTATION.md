@@ -1,6 +1,11 @@
 # SE Education — integrated delivery specification
 Status: **foundation only; do not deploy or advertise enrollment until the backend passes acceptance tests.**
 
+## Netlify deployment identity
+- Dedicated public website: **https://seeducational.netlify.app/** (proposed URL, not yet verified as deployed).
+- In Netlify, use SELC repository with **base directory `se-education`**, **publish directory `public`**, and no automatic production deployment until the integration release gate passes.
+- Configure the Portal connected-app target `education` with this precise origin.
+
 ## Source of truth
 - Portal is canonical for membership, sessions, educator approval, event creation, enrollment, payment and attendance.
 - SELC is the editorial and operations console; its gateway is a transport relay, not an authority.
