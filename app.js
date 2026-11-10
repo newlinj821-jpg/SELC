@@ -564,7 +564,7 @@ async function eventPage(){
  let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','The same RSVP decisions, assignments and guest lists as the Sanctum Eros Portal.',btn('Open check-in','data-page-link="door"'));
  markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+btn('Check in','data-event-door="'+esc(e.id)+'"')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming events','New events will appear as they are scheduled.');
  setContent(markup);bindPageLinks();
- $('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
+ $$('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
  $$('[data-event-door]').forEach(b=>b.onclick=()=>{context.eventId=b.dataset.eventDoor;openPage('door')});
  $$('[data-event-teacher]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eventTeacher));
 }
