@@ -52,7 +52,7 @@ async function learner(){
  if(!selectedCourse||!selectedEvent){root.hidden=true;return}
  root.hidden=false;root.replaceChildren();
  line(root,'h2','Your class materials');
- if(!session()?.token){line(root,'p','Sign in through the Portal to access curriculum for an approved workshop enrollment.');const a=line(root,'a','Connect my account','btn');a.href=portal+'/ecosystem-connect.html?app=education';return}
+ if(!session()?.token){line(root,'p','Sign in through the Portal to access curriculum for an approved workshop enrollment.');const a=line(root,'a','Connect my account','btn');a.href=portal+'/ecosystem-connect.html?app=education&returnUrl='+encodeURIComponent(location.href);return}
  try{
   const result=await endpoint({courseId:selectedCourse,eventId:selectedEvent});
   const course=result.course;
@@ -62,6 +62,7 @@ async function learner(){
    const section=element('section',null,'card');
    line(section,'h3',module.title);
    line(section,'p',module.body||'');
+   if(module.slideBullets){const points=element('section');line(points,'h4','Presentation notes');const list=element('ul');String(module.slideBullets).split(/\n+/).filter(Boolean).forEach(x=>line(list,'li',x));points.append(list);section.append(points)}
    if(module.activities)line(section,'p','Class activity: '+module.activities);
    if(module.resources)line(section,'p','Resources: '+module.resources);
    root.append(section);
@@ -82,18 +83,27 @@ async function learner(){
    const resultText=element('p',null,'quiz-result');form.append(resultText);
    form.addEventListener('submit',async e=>{
     e.preventDefault();submit.disabled=true;resultText.textContent='Checking answers…';
-    try{const res=await endpoint({}, {action:'grade',courseId:selectedCourse,eventId:selectedEvent,answers});resultText.textContent='Score: '+res.score+' / '+res.total+'. '+(res.passed?'Knowledge check complete.':'Review the content and try again.');
+    try{const res=await endpoint({}, {action:'grade',courseId:selectedCourse,eventId:selectedEvent,answers});resultText.textContent='Score: '+res.score+' / '+res.total+'. '+(res.completed?'Class completion recorded.':res.passed?'Knowledge check passed; class completion also requires recorded attendance.':'Review the content and try again.');
       const feedback=element('ul');res.feedback.forEach(x=>line(feedback,'li','Question '+x.id+': '+x.result));resultText.append(feedback);
     }catch(err){resultText.textContent=err.message}finally{submit.disabled=false}
    });
    root.append(form);
+   const check=element('button','Check my completion record','btn');check.type='button';
+   const completion=element('p',null,'quiz-result');
+   check.addEventListener('click',async()=>{
+    check.disabled=true;completion.textContent='Checking your class record…';
+    try{const status=await endpoint({}, {action:'completion',courseId:selectedCourse,eventId:selectedEvent});
+     completion.textContent=status.completed?'Class completed and recorded.':status.passed?'Your assessment passed. Attendance check-in is still required.':'No completed assessment is recorded for this workshop.';
+    }catch(err){completion.textContent=err.message}finally{check.disabled=false}
+   });
+   root.append(check,completion);
   }
  }catch(err){line(root,'p',err.message);const a=line(root,'a','Open my Portal account','btn');a.href=portal+'/member.html#education'}
 }
 async function start(){
  try{await exchange()}catch(err){setStatus(err.message)}
  const connected=session()?.token&&Date.parse(session()?.expiresAt||'')>Date.now();
- const acct=$('educationAccountLink');if(acct){acct.textContent=connected?'Connected to Portal':'Connect Portal account';acct.href=portal+'/ecosystem-connect.html?app=education'}
+ const acct=$('educationAccountLink');if(acct){acct.textContent=connected?'Connected to Portal':'Connect Portal account';acct.href=portal+'/ecosystem-connect.html?app=education&returnUrl='+encodeURIComponent(location.href)}
  await Promise.all([catalog(),learner()]);
 }
 start();
