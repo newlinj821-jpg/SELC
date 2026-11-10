@@ -1,9 +1,7 @@
+# Dedicated SE Education branch: publish only the education website.
+# This configuration applies to SE-Education, not SELC's main branch.
 [build]
-  publish = "."
-
-[functions]
-  directory = "netlify/functions"
-  node_bundler = "esbuild"
+  publish = "se-education/public"
 
 [build.environment]
   NODE_VERSION = "24"
