@@ -424,19 +424,50 @@ async function educatorReviewsPage(){
  $$('[data-educator-review]').forEach(b=>b.onclick=()=>{const x=rows.find(r=>r.id===b.dataset.educatorReview);if(!x)return;const dlg=modal('Community Educator · '+x.applicantName,'<form id="educatorReviewForm" class="hq-form"><label>Review decision</label><select name="status"><option>Changes Requested</option><option>Recommended</option><option>Declined</option>'+(owner()?'<option>Approved</option>':'')+'</select><label>Reasoning and next steps</label><textarea name="notes" rows="5" required minlength="20"></textarea><p data-status></p><button class="hq-button primary" type="submit">Save review</button></form>');watchForm($('#educatorReviewForm',dlg),async values=>{await post('educator-applications','review',{id:x.id,...values});dlg.close();flash('Educator review saved.');educatorReviewsPage()})});
 }
 
+async function openSEEducationTeacherMaterials(courseId){
+ if(!courseId)return flash('This workshop has no linked SE Education class yet.');
+ try{
+  const result=await api('se-education-courses',{query:{courseId,mode:'teacher'}}),course=result.course;
+  const m=course.modules||[],q=course.quiz||[];
+  const parts=[
+   '<p>'+tag(course.status||'Development')+' · '+esc(course.duration||'')+' · '+esc(course.level||'')+'</p>',
+   course.source==='prepared'?'<p class="hq-micro">Prepared preview only. Not imported or published.</p>':'',
+   '<h3>Overview & objectives</h3><p class="hq-prose">'+esc(course.summary||'')+'</p><pre style="white-space:pre-wrap">'+esc(course.objectives||'')+'</pre>',
+   '<h3>Private teacher run-of-show</h3><details open><summary>Full teaching script</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:500px;overflow:auto">'+esc(course.teacherPlan||'No instructor plan yet.')+'</pre></details>',
+   '<h3>Student follow-along and presentation slides</h3>',
+   m.map((x,i)=>'<details><summary>'+esc((i+1)+'. '+x.title)+' · '+esc(x.minutes||'?')+' min</summary>'+
+    '<h4>Student lesson</h4><pre style="white-space:pre-wrap">'+esc(x.body||'')+'</pre>'+
+    '<h4>Student exercise</h4><pre style="white-space:pre-wrap">'+esc(x.activities||'')+'</pre>'+
+    '<h4>Slide bullets</h4><pre style="white-space:pre-wrap">'+esc(x.slideBullets||'')+'</pre>'+
+    '<h4>Private educator cues</h4><pre style="white-space:pre-wrap">'+esc(x.speakerNotes||'')+'</pre>'+
+    '<h4>Discussion prompts</h4><pre style="white-space:pre-wrap">'+esc(x.prompts||'')+'</pre>'+
+    '<h4>Resources</h4><pre style="white-space:pre-wrap">'+esc(x.resources||'')+'</pre></details>').join(''),
+   '<h3>Quiz and private answer key</h3>',
+   q.map((x,i)=>'<details><summary>'+esc((i+1)+'. '+x.prompt)+'</summary><ol type="A">'+(x.choices||[]).map((choice,j)=>'<li'+(j===Number(x.answer)?' style="color:#dab789;font-weight:700"':'')+'>'+esc(choice)+(j===Number(x.answer)?' (correct)':'')+'</li>').join('')+'</ol><p>Rationale: '+esc(x.explanation||'Not supplied')+'</p></details>').join(''),
+   '<h3>Research and references</h3><pre style="white-space:pre-wrap;overflow-wrap:anywhere">'+esc(course.sources||'')+'</pre>',
+   '<p><a href="https://sanctumportal.org/se-education-preview.html?course='+encodeURIComponent(course.id)+'" target="_blank" rel="noopener">Open full-page teaching preview in Portal</a></p>'
+  ];
+  const dlg=modal(course.title,parts.join(''));
+  const guide=$('.login-inner',dlg);if(guide)guide.style.maxHeight='75vh',guide.style.overflowY='auto';
+ }catch(e){flash(e.message||'Teacher materials unavailable.')}
+}
+
 async function educationProgramsPage(){
- const [data,catalog]=await Promise.all([api('education-programs'),api('se-education-courses',{query:{mode:'catalog'}}).catch(()=>({courses:[],unavailable:true}))]),plans=data.plans||[],courses=catalog.courses||[];
+ const [data,catalog,prepared]=await Promise.all([api('education-programs'),api('se-education-courses',{query:{mode:'catalog'}}).catch(()=>({courses:[],unavailable:true})),owner()?api('se-education-courses',{query:{mode:'prepared'}}).catch(()=>({courses:[]})):Promise.resolve({courses:[]})]),plans=data.plans||[];
+ const byId=new Map();for(const x of prepared.courses||[])byId.set(x.id,x);for(const x of catalog.courses||[])byId.set(x.id,x);
+ const courses=[...byId.values()].sort((a,b)=>String(a.title).localeCompare(String(b.title));
  let markup=pageHeader('LEARN / TEACH / SHARE','Community Education Program','Work with educators to shape practical workshops. No class becomes a published event until Eros approves its scheduling.',btn('Education conversations','data-page-link="requests"'));
  markup+='<div class="hq-stats">'+[['WORKSHOP IDEAS',plans.length],['UNDER SELC REVIEW',plans.filter(p=>p.status==='SELC Review').length],['AWAITING FOUNDER',plans.filter(p=>p.status==='Ready for Founder').length],['APPROVED TO SCHEDULE',plans.filter(p=>p.status==='Approved for Scheduling').length]].map(([label,n])=>'<div class="hq-stat"><small>'+label+'</small><strong>'+number(n)+'</strong></div>').join('')+'</div>';
  markup+=plans.length?plans.map(p=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(p.educatorName||'Community Educator')+'</span><h2>'+esc(p.title)+'</h2><p>'+esc(p.summary||p.objectives||'Workshop proposal')+'</p><p class="hq-micro">Updated '+esc(date(p.updatedAt))+'</p></div>'+tag(p.status)+btn('Review plan','data-edu-plan="'+esc(p.requestId)+'"')+'</div>')).join(''):empty('Start building your education calendar','Educators can propose workshops in their Member Portal. Approved plans appear here for review, mentoring, and scheduling.');
  markup+='<div class="hq-section"><div class="hq-row"><div class="grow"><h2>SE Education Class Library</h2><p>Full lessons, quizzes and instructor guides for linked Workshop events. Publishing requires Founder approval.</p></div><a class="hq-button" href="https://sanctumportal.org/se-education-studio.html">Open visual Classroom Builder</a>'+(owner()?btn('Load 12 prepared drafts','data-edu-import="1"'):'')+'</div></div>';
- markup+=catalog.unavailable?card('<p>The live class catalog is temporarily unavailable. Workshop proposals remain accessible above.</p>'):courses.length?courses.map(x=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(x.level||'Workshop')+' · '+esc(x.duration||'')+'</span><h2>'+esc(x.title)+'</h2><p>'+esc(x.summary||'')+'</p><p class="hq-micro">'+esc(x.resourceCount||0)+' lesson modules · Version '+esc(x.version||0)+'</p></div>'+tag(x.status||'Development')+btn('Review class','data-se-course="'+esc(x.id)+'"')+'</div>')).join(''):empty('No class records imported yet','The founder can import the prepared drafts. Approved educators can then build out lessons through the Classroom Builder.');
+ markup+=(catalog.unavailable&&!courses.length)?card('<p>The live class catalog is unavailable. No prepared courses could be retrieved for this account.</p>'):courses.length?courses.map(x=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(x.level||'Workshop')+' · '+esc(x.duration||'')+'</span><h2>'+esc(x.title)+'</h2><p>'+esc(x.summary||'')+'</p><p class="hq-micro">'+esc(x.resourceCount||0)+' lesson modules · Version '+esc(x.version||0)+'</p></div>'+tag(x.status||'Development')+btn('Teacher materials','data-edu-preview="'+esc(x.id)+'"')+btn('Review class','data-se-course="'+esc(x.id)+'"')+'</div>')).join(''):empty('No class records imported yet','The founder can import the prepared drafts. Approved educators can then build out lessons through the Classroom Builder.');
  setContent(markup);bindPageLinks();
  $('[data-edu-import]')?.addEventListener('click',async()=>{
   if(!(await confirmDecision('Load the twelve prepared classes as unpublished drafts? Existing courses will not be overwritten.')))return;
   try{const r=await post('se-education-courses','import_prepared',{});flash('Imported '+(r.added||[]).length+' courses; '+(r.skipped||[]).length+' already existed.');educationProgramsPage()}catch(e){flash(e.message)}
  });
- $$('[data-se-course]').forEach(b=>b.onclick=async()=>{
+ $('[data-edu-preview]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eduPreview));
+ $('[data-se-course]').forEach(b=>b.onclick=async()=>{
   const id=b.dataset.seCourse,summary=courses.find(x=>x.id===id);if(!summary)return;
   let course=null;try{const result=await api('se-education-courses',{query:{courseId:id,mode:'teacher'}});course=result.course}catch(e){flash(e.message);return}
   const section=items=>'<ul>'+items.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
@@ -567,10 +598,11 @@ async function volunteerPage(){
 async function eventPage(){
  const data=await api('staff-portal'),evs=activeSELCEvents(data.events);
  let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','The same RSVP decisions, assignments and guest lists as the Sanctum Eros Portal.',btn('Open check-in','data-page-link="door"'));
- markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+btn('Check in','data-event-door="'+esc(e.id)+'"')+'</div>')).join(''):empty('No upcoming events','New events will appear as they are scheduled.');
+ markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+btn('Check in','data-event-door="'+esc(e.id)+'"')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming events','New events will appear as they are scheduled.');
  setContent(markup);bindPageLinks();
  $$('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
- $$('[data-event-door]').forEach(b=>b.onclick=()=>{context.eventId=b.dataset.eventDoor;openPage('door')});
+ $('[data-event-door]').forEach(b=>b.onclick=()=>{context.eventId=b.dataset.eventDoor;openPage('door')});
+ $('[data-event-teacher]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eventTeacher));
 }
 async function rsvpPage(eventId){
  context.eventId=eventId;load();
