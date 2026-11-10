@@ -108,7 +108,7 @@ async function openCourse(id){
 }
 async function init(){
  try{
-  const cat=await request({mode:'catalog'}),prepared=await request({mode:'prepared'}).catch(()=>({courses:[]}));
+  const [cat,prepared]=await Promise.all([request({mode:'catalog'}).catch(()=>({courses:[]})),request({mode:'prepared'}).catch(()=>({courses:[]}))]);
   const list=new Map();for(const x of prepared.courses||[])list.set(x.id,x);for(const x of cat.courses||[])list.set(x.id,x);
   rows=[...list.values()].sort((a,b)=>a.title.localeCompare(b.title));menu();
   if(!rows.length){status('No accessible courses. Sign in as the Founder or an approved educator.');return}
