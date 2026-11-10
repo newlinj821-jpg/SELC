@@ -56,6 +56,8 @@ async function learner(){
  try{
   const result=await endpoint({courseId:selectedCourse,eventId:selectedEvent});
   const course=result.course;
+  let completedModules=[...(result.progress?.completedModules||[])];
+  const progressText=line(root,'p','Lessons completed: '+completedModules.length+' / '+(course.modules||[]).length);
   line(root,'h3',course.title);
   line(root,'p',course.summary||'');
   for(const module of course.modules||[]){
@@ -65,6 +67,19 @@ async function learner(){
    if(module.slideBullets){const points=element('section');line(points,'h4','Presentation notes');const list=element('ul');String(module.slideBullets).split(/\n+/).filter(Boolean).forEach(x=>line(list,'li',x));points.append(list);section.append(points)}
    if(module.activities)line(section,'p','Class activity: '+module.activities);
    if(module.resources)line(section,'p','Resources: '+module.resources);
+   const lab=element('label',null,'quiz-option'),tick=element('input');
+   tick.type='checkbox';tick.checked=completedModules.includes(module.id);
+   lab.append(tick,document.createTextNode(' Mark lesson complete'));
+   tick.addEventListener('change',async()=>{
+    tick.disabled=true;
+    const proposed=tick.checked?[...new Set([...completedModules,module.id])]:completedModules.filter(x=>x!==module.id);
+    try{
+     const response=await endpoint({}, {action:'progress',courseId:selectedCourse,eventId:selectedEvent,completedModules:proposed});
+     completedModules=response.progress.completedModules;
+     progressText.textContent='Lessons completed: '+completedModules.length+' / '+(course.modules||[]).length;
+    }catch(err){tick.checked=!tick.checked;setStatus(err.message)}finally{tick.disabled=false}
+   });
+   section.append(lab);
    root.append(section);
   }
   if(course.quiz?.length){
