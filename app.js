@@ -436,7 +436,7 @@ async function educationProgramsPage(){
   if(!(await confirmDecision('Load the twelve prepared classes as unpublished drafts? Existing courses will not be overwritten.')))return;
   try{const r=await post('se-education-courses','import_prepared',{});flash('Imported '+(r.added||[]).length+' courses; '+(r.skipped||[]).length+' already existed.');educationProgramsPage()}catch(e){flash(e.message)}
  });
- $('[data-se-course]').forEach(b=>b.onclick=async()=>{
+ $$('[data-se-course]').forEach(b=>b.onclick=async()=>{
   const id=b.dataset.seCourse,summary=courses.find(x=>x.id===id);if(!summary)return;
   let course=null;try{const result=await api('se-education-courses',{query:{courseId:id,mode:'teacher'}});course=result.course}catch(e){flash(e.message);return}
   const section=items=>'<ul>'+items.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
@@ -451,7 +451,7 @@ async function educationProgramsPage(){
    try{await post('se-education-courses',actions[choice].action,{courseId:id,...(actions[choice].outcome?{outcome:actions[choice].outcome}:{})});dlg.close();flash('SE Education class updated.');educationProgramsPage()}catch(e){flash(e.message)}
   }));
  });
- $('[data-edu-plan]').forEach(b=>b.onclick=()=>{
+ $$('[data-edu-plan]').forEach(b=>b.onclick=()=>{
   const p=plans.find(x=>x.requestId===b.dataset.eduPlan);if(!p)return;
   const body='<p>'+tag(p.status)+' · '+esc(p.educatorName||'Educator')+'</p><h3>Learning objectives</h3><p class="hq-prose">'+esc(p.objectives||'To be developed')+'</p><h3>Course outline</h3><p class="hq-prose">'+esc(p.outline||'To be developed')+'</p><h3>Consent and safety</h3><p class="hq-prose">'+esc(p.consentSafety||'To be developed')+'</p><h3>Equipment & accessibility</h3><p class="hq-prose">'+esc(p.equipment||'Not specified')+'</p><p class="hq-prose">'+esc(p.accessibility||'Not specified')+'</p><h3>Mentorship and notes</h3><p class="hq-prose">'+esc(p.mentorRequest||'No mentor requested')+'</p>'+(p.notes||[]).map(n=>'<div class="hq-row"><div class="grow"><strong>'+esc(n.by)+'</strong><p class="hq-prose">'+esc(n.text)+'</p></div></div>').join('')+
   '<form class="hq-form" id="eduReview"><label>Review outcome</label><select name="status"><option value="Development">Keep in development</option><option value="Changes Requested">Request changes</option><option value="Ready for Founder">Ready for Founder review</option></select><label>Notes for the educator</label><textarea name="note" minlength="15" required rows="4"></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Send review</button></form>'+
