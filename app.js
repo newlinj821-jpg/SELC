@@ -444,7 +444,7 @@ async function educationProgramsPage(){
   if(!course.published)body+='<div class="hq-row">'+btn('Return for revisions','data-edu-decision="changes"')+btn('Ready for Founder','data-edu-decision="ready"')+(owner()?btn('Publish approved class','data-edu-decision="publish"'):'')+'</div>';
   else if(owner())body+='<div class="hq-row">'+btn('Unpublish class','data-edu-decision="unpublish"')+'</div>';
   const dlg=modal(course.title,body);
-  $('[data-edu-decision]',dlg).forEach(btnEl=>btnEl.addEventListener('click',async()=>{
+  $$('[data-edu-decision]',dlg).forEach(btnEl=>btnEl.addEventListener('click',async()=>{
    const choice=btnEl.dataset.eduDecision;
    const actions={changes:{action:'review',outcome:'Changes Requested'},ready:{action:'review',outcome:'Ready for Founder'},publish:{action:'publish'},unpublish:{action:'unpublish'}};
    if(!(await confirmDecision('Record '+choice+' for '+course.title+'?')))return;
