@@ -29,23 +29,43 @@ async function exchange(){
  sessionStorage.setItem(sessionKey,JSON.stringify({token:result.token,expiresAt:result.expiresAt}));
  setStatus('Connected to the Sanctum Eros Member Portal.');
 }
+const plannedCourses=[
+ ['BDSM 101: Foundations of Consent & Kink','Beginner · 90 minutes','Consent, negotiation, roles, risk awareness, and aftercare.'],
+ ['Consent & Negotiation: Practical Communication','Beginner · 90 minutes','Practice clear limits, signals, and respectful check-ins.'],
+ ['Impact Play Foundations','Beginner · 120 minutes','Equipment safety, anatomy, negotiation, and introductory demonstrations.'],
+ ['Psychological Play: Negotiation & Emotional Safety','Intermediate · 120 minutes','Boundaries and safety for negotiated psychological play.'],
+ ['Power Exchange & D/s Relationships','90 minutes','Negotiated authority, communication and healthy agreements.'],
+ ['Aftercare, Drop & Follow-Up','90 minutes','Physical and emotional recovery, individualized support, and follow-up.'],
+ ['Sensory Play & Communication','90 minutes','Materials, communication, and accessible sensory practices.'],
+ ['Ethical Non-Monogamy: Agreements & Communication','90 minutes','Relationship arrangements, health conversations, and boundaries.'],
+ ['Dungeon Etiquette, Privacy & Community Practice','90 minutes','Shared spaces, privacy, consent and community expectations.'],
+ ['Accessibility & Adaptive BDSM','90 minutes','Inclusive participation, communication, and access planning.'],
+ ['Dungeon Monitor Foundations','120 minutes','Role boundaries, observational safety and incident reporting.'],
+ ['Teaching Kink: Educator Facilitation Lab','120 minutes','How to plan, present and assess responsible kink education.']
+];
+function catalogCard(root,title,meta,summary,published=false,planned=false){
+ const card=element('article',null,'card');
+ line(card,'div',meta||'Instructor-led Workshop','meta');
+ line(card,'h3',title);
+ line(card,'p',summary||'SE Education workshop.');
+ line(card,'small',planned?'Planned class · Curriculum in preparation':published?'Enrollment and access through the Portal.':'Draft · Enrollment not open');
+ const link=element('a','View events and enrollment','btn');link.href=portal+'/events.html';card.append(link);root.append(card);
+}
 async function catalog(){
  const root=$('liveEducationCatalog');if(!root)return;
+ root.replaceChildren();
  try{
-  const result=await endpoint({mode:'catalog'});
-  root.replaceChildren();
-  if(!result.courses?.length){line(root,'p','The first classes are being prepared. Enrollment is not open yet.');return}
-  for(const course of result.courses){
-   const card=element('article',null,'card');
-   line(card,'div',(course.level||'Workshop')+' · '+(course.duration||'Instructor-led'),'meta');
-   line(card,'h3',course.title);
-   line(card,'p',course.summary||'Explore this SE Education class.');
-   if(course.published)line(card,'small','Enrollment and class access are managed through the Portal.');
-   else line(card,'small','Draft · Available to authorized educators only');
-   card.append(element('a','View Portal classes','btn')).lastElementChild.href=portal+'/events.html';
-   root.append(card);
+  const result=await endpoint({mode:'catalog'}),courses=(result.courses||[]).filter(x=>x.published===true);
+  if(!courses.length){
+   line(root,'p','Our first classes are in preparation. Enrollment has not opened.');
+   for(const [title,meta,summary] of plannedCourses)catalogCard(root,title,meta,summary,false,true);
+   return;
   }
- }catch(err){line(root,'p','Course catalog unavailable. '+err.message)}
+  for(const course of courses)catalogCard(root,course.title,(course.level||'Workshop')+' · '+(course.duration||'Instructor-led'),course.summary,true,false);
+ }catch(err){
+  line(root,'p','The live enrollment feed is temporarily unavailable. These are planned classes, not open registrations.');
+  for(const [title,meta,summary] of plannedCourses)catalogCard(root,title,meta,summary,false,true);
+ }
 }
 async function learner(){
  const root=$('learnerWorkspace');if(!root)return;
