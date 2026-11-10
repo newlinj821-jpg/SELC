@@ -425,12 +425,33 @@ async function educatorReviewsPage(){
 }
 
 async function educationProgramsPage(){
- const [data]=await Promise.all([api('education-programs')]),plans=data.plans||[];
+ const [data,catalog]=await Promise.all([api('education-programs'),api('se-education-courses',{query:{mode:'catalog'}}).catch(()=>({courses:[],unavailable:true}))]),plans=data.plans||[],courses=catalog.courses||[];
  let markup=pageHeader('LEARN / TEACH / SHARE','Community Education Program','Work with educators to shape practical workshops. No class becomes a published event until Eros approves its scheduling.',btn('Education conversations','data-page-link="requests"'));
  markup+='<div class="hq-stats">'+[['WORKSHOP IDEAS',plans.length],['UNDER SELC REVIEW',plans.filter(p=>p.status==='SELC Review').length],['AWAITING FOUNDER',plans.filter(p=>p.status==='Ready for Founder').length],['APPROVED TO SCHEDULE',plans.filter(p=>p.status==='Approved for Scheduling').length]].map(([label,n])=>'<div class="hq-stat"><small>'+label+'</small><strong>'+number(n)+'</strong></div>').join('')+'</div>';
  markup+=plans.length?plans.map(p=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(p.educatorName||'Community Educator')+'</span><h2>'+esc(p.title)+'</h2><p>'+esc(p.summary||p.objectives||'Workshop proposal')+'</p><p class="hq-micro">Updated '+esc(date(p.updatedAt))+'</p></div>'+tag(p.status)+btn('Review plan','data-edu-plan="'+esc(p.requestId)+'"')+'</div>')).join(''):empty('Start building your education calendar','Educators can propose workshops in their Member Portal. Approved plans appear here for review, mentoring, and scheduling.');
+ markup+='<div class="hq-section"><div class="hq-row"><div class="grow"><h2>SE Education Class Library</h2><p>Full lessons, quizzes and instructor guides for linked Workshop events. Publishing requires Founder approval.</p></div><a class="hq-button" href="https://sanctumportal.org/se-education-studio.html">Open visual Classroom Builder</a>'+(owner()?btn('Load 12 prepared drafts','data-edu-import="1"'):'')+'</div></div>';
+ markup+=catalog.unavailable?card('<p>The live class catalog is temporarily unavailable. Workshop proposals remain accessible above.</p>'):courses.length?courses.map(x=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(x.level||'Workshop')+' · '+esc(x.duration||'')+'</span><h2>'+esc(x.title)+'</h2><p>'+esc(x.summary||'')+'</p><p class="hq-micro">'+esc(x.resourceCount||0)+' lesson modules · Version '+esc(x.version||0)+'</p></div>'+tag(x.status||'Development')+btn('Review class','data-se-course="'+esc(x.id)+'"')+'</div>')).join(''):empty('No class records imported yet','The founder can import the prepared drafts. Approved educators can then build out lessons through the Classroom Builder.');
  setContent(markup);bindPageLinks();
- $$('[data-edu-plan]').forEach(b=>b.onclick=()=>{
+ $('[data-edu-import]')?.addEventListener('click',async()=>{
+  if(!confirmDecision('Load the twelve prepared classes as unpublished drafts? Existing courses will not be overwritten.'))return;
+  try{const r=await post('se-education-courses','import_prepared',{});flash('Imported '+(r.added||[]).length+' courses; '+(r.skipped||[]).length+' already existed.');educationProgramsPage()}catch(e){flash(e.message)}
+ });
+ $('[data-se-course]').forEach(b=>b.onclick=async()=>{
+  const id=b.dataset.seCourse,summary=courses.find(x=>x.id===id);if(!summary)return;
+  let course=null;try{const result=await api('se-education-courses',{query:{courseId:id,mode:'teacher'}});course=result.course}catch(e){flash(e.message);return}
+  const section=items=>'<ul>'+items.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>';
+  let body='<p>'+tag(course.status||'Development')+' · '+esc(course.level||'')+' · '+esc(course.duration||'')+'</p><h3>Learning objectives</h3><p class="hq-prose">'+esc(course.objectives||'Not supplied')+'</p><h3>Lesson plan</h3>'+section((course.modules||[]).map(x=>x.title+' — '+(x.minutes||'?')+' min'))+'<h3>Safety, sources and assessment</h3><p class="hq-prose">'+esc(course.sources||'No sources added')+'</p><p>'+esc((course.quiz||[]).length)+' quiz questions</p><h3>Private instructor plan</h3><details><summary>Read teaching script</summary><pre style="white-space:pre-wrap;max-height:360px;overflow:auto">'+esc(course.teacherPlan||'Not supplied')+'</pre></details><p><a href="https://sanctumportal.org/se-education-studio.html">Edit full curriculum in Classroom Builder</a></p>';
+  if(!course.published)body+='<div class="hq-row">'+btn('Return for revisions','data-edu-decision="changes"')+btn('Ready for Founder','data-edu-decision="ready"')+(owner()?btn('Publish approved class','data-edu-decision="publish"'):'')+'</div>';
+  else if(owner())body+='<div class="hq-row">'+btn('Unpublish class','data-edu-decision="unpublish"')+'</div>';
+  const dlg=modal(course.title,body);
+  $('[data-edu-decision]',dlg).forEach(btnEl=>btnEl.addEventListener('click',async()=>{
+   const choice=btnEl.dataset.eduDecision;
+   const actions={changes:{action:'review',outcome:'Changes Requested'},ready:{action:'review',outcome:'Ready for Founder'},publish:{action:'publish'},unpublish:{action:'unpublish'}};
+   if(!confirmDecision('Record '+choice+' for '+course.title+'?'))return;
+   try{await post('se-education-courses',actions[choice].action,{courseId:id,...(actions[choice].outcome?{outcome:actions[choice].outcome}:{})});dlg.close();flash('SE Education class updated.');educationProgramsPage()}catch(e){flash(e.message)}
+  }));
+ });
+ $('[data-edu-plan]').forEach(b=>b.onclick=()=>{
   const p=plans.find(x=>x.requestId===b.dataset.eduPlan);if(!p)return;
   const body='<p>'+tag(p.status)+' · '+esc(p.educatorName||'Educator')+'</p><h3>Learning objectives</h3><p class="hq-prose">'+esc(p.objectives||'To be developed')+'</p><h3>Course outline</h3><p class="hq-prose">'+esc(p.outline||'To be developed')+'</p><h3>Consent and safety</h3><p class="hq-prose">'+esc(p.consentSafety||'To be developed')+'</p><h3>Equipment & accessibility</h3><p class="hq-prose">'+esc(p.equipment||'Not specified')+'</p><p class="hq-prose">'+esc(p.accessibility||'Not specified')+'</p><h3>Mentorship and notes</h3><p class="hq-prose">'+esc(p.mentorRequest||'No mentor requested')+'</p>'+(p.notes||[]).map(n=>'<div class="hq-row"><div class="grow"><strong>'+esc(n.by)+'</strong><p class="hq-prose">'+esc(n.text)+'</p></div></div>').join('')+
   '<form class="hq-form" id="eduReview"><label>Review outcome</label><select name="status"><option value="Development">Keep in development</option><option value="Changes Requested">Request changes</option><option value="Ready for Founder">Ready for Founder review</option></select><label>Notes for the educator</label><textarea name="note" minlength="15" required rows="4"></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Send review</button></form>'+
