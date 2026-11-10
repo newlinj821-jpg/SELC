@@ -198,6 +198,26 @@ An effective participant can explain a relevant consent decision, identify a lim
 
 **Teacher self-review after class:** Were the learning outcomes met? Did anyone struggle with access or vocabulary? What activities ran long? Which safety clarifications were necessary? What sources require refreshing? Record revisions under a new version before repeating the class.
 
+
+## Cross-topic safety primer — restraint pressure and neck compression (15-minute optional add-on)
+
+**Teaching scope:** Basic recognition of anatomical hazards only. This is not a rope instruction course, a choking demonstration, a first-aid qualification, or permission to practice high-risk techniques.
+
+**Say:** “Impact and restraint often appear in the same scenes, but their risks are different. Pressure at the neck can impair blood flow or breathing, cause serious injury, and cannot be made safe with a particular hand position, duration or pressure. We do not teach techniques for choking here. For restraint more generally, pressure on nerves, impaired circulation, falls and restricted escape can cause injury. The aim today is recognizing when not to proceed and when to stop.”
+
+**Show:** On a medically reviewed diagram, identify the neck and airway as areas where compression must be avoided. Discuss pressure-sensitive nerve regions, compromised extremity circulation and fall hazards *without showing a tying path or a map of how to apply restraint.* The teaching exercise is to label “do not compress / investigate risk / release and seek help,” not to construct knots or a chokehold.
+
+**Ask:** “What if someone reports tingling, weakness, color change, dizziness, confusion or difficulty speaking or breathing?” **Expected:** Stop immediately and remove the source of pressure safely; call emergency services for severe symptoms and seek prompt medical assessment after neck compression even if visible injury is absent. Never treat lack of bruising as reassurance.
+
+**Scenario:** A learner suggests that light neck pressure or a short duration is a safe technique. **Respond:** “There is no reliably safe method of neck compression. We can discuss risks and non-compressive roleplay alternatives, but we are not demonstrating or teaching choking.”
+
+**Assessment:** (1) Is a safeword alone enough to make strangulation safe? **No.** (2) Does a lack of marks rule out an internal injury? **No.** (3) What happens when numbness appears during restraint? **Stop, release, assess.** (4) Do students learn to tie here? **No.**
+
+**Sources for instructor review:**
+- NCSF, *Harm Reduction Alternatives for Sexual Choking* (2026): https://ncsfreedom.org/2026/04/21/harm-reduction-alternatives-for-sexual-choking/
+- NHS, *Non-fatal strangulation*: https://www.nhsinform.scot/?healthy-living=non-fatal-strangulation-nfs
+- Peer-reviewed 2026 research abstract: https://pubmed.ncbi.nlm.nih.gov/42637988/
+
 ## Research and source review
 
 - NCSF Consent Counts: https://ncsfreedom.org/key-programs-2/consent-counts/
