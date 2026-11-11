@@ -30,19 +30,13 @@ async function exchange(){
  setStatus('Connected to the Sanctum Eros Member Portal.');
 }
 const plannedCourses=[
- ['BDSM 101: Foundations of Consent & Kink','Beginner · 90 minutes','Consent, negotiation, roles, risk awareness, and aftercare.'],
- ['Consent & Negotiation: Practical Communication','Beginner · 90 minutes','Practice clear limits, signals, and respectful check-ins.'],
- ['Impact Play Foundations','Beginner · 120 minutes','Equipment safety, anatomy, negotiation, and introductory demonstrations.'],
- ['Psychological Play: Negotiation & Emotional Safety','Intermediate · 120 minutes','Boundaries and safety for negotiated psychological play.'],
- ['Power Exchange & D/s Relationships','90 minutes','Negotiated authority, communication and healthy agreements.'],
- ['Aftercare, Drop & Follow-Up','90 minutes','Physical and emotional recovery, individualized support, and follow-up.'],
- ['Sensory Play & Communication','90 minutes','Materials, communication, and accessible sensory practices.'],
- ['Ethical Non-Monogamy: Agreements & Communication','90 minutes','Relationship arrangements, health conversations, and boundaries.'],
- ['Dungeon Etiquette, Privacy & Community Practice','90 minutes','Shared spaces, privacy, consent and community expectations.'],
- ['Accessibility & Adaptive BDSM','90 minutes','Inclusive participation, communication, and access planning.'],
- ['Dungeon Monitor Foundations','120 minutes','Role boundaries, observational safety and incident reporting.'],
- ['Teaching Kink: Educator Facilitation Lab','120 minutes','How to plan, present and assess responsible kink education.']
-];
+ ['BDSM 101: Getting Into Kink','Foundations · 90 minutes','Roles, community expectations, essential negotiation, scene basics and safer participation.'],
+ ['Consent, Negotiation & Scene Planning','Foundations · 90 minutes','Practice a complete scene negotiation and learn when to pause, decline or stop.'],
+ ['Impact Play: Tools, Technique & Control','Practical · 120 minutes','Compare implements, inspect equipment, discuss anatomy and observe inert-target demonstrations.'],
+ ['Dominance, Submission & Power Exchange','Relationships · 90 minutes','Negotiate the scope of authority, protocols, accountability and revisable agreements.'],
+ ['Psychological & Sensory Play','Specialty · 120 minutes','Negotiate language, emotional intensity and sensory elements using non-contact demonstrations.'],
+ ['Dungeon Etiquette & Risk Awareness','Community · 90 minutes','Shared space etiquette, privacy, equipment concerns and contacting staff or monitors.']
+]
 function catalogCard(root,title,meta,summary,published=false,planned=false){
  const card=element('article',null,'card');
  line(card,'div',meta||'Instructor-led Workshop','meta');
@@ -142,10 +136,12 @@ async function ownerLibrary(){
  let list;
  try{list=await endpoint({mode:'prepared'});}catch{return;}
  root.hidden=false;content.replaceChildren();
- const heading=element('p','Prepared lesson plans are available for review here, including instructor notes and knowledge checks. Publishing and enrollment remain separate approval steps.');content.append(heading);
- for(const item of list.courses||[]){
+ const heading=element('p','Six instructor-led core workshops plus supporting specialist, relationship and leadership curricula. All twelve prepared plans can be reviewed here, including full instructor notes and answer keys. Publishing and enrollment remain separate approval steps.');content.append(heading);
+ const coreOrder=['bdsm-101','consent-negotiation','impact-play-foundations','power-exchange-and-ds','psychological-play-emotional-safety','dungeon-etiquette-and-privacy'];
+ const ordered=[...(list.courses||[])].sort((a,b)=>(coreOrder.indexOf(a.id)<0?99:coreOrder.indexOf(a.id))-(coreOrder.indexOf(b.id)<0?99:coreOrder.indexOf(b.id)));
+ for(const item of ordered){
   const card=element('article',null,'card');
-  line(card,'div',(item.level||'Workshop')+' · '+(item.duration||''),'meta');
+  line(card,'div',(coreOrder.includes(item.id)?'PRIMARY WORKSHOP · ':'SUPPORTING CURRICULUM · ')+(item.duration||''),'meta');
   line(card,'h3',item.title);line(card,'p',item.summary);
   const open=element('button','Read full course and instructor plan','btn');
   open.type='button';open.setAttribute('aria-expanded','false');
@@ -154,7 +150,7 @@ async function ownerLibrary(){
    if(!details.hidden){details.hidden=true;open.setAttribute('aria-expanded','false');return;}
    open.disabled=true;open.textContent='Opening course…';
    try{
-    const res=await endpoint({mode:'teacher',courseId:item.id});
+    const res=await endpoint({mode:'teacher',source:'prepared',courseId:item.id});
     const course=res.course||{};
     details.replaceChildren();
     if(course.objectives){line(details,'h4','Learning objectives');line(details,'p',course.objectives);}
