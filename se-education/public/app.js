@@ -96,6 +96,21 @@ async function learner(){
    section.append(lab);
    root.append(section);
   }
+  const inputBox=element('section',null,'card');line(inputBox,'h3','Questions and workshop feedback');
+  line(inputBox,'p','Send a question without attaching your name to the instructor response record. Questions and feedback are attached to this workshop event.');
+  const question=element('textarea');question.placeholder='Question for the educator';question.rows=3;question.style.width='100%';
+  const sendQuestion=element('button','Send anonymous question','btn');sendQuestion.type='button';
+  const questionStatus=element('p');questionStatus.setAttribute('role','status');
+  sendQuestion.addEventListener('click',async()=>{sendQuestion.disabled=true;try{await endpoint({}, {action:'question',courseId:selectedCourse,eventId:selectedEvent,text:question.value});question.value='';questionStatus.textContent='Question submitted.'}catch(err){questionStatus.textContent=err.message}finally{sendQuestion.disabled=false}});
+  inputBox.append(question,sendQuestion,questionStatus);
+  const ratingLabel=element('label','Rate this workshop (1–5)');const rating=element('select');
+  rating.style.cssText='display:block;min-height:44px;width:100%;margin:10px 0;color:inherit;background:#211b1d;border:1px solid #5a4444;';
+  [1,2,3,4,5].forEach(n=>{const option=element('option',n+' / 5');option.value=String(n);rating.append(option)});rating.value='5';ratingLabel.append(rating);
+  const feedback=element('textarea');feedback.rows=3;feedback.placeholder='What worked? What should be clearer?';feedback.style.width='100%';
+  const sendFeedback=element('button','Submit class feedback','btn');sendFeedback.type='button';
+  const feedbackStatus=element('p');feedbackStatus.setAttribute('role','status');
+  sendFeedback.addEventListener('click',async()=>{sendFeedback.disabled=true;try{await endpoint({}, {action:'feedback',courseId:selectedCourse,eventId:selectedEvent,text:feedback.value,rating:Number(rating.value)});feedback.value='';feedbackStatus.textContent='Feedback submitted.'}catch(err){feedbackStatus.textContent=err.message}finally{sendFeedback.disabled=false}});
+  inputBox.append(ratingLabel,feedback,sendFeedback,feedbackStatus);root.append(inputBox);
   if(course.quiz?.length){
    const form=element('form');line(form,'h3','Knowledge check');
    const answers={};
@@ -170,6 +185,7 @@ async function ownerLibrary(){
    }catch(e){details.replaceChildren();line(details,'p',e.message);details.hidden=false;}
    finally{open.disabled=false;open.textContent='Read full course and instructor plan';}
   });
+  const teach=element('a','Open instructor teaching studio','btn');teach.href='/teach.html?course='+encodeURIComponent(item.id);teach.style.marginTop='12px';card.append(teach);
   card.append(open,details);content.append(card);
  }
 }
