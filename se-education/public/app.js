@@ -30,12 +30,16 @@ async function exchange(){
  setStatus('Connected to the Sanctum Eros Member Portal.');
 }
 const plannedCourses=[
- ['BDSM 101: Getting Into Kink','Foundations · 90 minutes','Roles, community expectations, essential negotiation, scene basics and safer participation.'],
- ['Consent, Negotiation & Scene Planning','Foundations · 90 minutes','Practice a complete scene negotiation and learn when to pause, decline or stop.'],
- ['Impact Play: Tools, Technique & Control','Practical · 120 minutes','Compare implements, inspect equipment, discuss anatomy and observe inert-target demonstrations.'],
- ['Dominance, Submission & Power Exchange','Relationships · 90 minutes','Negotiate the scope of authority, protocols, accountability and revisable agreements.'],
- ['Psychological & Sensory Play','Specialty · 120 minutes','Negotiate language, emotional intensity and sensory elements using non-contact demonstrations.'],
- ['Dungeon Etiquette & Risk Awareness','Community · 90 minutes','Shared space etiquette, privacy, equipment concerns and contacting staff or monitors.']
+ ['BDSM 101: Getting Into Kink','CORE · 101 · 90 minutes','Roles, consent, community and scene foundations.'],
+ ['BDSM 201: Scene Planning & Negotiation','CORE · 201 · 120 minutes','Build a complete, revocable scene plan with contingencies.'],
+ ['BDSM 301: Complex Scenes & Judgment','CORE · 301 · 120 minutes','Advanced scenario work: group agreements, capacity and incident decisions.'],
+ ['Impact Play: Tools, Technique & Control','IMPACT · 101 · 120 minutes','Inspect equipment, examine anatomy and observe inert-target practice.'],
+ ['Impact 201: Precision, Pacing & Scene Flow','IMPACT · 201 · 120 minutes','Improve decisions about control, pacing, risk and changes.'],
+ ['Dominance, Submission & Power Exchange','POWER EXCHANGE · 101 · 90 minutes','Scope, agency, agreements and responsibility.'],
+ ['D/s 201: Protocol, Service & Accountability','POWER EXCHANGE · 201 · 90 minutes','Develop sustainable protocols and reviewable agreements.'],
+ ['Dungeon Etiquette & Risk Awareness','COMMUNITY · 101 · 90 minutes','Shared-space conduct, privacy and safety escalation.'],
+ ['Dungeon 201: Monitor & Event Operations','COMMUNITY · 201 · 120 minutes','Hazard inspection, intervention and staff handoffs.'],
+ ['Psychological & Sensory Play','SPECIALIST · 120 minutes','Negotiation and non-contact learning for complex sensations.']
 ]
 function catalogCard(root,title,meta,summary,published=false,planned=false){
  const card=element('article',null,'card');
@@ -151,12 +155,12 @@ async function ownerLibrary(){
  let list;
  try{list=await endpoint({mode:'prepared'});}catch{return;}
  root.hidden=false;content.replaceChildren();
- const heading=element('p','Six instructor-led core workshops plus supporting specialist, relationship and leadership curricula. All twelve prepared plans can be reviewed here, including full instructor notes and answer keys. Publishing and enrollment remain separate approval steps.');content.append(heading);
- const coreOrder=['bdsm-101','consent-negotiation','impact-play-foundations','power-exchange-and-ds','psychological-play-emotional-safety','dungeon-etiquette-and-privacy'];
+ const heading=element('p','Numbered foundations, intermediate and advanced workshops, plus supporting specialist and leadership curricula. The full prepared library can be reviewed here, including full instructor notes and answer keys. Publishing and enrollment remain separate approval steps.');content.append(heading);
+ const coreOrder=['bdsm-101','bdsm-201','bdsm-301','impact-play-foundations','impact-201','power-exchange-and-ds','ds-201','dungeon-etiquette-and-privacy','dungeon-201','psychological-play-emotional-safety'];
  const ordered=[...(list.courses||[])].sort((a,b)=>(coreOrder.indexOf(a.id)<0?99:coreOrder.indexOf(a.id))-(coreOrder.indexOf(b.id)<0?99:coreOrder.indexOf(b.id)));
  for(const item of ordered){
   const card=element('article',null,'card');
-  line(card,'div',(coreOrder.includes(item.id)?'PRIMARY WORKSHOP · ':'SUPPORTING CURRICULUM · ')+(item.duration||''),'meta');
+  line(card,'div',(coreOrder.includes(item.id)?'FEATURED WORKSHOP · ':'SUPPORTING CURRICULUM · ')+(item.duration||''),'meta');
   line(card,'h3',item.title);line(card,'p',item.summary);
   const open=element('button','Read full course and instructor plan','btn');
   open.type='button';open.setAttribute('aria-expanded','false');
