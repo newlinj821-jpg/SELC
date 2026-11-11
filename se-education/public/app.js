@@ -153,7 +153,7 @@ async function ownerLibrary(){
  const root=$('ownerCourseLibrary'),content=$('ownerCourseContent');
  if(!root||!content||!session()?.token)return;
  let list;
- try{list=await endpoint({mode:'prepared'});}catch{return;}
+ try{list=await endpoint({mode:'prepared'});}catch(err){setStatus('Connected account does not have owner curriculum access. Sign into the Portal owner/staff account, then choose Owner curriculum access to reconnect.');return;}
  root.hidden=false;content.replaceChildren();
  const heading=element('p','Numbered foundations, intermediate and advanced workshops, plus supporting specialist and leadership curricula. The full prepared library can be reviewed here, including full instructor notes and answer keys. Publishing and enrollment remain separate approval steps.');content.append(heading);
  const coreOrder=['bdsm-101','bdsm-201','bdsm-301','impact-play-foundations','impact-201','power-exchange-and-ds','ds-201','dungeon-etiquette-and-privacy','dungeon-201','psychological-play-emotional-safety'];
@@ -197,7 +197,8 @@ async function ownerLibrary(){
 async function start(){
  try{await exchange()}catch(err){setStatus(err.message)}
  const connected=session()?.token&&Date.parse(session()?.expiresAt||'')>Date.now();
- const acct=$('educationAccountLink');if(acct){acct.textContent=connected?'Portal connected · Sign in again':'Sign in with Portal';acct.href=portal+'/ecosystem-connect.html?app=education&returnUrl='+encodeURIComponent(location.href)}
+ const acct=$('educationAccountLink');if(acct){acct.textContent=connected?'Portal connected · Reconnect':'Sign in with Portal';acct.href=portal+'/ecosystem-connect.html?app=education&returnUrl='+encodeURIComponent(location.href)}
+ const owner=$('educationOwnerLink');if(owner){owner.href=portal+'/ecosystem-connect.html?app=education&returnUrl='+encodeURIComponent(location.origin+'/#ownerCourseLibrary');owner.title='Requires an active authenticated Portal owner/staff login. Member test accounts do not gain owner permission automatically.';}
  await Promise.all([catalog(),learner(),ownerLibrary()]);
 }
 start();
