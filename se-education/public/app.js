@@ -135,11 +135,54 @@ async function learner(){
   }
  }catch(err){line(root,'p',err.message);const a=line(root,'a','Open my Portal account','btn');a.href=portal+'/member.html#education'}
 }
+
+async function ownerLibrary(){
+ const root=$('ownerCourseLibrary'),content=$('ownerCourseContent');
+ if(!root||!content||!session()?.token)return;
+ let list;
+ try{list=await endpoint({mode:'prepared'});}catch{return;}
+ root.hidden=false;content.replaceChildren();
+ const heading=element('p','Prepared lesson plans are available for review here, including instructor notes and knowledge checks. Publishing and enrollment remain separate approval steps.');content.append(heading);
+ for(const item of list.courses||[]){
+  const card=element('article',null,'card');
+  line(card,'div',(item.level||'Workshop')+' · '+(item.duration||''),'meta');
+  line(card,'h3',item.title);line(card,'p',item.summary);
+  const open=element('button','Read full course and instructor plan','btn');
+  open.type='button';open.setAttribute('aria-expanded','false');
+  const details=element('div');details.hidden=true;
+  open.addEventListener('click',async()=>{
+   if(!details.hidden){details.hidden=true;open.setAttribute('aria-expanded','false');return;}
+   open.disabled=true;open.textContent='Opening course…';
+   try{
+    const res=await endpoint({mode:'teacher',courseId:item.id});
+    const course=res.course||{};
+    details.replaceChildren();
+    if(course.objectives){line(details,'h4','Learning objectives');line(details,'p',course.objectives);}
+    if(course.prerequisites){line(details,'h4','Prerequisites');line(details,'p',course.prerequisites);}
+    for(const m of course.modules||[]){
+      const section=element('section');line(section,'h4',m.title);
+      line(section,'p',m.body||'');
+      if(m.activities)line(section,'p','Exercise: '+m.activities);
+      if(m.speakerNotes)line(section,'p','Instructor notes: '+m.speakerNotes);
+      if(m.prompts)line(section,'p','Teaching prompts: '+m.prompts);
+      details.append(section);
+    }
+    if(course.teacherPlan){line(details,'h4','Complete private instructor plan');const plan=element('pre',course.teacherPlan);plan.style.cssText='white-space:pre-wrap;overflow-wrap:anywhere;font:inherit';details.append(plan);}
+    if(course.sources){line(details,'h4','Sources and further reading');line(details,'p',course.sources);}
+    if(course.quiz?.length){line(details,'h4','Instructor assessment key');for(const q of course.quiz){line(details,'p',q.prompt+' — '+(q.choices?.[Number(q.answer)]||'')+(q.explanation?' — '+q.explanation:''));}}
+    details.hidden=false;open.setAttribute('aria-expanded','true');
+   }catch(e){details.replaceChildren();line(details,'p',e.message);details.hidden=false;}
+   finally{open.disabled=false;open.textContent='Read full course and instructor plan';}
+  });
+  card.append(open,details);content.append(card);
+ }
+}
+
 async function start(){
  try{await exchange()}catch(err){setStatus(err.message)}
  const connected=session()?.token&&Date.parse(session()?.expiresAt||'')>Date.now();
- const acct=$('educationAccountLink');if(acct){acct.textContent=connected?'Connected to Portal':'Connect Portal account';acct.href=portal+'/ecosystem-connect.html?app=education&returnUrl='+encodeURIComponent(location.href)}
- await Promise.all([catalog(),learner()]);
+ const acct=$('educationAccountLink');if(acct){acct.textContent=connected?'Portal connected · Sign in again':'Sign in with Portal';acct.href=portal+'/ecosystem-connect.html?app=education&returnUrl='+encodeURIComponent(location.href)}
+ await Promise.all([catalog(),learner(),ownerLibrary()]);
 }
 start();
 })();
