@@ -33,11 +33,11 @@ const plannedCourses=[
  ['BDSM 101: Getting Into Kink','CORE · 101 · 90 minutes','Roles, consent, community and scene foundations.'],
  ['BDSM 201: Scene Planning & Negotiation','CORE · 201 · 120 minutes','Build a complete, revocable scene plan with contingencies.'],
  ['BDSM 301: Complex Scenes & Judgment','CORE · 301 · 120 minutes','Advanced scenario work: group agreements, capacity and incident decisions.'],
- ['Impact Play: Tools, Technique & Control','IMPACT · 101 · 120 minutes','Inspect equipment, examine anatomy and observe inert-target practice.'],
+ ['Impact 101: Tools, Technique & Control','IMPACT · 101 · 120 minutes','Inspect equipment, examine anatomy and observe inert-target practice.'],
  ['Impact 201: Precision, Pacing & Scene Flow','IMPACT · 201 · 120 minutes','Improve decisions about control, pacing, risk and changes.'],
- ['Dominance, Submission & Power Exchange','POWER EXCHANGE · 101 · 90 minutes','Scope, agency, agreements and responsibility.'],
+ ['D/s 101: Dominance, Submission & Power Exchange','POWER EXCHANGE · 101 · 90 minutes','Scope, agency, agreements and responsibility.'],
  ['D/s 201: Protocol, Service & Accountability','POWER EXCHANGE · 201 · 90 minutes','Develop sustainable protocols and reviewable agreements.'],
- ['Dungeon Etiquette & Risk Awareness','COMMUNITY · 101 · 90 minutes','Shared-space conduct, privacy and safety escalation.'],
+ ['Dungeon 101: Etiquette & Risk Awareness','COMMUNITY · 101 · 90 minutes','Shared-space conduct, privacy and safety escalation.'],
  ['Dungeon 201: Monitor & Event Operations','COMMUNITY · 201 · 120 minutes','Hazard inspection, intervention and staff handoffs.'],
  ['Psychological & Sensory Play','SPECIALIST · 120 minutes','Negotiation and non-contact learning for complex sensations.']
 ]
