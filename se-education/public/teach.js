@@ -6,6 +6,17 @@ const $=id=>document.getElementById(id);
 const params=new URLSearchParams(location.search);
 const courseId=params.get('course')||'';
 const connect=portal+'/ecosystem-connect.html?app=education&returnUrl='+encodeURIComponent(location.href);
+async function exchangeHandoff(){
+ const code=params.get('se_handoff');
+ if(!code)return;
+ const url=new URL(location.href);
+ ['se_handoff','se_portal','se_app'].forEach(k=>url.searchParams.delete(k));
+ history.replaceState(null,'',url.pathname+url.search+url.hash);
+ const response=await fetch(portal+'/.netlify/functions/ecosystem-session',{method:'POST',mode:'cors',cache:'no-store',headers:{'content-type':'application/json'},body:JSON.stringify({action:'exchange_handoff',target:'education',code,clientOrigin:location.origin})});
+ let result={};try{result=await response.json()}catch{}
+ if(!response.ok||!result.token)throw new Error(result.error||'The Portal connection was not completed.');
+ sessionStorage.setItem('se-education-session',JSON.stringify({token:result.token,expiresAt:result.expiresAt}));
+}
 $('connect').href=connect;
 const session=()=>{try{const row=JSON.parse(sessionStorage.getItem('se-education-session')||'null');return row&&Date.parse(row.expiresAt)>Date.now()?row:null}catch{return null}};
 const text=(el,value)=>{el.textContent=String(value??'')};
@@ -27,7 +38,7 @@ function clock(){let n=seconds;const m=Math.floor(n/60),s=n%60;text($('timeRemai
 function runClock(){if(tick)return;tick=setInterval(()=>{if(seconds>0)seconds--;clock();if(seconds<=0)pauseClock();},1000);}
 function pauseClock(){clearInterval(tick);tick=null}
 async function loadFeedback(){const id=$('eventId').value.trim(),root=$('feedbackContent');root.replaceChildren();if(!id){text(root,'Enter a workshop event ID first.');return}try{const data=await request({mode:'class-responses',courseId,eventId:id});for(const item of data.responses||[]){const box=make(root,'div');box.className='step';make(box,'small',item.type.toUpperCase()+' · '+new Date(item.createdAt).toLocaleString());if(item.rating)make(box,'strong',item.rating+' / 5');make(box,'p',item.text)}if(!data.responses?.length)make(root,'p','No responses recorded for this event.');}catch(e){text(root,e.message)}}
-async function init(){if(!session()){text($('accessMessage'),'Sign in to access the instructor studio.');return}if(!/^[a-z0-9][a-z0-9-]{2,95}$/.test(courseId)){text($('accessMessage'),'Choose a course from the curriculum library.');return}try{let res;try{res=await request({courseId,mode:'teacher',source:'prepared'})}catch{res=await request({courseId,mode:'teacher'})}course=res.course;text($('courseTitle'),course.title);$('signedOut').hidden=true;$('studio').hidden=false;text($('accessMessage'),'Instructor access verified. Materials are private.');overview();presentation();handout();scenarios();loadPrep();clock()}catch(e){text($('accessMessage'),e.message)}}
+async function init(){try{await exchangeHandoff()}catch(e){text($('accessMessage'),e.message);return}if(!session()){text($('accessMessage'),'Sign in to access the instructor studio.');return}if(!/^[a-z0-9][a-z0-9-]{2,95}$/.test(courseId)){text($('accessMessage'),'Choose a course from the curriculum library.');return}try{let res;try{res=await request({courseId,mode:'teacher',source:'prepared'})}catch{res=await request({courseId,mode:'teacher'})}course=res.course;text($('courseTitle'),course.title);$('signedOut').hidden=true;$('studio').hidden=false;text($('accessMessage'),'Instructor access verified. Materials are private.');overview();presentation();handout();scenarios();loadPrep();clock()}catch(e){text($('accessMessage'),e.message)}}
 document.querySelectorAll('[data-panel]').forEach(b=>b.addEventListener('click',()=>showPanel(b.dataset.panel)));
 $('prevSlide').addEventListener('click',()=>{slideIndex=Math.max(0,slideIndex-1);renderSlide()});$('nextSlide').addEventListener('click',()=>{slideIndex=Math.min(slides.length-1,slideIndex+1);renderSlide()});$('fullSlide').addEventListener('click',()=>{$('presentation').requestFullscreen?.()});$('startTimer').addEventListener('click',runClock);$('pauseTimer').addEventListener('click',pauseClock);$('resetTimer').addEventListener('click',()=>{pauseClock();seconds=Math.max(1,Math.min(180,Number($('timerMinutes').value)||10))*60;clock()});$('savePrep').addEventListener('click',savePrep);$('printPrep').addEventListener('click',()=>window.print());$('eventId').addEventListener('change',loadPrep);$('loadFeedback').addEventListener('click',loadFeedback);
 init();
