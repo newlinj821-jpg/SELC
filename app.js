@@ -472,7 +472,7 @@ async function roleHandbookPage(){
  markup+=card('<h2>Using this handbook</h2><p>Read the role responsibilities alongside the shared standards. Duties are limited by your active certification and the Portal authorization system. Raise unclear rules with a Coordinator or the Founder before acting. A handbook is not permission to bypass an explicit system restriction.</p>');
  setContent(markup);
  if(supplemental)bindSupplementalGuides(supplemental);
- $('[data-handbook-role]').forEach(b=>b.onclick=()=>{context.handbookRole=b.dataset.handbookRole;roleHandbookPage().catch(failure)});
+ $$('[data-handbook-role]').forEach(b=>b.onclick=()=>{context.handbookRole=b.dataset.handbookRole;roleHandbookPage().catch(failure)});
 }
 async function appendSupplementalGuides(data){
  const docs=data.articles||[];
