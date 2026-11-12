@@ -141,7 +141,8 @@ async function loadPublicLeadership(){
   const data=await api('selc-public',{token:'',timeout:5000});
   const host=$('#publicDirectory');if(!host)return;
   const people=Array.isArray(data.people)?data.people:[];
-  const bySeat=new Map(people.filter(p=>p.role!=='coordinator').map(p=>[Number(p.seat),p]));
+  const bySeat=new Map(people.filter(p=>p.role==='representative').map(p=>[Number(p.seat),p]));
+  const advisors=people.filter(p=>p.role==='advisor');
   const coordinators=people.filter(p=>p.role==='coordinator').slice(0,2);
   const coordinatorHost=$('#publicCoordinators');
   if(coordinatorHost)coordinatorHost.innerHTML=[0,1].map(n=>{
@@ -152,6 +153,8 @@ async function loadPublicLeadership(){
     const person=bySeat.get(n);
     return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+esc(person?.publicParticipation||'SELC Representative')+'</small></div>';
   }).join('');
+  const advisorHost=$('#publicAdvisors');
+  if(advisorHost)advisorHost.innerHTML=advisors.length?advisors.map((person,i)=>'<div class="seat-card"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(person.publicName||'Advisor')+'</strong><small>SELC Advisor · '+esc(person.publicParticipation||'Community & Education')+'</small></div>').join(''):'<p class="directory-note">No Advisors have chosen to publish their names yet.</p>';
 }
 async function beginHeadquarters(){
  const session=await api('selc-auth');
