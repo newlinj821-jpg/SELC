@@ -182,6 +182,7 @@ const NAV=[
  ['applyeducator','✦','Become a Community Educator','Education',u=>!organizerRole(u)],
  ['educatorreviews','▤','Educator applications','Education',u=>u==='founder'||u==='coordinator'],
  ['educators','✦','Education & workshops','Committee',u=>committeeRole(u)],
+ ['registry','▤','Member registry','Leadership',u=>committeeRole(u)],
  ['generalapps','▧','Member & role applications','Event operations',u=>committeeRole(u)],
  ['events','▦','Events & RSVPs','Event operations',u=>committeeRole(u)],
  ['volunteer','✋','Staffing overview','Event operations',u=>committeeRole(u)],
@@ -215,7 +216,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,registry:memberRegistryPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -235,7 +236,7 @@ async function homePage(){
   ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
   ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',activeSELCEvents(staff?.events).length,'events']
  ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
- card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Community inbox','communityinbox'],['Applications','generalapps'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
+ card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Community inbox','communityinbox'],['Applications','generalapps'],['Member registry','registry'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
  if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
  setContent(markup);bindPageLinks();
 }
@@ -552,6 +553,35 @@ async function requestsPage(filter='all'){
   $$('[data-download]',dialog).forEach(b=>b.onclick=async()=>{const a=(r.attachments||[]).find(x=>x.id===b.dataset.download);try{const url=FN+'community-requests?id='+encodeURIComponent(r.id)+'&attachment='+encodeURIComponent(b.dataset.download);const response=await fetch(url,{headers:{Authorization:'Bearer '+context.token},credentials:'omit'});if(!response.ok)throw new Error('Unable to open attachment.');const blob=await response.blob(),link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=a?.name||'attachment';link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000)}catch(e){flash(e.message)}});
   $$('[data-rstatus]',dialog).forEach(b=>b.onclick=async()=>{try{await post('community-requests','update',{id:r.id,status:b.dataset.rstatus});dialog.close();requestsPage(filter)}catch(e){flash(e.message)}});
  });
+}
+async function memberRegistryPage(){
+ if(!leader())return openPage('home');
+ const result=await api('members'),members=(result.members||[]).filter(m=>m&&!m.deletedAt&&!m.isTestAccount);
+ const statuses=['All','approved','pending','denied'],accessLevels=['All','Active','Restricted','Temp-Banned','Banned','Inactive','Re-vetting Required'];
+ let filter='',status='All',access='All';
+ let markup=pageHeader('SELC / MEMBER LEADERSHIP','Member registry','The authoritative Sanctum Eros membership registry, shared with the Portal. Representatives and Coordinators may review and correct permitted records; sensitive access decisions use authorized safety controls.');
+ markup+=card('<div class="hq-form-grid"><label>Find member<input id="registrySearch" placeholder="Name, member number, FetLife username"></label><label>Membership<select id="registryStatus">'+statuses.map(v=>'<option value="'+esc(v)+'">'+esc(v==='All'?'All statuses':v)+'</option>').join('')+'</select></label><label>Venue access<select id="registryAccess">'+accessLevels.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+'</select></label></div><p class="hq-micro">Member registry data is confidential. A membership approval is not the same as an event RSVP, Staff appointment, or venue ban decision.</p>');
+ markup+='<div id="registryResults"></div>';
+ setContent(markup);
+ const render=()=>{
+  const selected=members.filter(m=>(status==='All'||String(m.status||'').toLowerCase()===status)&&(access==='All'||(m.accessStatus||'Active')===access)&&(!filter||[m.memberId,m.name,m.preferredName,m.fetlife,m.loginEmail].some(x=>String(x||'').toLowerCase().includes(filter))));
+  const target=$('#registryResults');
+  target.innerHTML='<p class="hq-micro">'+selected.length+' of '+members.length+' members</p>'+(selected.length?selected.slice(0,150).map(m=>card('<div class="hq-row"><div class="grow"><strong>'+esc(m.name||m.preferredName||'Member')+'</strong><p>'+esc(m.memberId||'No member number')+' · '+esc(m.fetlife?'@'+m.fetlife:(m.loginEmail||'No public username'))+'</p><p>'+esc(m.status||'Unknown')+' · Venue access: '+esc(m.accessStatus||'Active')+'</p></div>'+btn('Review & edit','data-registry-edit="'+esc(m.id)+'"','primary')+'</div>')).join(''):empty('No matching members','Change the filters to find another record.'));
+  $('[data-registry-edit]',target).forEach(button=>button.onclick=()=>{
+   const m=members.find(x=>x.id===button.dataset.registryEdit);if(!m)return;
+   const fields='<div class="hq-form-grid"><label>Member name<input name="name" required maxlength="120" value="'+esc(m.name||'')+'"></label><label>Contact<input name="contact" maxlength="180" value="'+esc(m.contact||'')+'"></label></div>'+
+    '<label>Attendance category<select name="attendanceCategory">'+['new','returning','established'].map(x=>'<option value="'+x+'"'+(x===(m.attendanceCategory||'new')?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>'+
+    '<label>Internal registry notes<textarea name="adminNotes" rows="4">'+esc(m.adminNotes||'')+'</textarea></label>'+
+    '<p class="hq-micro">Restricted, banned and temporarily suspended access must be handled through authorized safety and ban workflows; this form does not change venue restrictions or certifications.</p><p data-status></p><button class="hq-button primary" type="submit">Save registry correction</button>';
+   const dialog=modal('Registry · '+esc(m.memberId||m.name),' <p>Membership: '+esc(m.status||'Unknown')+' · Access: '+esc(m.accessStatus||'Active')+'</p><form class="hq-form" id="registryEditForm">'+fields+'</form><div class="hq-actions">'+btn('Application queue','data-page-link="generalapps"')+btn('Ban & restriction history','data-page-link="banhistory"')+'</div>');
+   bindPageLinks(dialog);
+   watchForm($('#registryEditForm',dialog),async values=>{await api('members',{method:'POST',body:{adminAction:'selc_registry_update',id:m.id,...values}});dialog.close();flash('Registry correction saved and audited.');await memberRegistryPage()});
+  });
+ };
+ $('#registrySearch').addEventListener('input',e=>{filter=e.target.value.trim().toLowerCase();render()});
+ $('#registryStatus').addEventListener('change',e=>{status=e.target.value;render()});
+ $('#registryAccess').addEventListener('change',e=>{access=e.target.value;render()});
+ render();
 }
 async function generalAppsPage(){
  const [apps,members]=await Promise.all([api('applications'),api('members',{query:{status:'pending'}})]),all=apps.applications||[],roles=all.filter(a=>a.type!=='admission_assistance'),assistance=all.filter(a=>a.type==='admission_assistance'&&!a.eventArchived&&['Pending','Under Review','Approved'].includes(a.status)),reviewable=[...roles,...assistance],memberRows=members.members||[];
