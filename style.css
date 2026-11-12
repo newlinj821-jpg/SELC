@@ -284,3 +284,23 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 .editor-copy-compare strong{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#f28798;margin-bottom:10px}
 .editor-copy-compare p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.55;color:#f4ecee}
 @media(max-width:700px){.editor-copy-compare{grid-template-columns:1fr}.editor-copy-compare section{padding:14px}}
+
+
+/* SELC role handbooks: intentionally distinct from the generic card library */
+.hq-handbook-hero{background:linear-gradient(128deg,#171014 0%,#32212b 72%,#4e2232 100%);border:1px solid rgba(181,134,140,.38);border-radius:18px;padding:clamp(22px,3vw,40px);display:flex;align-items:center;justify-content:space-between;gap:20px;color:#f7f2ee;margin:18px 0 24px;box-shadow:0 16px 35px rgba(0,0,0,.12)}
+.hq-handbook-hero h2{font-size:clamp(1.65rem,3vw,2.65rem);font-weight:650;letter-spacing:-.04em;margin:10px 0}
+.hq-handbook-hero p{color:#d0c0c3;font-size:.9rem;margin:0}
+.hq-handbook-hero .hq-eyebrow{color:#e9abb3;letter-spacing:.16em;text-transform:uppercase}
+.hq-handbook-emblem{border:1px solid rgba(255,255,255,.3);border-radius:50%;width:96px;height:96px;flex-shrink:0;display:grid;place-items:center;font-family:Georgia,serif;letter-spacing:.12em;color:#f0bdc4;font-size:1.35rem}
+.hq-handbook-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start;margin:20px 0 28px}
+.hq-handbook-heading{font-size:1.12rem;letter-spacing:-.015em;margin:0 0 14px}
+.hq-handbook-section{border:1px solid var(--line,rgba(130,130,130,.26));border-radius:12px;background:var(--panel,#1c191c);margin-bottom:10px;overflow:hidden}
+.hq-handbook-section summary{display:flex;align-items:center;gap:14px;cursor:pointer;padding:16px 18px;list-style:none;line-height:1.35}
+.hq-handbook-section summary::-webkit-details-marker{display:none}
+.hq-handbook-section summary strong{flex:1;font-size:.98rem}
+.hq-handbook-number{font-size:.73rem;font-weight:700;color:#b46f80;letter-spacing:.12em}
+.hq-handbook-chevron{font-size:1.25rem;transition:transform .2s}
+.hq-handbook-section[open] .hq-handbook-chevron{transform:rotate(180deg)}
+.hq-handbook-copy{padding:0 20px 20px 51px;line-height:1.75;font-size:.95rem;white-space:pre-line;overflow-wrap:anywhere}
+.hq-handbook-section:focus-within{outline:2px solid #b96d82;outline-offset:2px}
+@media(max-width:860px){.hq-handbook-layout{grid-template-columns:1fr}.hq-handbook-emblem{width:65px;height:65px;font-size:1rem}.hq-handbook-copy{padding-left:20px}}

@@ -18,7 +18,7 @@ const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator · Administr
 const committeeRole=u=>['founder','coordinator','representative'].includes(u);
 const participantRole=u=>committeeRole(u)||u==='advisor';
 const advisor=()=>role()==='advisor';
-const advisorVoteCategories=new Set(['education','events','outreach','community','accessibility']);
+// All active SELC appointment tiers may vote on committee proposals.
 const organizerRole=u=>['community-applicant','community-leader'].includes(u);
 const leader=()=>context.me&&['founder','coordinator','representative'].includes(context.me.role);
 const reviewer=()=>context.me&&['founder','coordinator'].includes(context.me.role);
@@ -152,7 +152,7 @@ async function loadPublicLeadership(){
   }).join('');
   host.innerHTML=[1,2,3].map(n=>{
     const person=bySeat.get(n);
-    return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+esc(person?.publicParticipation||'SELC Representative')+'</small></div>';
+    return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+'SELC Representative'+'</small></div>';
   }).join('');
   const transitionHost=$('#publicTransitionRepresentatives');
   if(transitionHost){
@@ -160,7 +160,7 @@ async function loadPublicLeadership(){
    transitionHost.classList.toggle('hidden',grandfatheredRepresentatives.length===0);
   }
   const advisorHost=$('#publicAdvisors');
-  if(advisorHost)advisorHost.innerHTML=advisors.length?advisors.map((person,i)=>'<div class="seat-card"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(person.publicName||'Advisor')+'</strong><small>SELC Advisor · '+esc(person.publicParticipation||'Community & Education')+'</small></div>').join(''):'<p class="directory-note">No Advisors have chosen to publish their names yet.</p>';
+  if(advisorHost)advisorHost.innerHTML=advisors.length?advisors.map((person,i)=>'<div class="seat-card"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(person.publicName||'Advisor')+'</strong><small>SELC Advisor</small></div>').join(''):'<p class="directory-note">No Advisors have chosen to publish their names yet.</p>';
 }
 async function beginHeadquarters(){
  const session=await api('selc-auth');
@@ -176,11 +176,12 @@ const NAV=[
  ['join','✎','Apply to SELC','Your work',u=>u==='member'||u==='advisor'],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
- ['ballots','✓','Coordinator election','Your work',u=>u==='representative'||u==='coordinator'],
+ ['ballots','✓','Coordinator election','Your work',u=>participantRole(u)&&u!=='founder'],
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
  ['leader','◈','SELC members & advisors','Leadership',u=>participantRole(u)],
  ['availability','◷','My availability','Your work',u=>participantRole(u)&&u!=='founder'],
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
+ ['handbook','▤','My role handbook','Your work',u=>participantRole(u)],
  ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
  ['communityinbox','✉','Community Inbox','Committee',u=>participantRole(u)],
  ['memberdesk','✉','Member messages & feedback','Committee',u=>participantRole(u),'hidden'],
@@ -200,7 +201,7 @@ const NAV=[
  ['volunteer','✋','Staffing overview','Event operations',u=>committeeRole(u)],
   ['staffpath','✓','Apply to become Staff','Your work',u=>u==='representative'||u==='coordinator'],
  ['readiness','▣','Event readiness','Event operations',u=>committeeRole(u)],
- ['door','⌗','Check-in & tickets','Event operations',u=>committeeRole(u)],
+ 
  ['iacases','▤','Internal Affairs cases','Safety',u=>committeeRole(u)],
   ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
  ['banhistory','⌛','Ban history','Safety',u=>committeeRole(u)],
@@ -228,7 +229,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,registry:memberRegistryPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,handbook:roleHandbookPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,registry:memberRegistryPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -237,10 +238,10 @@ async function advisorHomePage(home){
   api('committee-desk',{query:{scope:'messages'}}).catch(()=>({messages:[]})),
   api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]}))
  ]);
- const eligible=(proposals.proposals||[]).filter(p=>p.status==='Discussion'&&advisorVoteCategories.has(p.category));
- const markup=pageHeader('SELC / ADVISOR','Welcome back, '+esc((context.me.displayName||'Advisor').split(' ')[0]),'Support member communications, education, outreach and community improvement. Your voting rights apply to designated proposal categories.')+
+ const eligible=(proposals.proposals||[]).filter(p=>p.status==='Discussion');
+ const markup=pageHeader('SELC / ADVISOR','Welcome back, '+esc((context.me.displayName||'Advisor').split(' ')[0]),'Support member communications, education, outreach and community improvement. You may provide feedback and vote on committee proposals across all categories.')+
   '<div class="hq-stats"><div class="hq-stat"><small>SHARED MESSAGES</small><strong>'+number(inbox.messages?.length||0)+'</strong></div><div class="hq-stat"><small>ADVISOR-ELIGIBLE VOTES</small><strong>'+number(eligible.length)+'</strong></div></div>'+
-  card('<h2>Your Advisor responsibilities</h2><p>Participate in SELC chat, review opted-in member communications and event feedback, contribute educational ideas, and vote on eligible proposals. Private IA records, membership approvals, Staff appointments and bans remain outside the Advisor role.</p><div class="hq-actions">'+btn('Community inbox','data-page-link="communityinbox"','primary')+btn('Proposals and votes','data-page-link="proposals"')+btn('SELC chat','data-page-link="chat"')+btn('Apply for Representative','data-page-link="join"')+'</div>');
+  card('<h2>Your Advisor responsibilities</h2><p>Participate in SELC chat, review opted-in member communications and event feedback, contribute educational ideas, and vote on committee proposals. Private IA records, membership approvals, Staff appointments and bans remain outside the Advisor role.</p><div class="hq-actions">'+btn('Community inbox','data-page-link="communityinbox"','primary')+btn('Proposals and votes','data-page-link="proposals"')+btn('SELC chat','data-page-link="chat"')+btn('Apply for Representative','data-page-link="join"')+'</div>');
  setContent(markup);bindPageLinks();
 }
 async function homePage(){
@@ -260,7 +261,7 @@ async function homePage(){
   ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
   ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',activeSELCEvents(staff?.events).length,'events']
  ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
- card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Community inbox','communityinbox'],['Applications','generalapps'],['Member registry','registry'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
+ card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Community inbox','communityinbox'],['Applications','generalapps'],['Member registry','registry'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
  if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
  setContent(markup);bindPageLinks();
 }
@@ -369,7 +370,7 @@ async function certificationPage(){
  const advisorLessons=[
  {title:'Advisor boundaries and participation',objective:'Participate meaningfully without independent administrative or safety authority.',steps:['Advisors advise on community, education and events; Representatives approve routine membership changes and Coordinators oversee higher authority.','Members must explicitly authorize shared correspondence; complaints and IA cases remain restricted.','SELC Advisor status does not grant free admissions, Staff permissions, or access to private member files.'],scenario:'A member asks an Advisor to approve their membership. Route the request to a Representative and offer only procedural guidance.'},
  {title:'Member communications and community care',objective:'Support privacy-respecting communication and constructive feedback.',steps:['Use the authorized Community Inbox for opted-in messages, reviews and suggestions.','Escalate allegations, safeguarding issues and conflicts without attempting an investigation.','Keep replies factual, kind, and linked to the shared record.'],scenario:'A complaint alleges a consent violation. Stop reading and refer to authorized IA/leadership reporting channels.'},
- {title:'Education, projects and accountable voting',objective:'Research, propose and vote within an Advisor remit.',steps:['Advisors may introduce proposals and vote on education, events, outreach, community and accessibility topics.','Governance, pricing, staffing, bans and organizational rules are reserved to elected leadership voters.','Disclose conflicts, document recommendations and follow approved project handovers.'],scenario:'An Advisor wants to vote on pricing: they may comment but cannot cast a binding ballot.'}
+ {title:'Education, projects and accountable voting',objective:'Research, propose and vote within an Advisor remit.',steps:['Advisors may introduce, discuss and vote on all committee proposals, including broader governance topics.','Voting does not authorize Advisors to change pricing, manage Staff, investigate bans or enforce policies independently.','Disclose conflicts, document recommendations and follow approved project handovers.'],scenario:'An Advisor votes on pricing: the vote is recorded, but execution and final approval remain with authorized leadership.'}
  ];
  const modulesFor=type=>type==='advisor'?advisorLessons:[...commonLessons,...(roleLessons[type]||[])];
  const renderModule=(m,i)=>'<details class="hq-card"><summary><strong>'+(i+1)+'. '+esc(m.title)+'</strong></summary>'+
@@ -439,7 +440,7 @@ async function applicationsPage(){
  const reviewMarkup='<p>'+tag(a.status)+' Submitted '+esc(date(a.createdAt))+'</p><div class="hq-card">'+answers+'</div>'+
   '<form class="hq-form" id="appReviewForm"><label>Notes for review</label><textarea name="notes" rows="4">'+esc(a.reviewNotes||'')+'</textarea>'+
   '<label>Public display name (optional)</label><input name="publicName" value="'+esc(a.displayName||'')+'">'+
-  '<label class="checkline"><input type="checkbox" name="publicProfile"> Show this person’s name publicly with their consent</label>'+exceptionMarkup+
+  '<label class="checkline"><input type="checkbox" name="publicProfile" checked> List this person publicly (they can turn it off in My Account)</label>'+exceptionMarkup+
   '<div class="hq-actions">'+actionButtons+'</div><p data-status class="hq-form-status"></p></form>'+(a.reviewHistory?.length?'<section class="hq-card"><h3>Decision history</h3>'+a.reviewHistory.map(e=>'<p class="hq-micro">'+esc(date(e.at))+' · '+esc(e.action)+' · '+esc(e.reviewedBy||'SELC')+' — '+esc(e.notes||'')+'</p>').join('')+'</section>':'');
  const d=modal(a.displayName+' · '+a.type,reviewMarkup);
  $$('[data-action]',d).forEach(btnEl=>btnEl.onclick=async()=>{const vals=formValues($('#appReviewForm',d)),action=btnEl.dataset.action;try{
@@ -454,6 +455,18 @@ async function applicationsPage(){
   d.close();flash(action==='appoint'?'Application accepted; certification assigned.':'Application updated.');applicationsPage()
  }catch(e){setStatus($('[data-status]',d),e.message)}});
  });
+}
+async function roleHandbookPage(){
+ const selected=context.handbookRole||(role()==='founder'?'advisor':role());
+ const payload=await api('selc-handbook',{query:{role:selected}}),book=payload.handbook||{},roles=payload.accessibleRoles||[role()];
+ const section=(item,index)=>'<details class="hq-handbook-section" '+(index===0?'open':'')+'><summary><span class="hq-handbook-number">'+String(index+1).padStart(2,'0')+'</span><strong>'+esc(item[0])+'</strong><span class="hq-handbook-chevron">⌄</span></summary><div class="hq-handbook-copy">'+esc(item[1])+'</div></details>';
+ let markup=pageHeader('SELC / ROLE STANDARDS',book.name+' handbook',book.overview||'Official role procedures and obligations.');
+ markup+='<div class="hq-handbook-hero"><div><span class="hq-eyebrow">'+esc(book.eyebrow||'COMMITTEE OPERATIONS')+'</span><h2>'+esc(book.name||'Leadership')+' · Field Manual</h2><p>Version '+esc(payload.version)+' · Official appointment handbook · Accessible to your authorized role only</p></div><span class="hq-handbook-emblem">SELC</span></div>';
+ if(roles.length>1)markup+='<div class="hq-actions">'+roles.map(x=>btn(x.charAt(0).toUpperCase()+x.slice(1),'data-handbook-role="'+esc(x)+'"',x===selected?'primary':'')).join('')+'</div>';
+ markup+='<div class="hq-handbook-layout"><div><h2 class="hq-handbook-heading">Position responsibilities</h2>'+(book.sections||[]).map(section).join('')+'</div><div><h2 class="hq-handbook-heading">Standards applying to every position</h2>'+(payload.shared||[]).map(section).join('')+'</div></div>';
+ markup+=card('<h2>Using this handbook</h2><p>Read the role responsibilities alongside the shared standards. Duties are limited by your active certification and the Portal authorization system. Raise unclear rules with a Coordinator or the Founder before acting. A handbook is not permission to bypass an explicit system restriction.</p>');
+ setContent(markup);
+ $$('[data-handbook-role]').forEach(b=>b.onclick=()=>{context.handbookRole=b.dataset.handbookRole;roleHandbookPage().catch(failure)});
 }
 async function libraryPage(){
  const data=await api('leadership-library'),docs=data.articles||[];
@@ -513,7 +526,7 @@ async function leadershipWorkPage(){
 
 async function leaderPage(){
  const data=await api('selc-governance',{query:{scope:'members'}}),people=(data.members||[]).sort((a,b)=>({coordinator:0,representative:1,advisor:2}[a.role]??3)-({coordinator:0,representative:1,advisor:2}[b.role]??3)||String(a.displayName||'').localeCompare(String(b.displayName||'')));
- let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Advisors, three Representatives and two Coordinators, plus Eros as Founder/Chair. Advisors vote on designated education and community proposals; organization-wide governance ballots remain reserved.');
+ let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Advisors, three Representatives and two Coordinators, plus Eros as Founder/Chair. All three appointed leadership tiers may discuss and vote on committee proposals; action and approval permissions remain role-specific.');
  markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.filter(x=>x.role==='representative').length+' / 3</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div><div class="hq-stat"><small>ADVISORS</small><strong>'+people.filter(x=>x.role==='advisor').length+' / 5</strong></div></div>';
  if(people.filter(x=>x.role==='representative').length>3)markup+=card('<h3>Representative transition</h3><p>The new standard capacity is three Representatives. Existing appointments above this number remain valid during a deliberate transition. No one is automatically demoted; new Representative appointments stay paused until a vacancy opens within the three-seat cap.</p>');
  markup+=card('<h2>Committee members and Advisors</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>'+(p.role==='advisor'?'Advisor · project and community participation':'Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role))+' · '+esc(p.availability?.status||'Available')+(p.availability?.until?' through '+esc(p.availability.until):'')+'</p></div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
@@ -532,7 +545,7 @@ async function proposalPage(){
  };
  $$('[data-proposal]').forEach(b=>b.onclick=()=>{const p=rows.find(x=>x.id===b.dataset.proposal);if(!p)return;
   const voteSummary=p.voteSummary||{},tally={yes:voteSummary.yes||0,no:voteSummary.no||0,abstain:voteSummary.abstain||0};
-  const canVote=!advisor()||advisorVoteCategories.has(p.category),canTrack=reviewer()&&['Chair Approved','In Progress','Blocked','Completed'].includes(p.status);
+  const canVote=participantRole(role()),canTrack=reviewer()&&['Chair Approved','In Progress','Blocked','Completed'].includes(p.status);
   const d=modal(p.title,'<p class="hq-eyebrow">'+esc(p.category||'')+' / '+esc(p.status)+'</p><p class="hq-prose">'+esc(p.description)+'</p><p>Committee votes: '+number(tally.yes)+' support · '+number(tally.no)+' oppose · '+number(tally.abstain)+' abstain</p><p class="hq-micro">'+number(voteSummary.participating||0)+' of '+number(voteSummary.eligible||0)+' eligible · quorum '+number(voteSummary.quorumNeeded||0)+' · '+(voteSummary.passed?'Majority reached':voteSummary.quorumMet?'Awaiting majority':'Awaiting quorum')+'</p><div class="hq-actions">'+(canVote&&p.status==='Discussion'?btn('Support','data-pvote="yes"','primary')+btn('Oppose','data-pvote="no"')+btn('Abstain','data-pvote="abstain"'):'<p class="hq-micro">'+(advisor()?'Advisors may comment on this proposal, but its vote is reserved for Representatives and Coordinators.':'Voting is closed.')+'</p>')+'</div><hr style="border:0;border-top:1px solid #545058;margin:18px 0"><h3>Discussion ('+(p.comments?.length||0)+')</h3><div class="hq-panel-list">'+(p.comments||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+esc(m.from)+'</strong><p class="hq-prose">'+esc(m.message)+'</p><p class="hq-micro">'+esc(date(m.at))+'</p></div></div>').join('')+'</div><form class="hq-form" id="commentProposal"><label>Add your perspective</label><textarea name="message" required></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Add comment</button></form>'+(owner()&&p.status==='Discussion'?'<h3>Decision</h3><div class="hq-actions">'+btn('Approve proposal','data-chair="approved"','primary')+btn('Return for changes','data-chair="returned"')+btn('Decline','data-chair="declined"','danger')+'</div>':''));
   if(canTrack){
     const options=['Not Started','In Progress','Blocked','Completed'];
@@ -760,7 +773,7 @@ async function eventPage(){
  const coordinator=role()==='coordinator',canManageDrafts=coordinator||owner();
  const [operational,calendar,proposalResult]=await Promise.all([api('staff-portal'),canManageDrafts?api('events').catch(()=>({events:[]})):Promise.resolve(null),canManageDrafts?api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]})):Promise.resolve(null)]);
  const evs=activeSELCEvents(operational.events),drafts=canManageDrafts?(calendar?.events||[]).filter(e=>e.published===false&&!e.deletedAt&&!e.cancelledAt):[],relatedProposals=proposalResult?.proposals||[];
- let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','Review RSVPs, event assignments, and guest lists. Coordinators may draft events here without publishing them.',coordinator?btn('Create event draft','data-new-event-draft','primary'):btn('Open check-in','data-page-link="door"'));
+ let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','Review RSVPs, event assignments, and guest lists. Coordinators may draft events here without publishing them.',coordinator?btn('Create event draft','data-new-event-draft','primary'):'');
  if(canManageDrafts)markup+=card('<h2>Unpublished event drafts</h2><p class="hq-muted">Drafts do not open RSVPs. Submit an event proposal for a committee vote before publication.</p>'+
   (drafts.length?drafts.map(e=>{
    const proposal=relatedProposals.find(p=>p.linkedEventId===e.id&&p.status!=='Declined');
@@ -771,10 +784,10 @@ async function eventPage(){
     (owner()&&proposal?.voteSummary?.passed&&proposal?.chairDecision==='approved'?btn('Publish approved event','data-publish-event="'+esc(e.id)+'"','primary'):'')+'</div></div>';
   }).join(''):empty('No event drafts','Create a draft to begin planning.')));
 
- markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+btn('Check in','data-event-door="'+esc(e.id)+'"')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming published events','New events will appear as they are scheduled.');
+ markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming published events','New events will appear as they are scheduled.');
  setContent(markup);bindPageLinks();
  $$('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
- $$('[data-event-door]').forEach(b=>b.onclick=()=>{context.eventId=b.dataset.eventDoor;openPage('door')});
+ 
  $$('[data-event-teacher]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eventTeacher));
  const editor=(prior={})=>{
   const opts=[['play','Play party'],['social','Social'],['workshop','Workshop / Class']];
@@ -1278,14 +1291,14 @@ async function accountPage(){
  const external=organizerRole(role());
  const [shared,home,committee]=await Promise.all([
   api('workspace-profile').catch(()=>null),
-  committeeRole(role())?api('selc-governance',{query:{scope:'home'}}).catch(()=>null):Promise.resolve(null),
-  committeeRole(role())?api('selc-governance',{query:{scope:'members'}}).catch(()=>null):Promise.resolve(null)
+  participantRole(role())?api('selc-governance',{query:{scope:'home'}}).catch(()=>null):Promise.resolve(null),
+  participantRole(role())?api('selc-governance',{query:{scope:'members'}}).catch(()=>null):Promise.resolve(null)
  ]);
  const me=(committee?.members||[]).find(p=>p.accountId===home?.me?.accountId)||null;
  let markup=pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is linked to your SELC appointment, but your public screen name can be different.');
  markup+=card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(context.me.isStaff&&['representative','coordinator'].includes(role())?'Staff + '+(role()==='coordinator'?'Coordinator':'Representative'):(RANK[role()]||role()))+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal handles your member profile, password, tickets and course records. A SELC screen name does not change your login.')+'</p>');
  if(me&&role()!=='founder'){
-  markup+=card('<h2>Public-facing SELC name</h2><p>Choose the name that appears in the committee directory and SELC replies. Your account name and sign-in stay unchanged.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Your SELC screen name</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label for="selcParticipation">Public participation label</label><select id="selcParticipation" name="publicParticipation"><option value="">SELC Representative (default)</option><option value="Venue + online" '+(me.publicParticipation==='Venue + online'?'selected':'')+'>Venue + online</option><option value="Online-first" '+(me.publicParticipation==='Online-first'?'selected':'')+'>Online-first</option><option value="Online + venue support" '+(me.publicParticipation==='Online + venue support'?'selected':'')+'>Online + venue support</option><option value="Community outreach" '+(me.publicParticipation==='Community outreach'?'selected':'')+'>Community outreach</option><option value="Education" '+(me.publicParticipation==='Education'?'selected':'')+'>Education</option></select><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile||!me.publicNameUpdatedAt?'checked':'')+'> Show my name and committee position on the public SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
+  markup+=card('<h2>Public-facing SELC name</h2><p>Your public directory listing is enabled by default. You can turn it off at any time. Separately, choose the name shown publicly; this never changes your account login.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Public display name (separate from your login)</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile!==false?'checked':'')+'> Show my public display name and leadership role on the SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
  }
  markup+=card('<h2>Connected account</h2><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html#account" rel="noopener noreferrer">Manage member account ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>');
  setContent(markup);
