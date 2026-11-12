@@ -41,3 +41,19 @@ test('SELC website authenticates against Portal, not a local user list',()=>{
  assert.match(js,/Authorization.*Bearer/);
  assert.match(js,/credentials:'omit'/);
 });
+
+test('Advisor sits below Representative and can see only designated participation screens',()=>{
+ assert.match(html,/id="publicAdvisors"/);
+ assert.match(js,/role==='advisor'/);
+ assert.match(js,/advisorHomePage/);
+ assert.match(js,/advisorVoteCategories/);
+ assert.match(js,/advisorLessons/);
+ assert.match(js,/type==='advisor'\?'Advisor certification'/);
+ assert.match(js,/data-action="offer-advisor"/);
+ assert.match(js,/data-action="reopen"/);
+ assert.match(js,/pendingRole==='advisor'/);
+ assert.match(js,/canVote=!advisor\(\)\|\|advisorVoteCategories\.has\(p\.category\)/);
+ assert.doesNotMatch(js,/\['registry'[^\n]+participantRole/);
+ assert.doesNotMatch(js,/\['iacases'[^\n]+participantRole/);
+ assert.doesNotMatch(js,/\['door'[^\n]+participantRole/);
+});
