@@ -14,8 +14,11 @@ const TOKEN_KEY='selc.session.v1';
 // This is a display safeguard; the Portal remains the authoritative event store.
 const isDiscontinuedEvent=e=>/\bkink\s+n\s+drinks\b/i.test(String(e?.event?.title||e?.title||e?.name||'').replace(/[^a-z0-9]+/gi,' ').trim());
 const activeSELCEvents=events=>(Array.isArray(events)?events:[]).filter(e=>!isDiscontinuedEvent(e));
-const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator · Administration',representative:'SELC Representative · Leadership',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
+const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator · Administration',representative:'SELC Representative · Leadership',advisor:'SELC Advisor · Community & Education',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
 const committeeRole=u=>['founder','coordinator','representative'].includes(u);
+const participantRole=u=>committeeRole(u)||u==='advisor';
+const advisor=()=>role()==='advisor';
+const advisorVoteCategories=new Set(['education','events','outreach','community','accessibility']);
 const organizerRole=u=>['community-applicant','community-leader'].includes(u);
 const leader=()=>context.me&&['founder','coordinator','representative'].includes(context.me.role);
 const reviewer=()=>context.me&&['founder','coordinator'].includes(context.me.role);
@@ -161,27 +164,27 @@ const NAV=[
  ['home','⌂','Overview','Your work',u=>!organizerRole(u)],
  ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
   ['admincenter','◈','Coordinator administration','Leadership',u=>u==='coordinator'],
- ['join','✎','Apply to SELC','Your work',u=>u==='member'],
+ ['join','✎','Apply as Representative','Your work',u=>u==='member'||u==='advisor'],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
  ['ballots','✓','Coordinator election','Your work',u=>u==='representative'||u==='coordinator'],
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
- ['leader','◈','Leadership & appointments','Leadership',u=>u==='founder'||u==='coordinator'||u==='representative'],
- ['availability','◷','My availability','Your work',u=>committeeRole(u)&&u!=='founder'],
+ ['leader','◈','SELC members & advisors','Leadership',u=>participantRole(u)],
+ ['availability','◷','My availability','Your work',u=>participantRole(u)&&u!=='founder'],
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
  ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
- ['communityinbox','✉','Community Inbox','Committee',u=>committeeRole(u)],
- ['memberdesk','✉','Member messages & complaints','Committee',u=>committeeRole(u),'hidden'],
- ['suggestionsdesk','◇','Member suggestions','Committee',u=>committeeRole(u),'hidden'],
- ['feedbackdesk','▤','Event feedback review','Committee',u=>committeeRole(u),'hidden'],
- ['proposals','◉','Proposals & votes','Committee',u=>committeeRole(u)],
+ ['communityinbox','✉','Community Inbox','Committee',u=>participantRole(u)],
+ ['memberdesk','✉','Member messages & feedback','Committee',u=>participantRole(u),'hidden'],
+ ['suggestionsdesk','◇','Member suggestions','Committee',u=>participantRole(u),'hidden'],
+ ['feedbackdesk','▤','Event feedback review','Committee',u=>participantRole(u),'hidden'],
+ ['proposals','◉','Proposals & votes','Committee',u=>participantRole(u)],
  ['content','✎','Website content','Committee',u=>committeeRole(u)],
  ['chat','▤','Community chat','Community',u=>!['community-applicant'].includes(u)],
  ['requests','↗','Community conversations','Committee',u=>committeeRole(u)],
  ['communityleaders','◇','Community Leaders network','Partnerships'],
  ['applyeducator','✦','Become a Community Educator','Education',u=>!organizerRole(u)],
  ['educatorreviews','▤','Educator applications','Education',u=>u==='founder'||u==='coordinator'],
- ['educators','✦','Education & workshops','Committee',u=>committeeRole(u)],
+ ['educators','✦','Education & workshops','Committee',u=>participantRole(u)],
  ['registry','▤','Member registry','Leadership',u=>committeeRole(u)],
  ['generalapps','▧','Member & role applications','Event operations',u=>committeeRole(u)],
  ['events','▦','Events & RSVPs','Event operations',u=>committeeRole(u)],
@@ -220,12 +223,24 @@ async function openPage(page){
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
+async function advisorHomePage(home){
+ const [inbox,proposals]=await Promise.all([
+  api('committee-desk',{query:{scope:'messages'}}).catch(()=>({messages:[]})),
+  api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]}))
+ ]);
+ const eligible=(proposals.proposals||[]).filter(p=>p.status==='Discussion'&&advisorVoteCategories.has(p.category));
+ const markup=pageHeader('SELC / ADVISOR','Welcome back, '+esc((context.me.displayName||'Advisor').split(' ')[0]),'Support member communications, education, outreach and community improvement. Your voting rights apply to designated proposal categories.')+
+  '<div class="hq-stats"><div class="hq-stat"><small>SHARED MESSAGES</small><strong>'+number(inbox.messages?.length||0)+'</strong></div><div class="hq-stat"><small>ADVISOR-ELIGIBLE VOTES</small><strong>'+number(eligible.length)+'</strong></div></div>'+
+  card('<h2>Your Advisor responsibilities</h2><p>Participate in SELC chat, review opted-in member communications and event feedback, contribute educational ideas, and vote on eligible proposals. Private IA records, membership approvals, Staff appointments and bans remain outside the Advisor role.</p><div class="hq-actions">'+btn('Community inbox','data-page-link="communityinbox"','primary')+btn('Proposals and votes','data-page-link="proposals"')+btn('SELC chat','data-page-link="chat"')+btn('Apply for Representative','data-page-link="join"')+'</div>');
+ setContent(markup);bindPageLinks();
+}
 async function homePage(){
  const jobs=[api('selc-governance',{query:{scope:'home'}})];
  if(leader())jobs.push(api('community-requests'),api('staff-portal'),api('ban-reports'));
  const results=await Promise.allSettled(jobs),home=results[0].status==='fulfilled'?results[0].value:null;
  if(!home)throw results[0].reason||new Error('The leadership workspace is unavailable.');
  context.data.home=home;
+ if(advisor())return advisorHomePage(home);
  if(!leader()){const pendingCert=(home.myApplications||[]).some(a=>a.status==='Certification Pending');setContent(pageHeader('WELCOME TO SELC','Your next chapter','SELC membership requires approved SE membership, a separate application and acceptance, then certification.')+(pendingCert?card('<h2>Application accepted — certification required</h2><p>Complete your training to activate committee privileges.</p>'+btn('Begin SELC certification','data-page-link="certification"','primary')):card('<h2>Help build something meaningful</h2><p>Apply to join the committee. Acceptance alone never grants internal or voting privileges.</p>'+btn('Apply to be a Representative','data-page-link="join"','primary')))+(home.myApplications?.length?card('<h2>Your applications</h2>'+home.myApplications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>Submitted '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join('')):''));bindPageLinks();return}
  const [conv,staff,bans]=results.slice(1).map(r=>r.status==='fulfilled'?r.value:null);
  const proposals=await api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]}));
@@ -247,7 +262,7 @@ async function joinPage(){
  const home=context.data.home||await api('selc-governance',{query:{scope:'home'}}),pending=home.myApplications||[];
  let markup=pageHeader('YOUR APPLICATION','Step forward','SELC Representatives help with learning, events, outreach, community connections and thoughtful leadership. Remote participation is welcome.');
  if(pending.length)markup+=card('<h2>Your application history</h2>'+pending.map(a=>'<div class="hq-row"><div class="grow"><strong>Representative application</strong><p>'+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join(''));
- if(role()!=='member'){setContent(markup+card('<h2>You are already on the committee</h2><p>Use the leadership sections to continue your work.</p>'));return}
+ if(!['member','advisor'].includes(role())){setContent(markup+card('<h2>You already have a Representative or Coordinator appointment</h2><p>Use the leadership sections to continue your work.</p>'));return}
  markup+=card('<h2>Tell us about yourself</h2><p>This is a chance to tell us what you care about—not a test of who can write the longest answer.</p><form id="repForm" class="hq-form">'+REPFIELDS.map(f=>textfield(f)).join('')+'<label class="checkline"><input type="checkbox" name="truthful" required> These responses reflect my own experience and intentions.</label><p data-status class="hq-form-status" aria-live="polite"></p><button type="submit" class="hq-button primary">Submit Representative application ↗</button></form>');
  setContent(markup);watchForm($('#repForm'),async(data,form)=>{if(!data.truthful)throw new Error('Confirm the accuracy of your application.');const answers=Object.fromEntries(REPFIELDS.map(x=>[x[0],data[x[0]]]));if(answers.motivation.length<80||answers.experience.length<80)throw new Error('Please expand your motivation and experience to at least 80 characters each.');await post('selc-governance','apply_representative',{answers});setStatus(form.querySelector('[data-status]'),'Your application was received.',true);flash('SELC application received.');await openPage('home')})
 }
