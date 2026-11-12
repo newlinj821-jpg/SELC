@@ -38,17 +38,21 @@ Staff, Dungeon Monitors, Educators, and certified IA Staff are **separate appoin
 
 Authorized certified **IA Staff** may impose or lift bans by their separate IA authorization. A Representative or Advisor who is separately appointed Staff does **not** receive those powers from the SELC title.
 
+## Seat caps and continuity
+
+Five Advisors / three Representatives / two Coordinators (ten appointed positions total) plus the Founder/Chair. The Portal reserves five Advisor offers and three Representative approvals, and maintains Coordinator positions in existing stored slots 6–7. No existing leader is automatically demoted by reducing the Representative cap from five to three. During transition, additional incumbent Representatives retain their role, but new Representative appointments are blocked until the active/reserved count is below three. Coordinator promotions free a Representative place. Advisor advancement requires the Representative certification and a vacancy.
+
 ## Advisor scope
 
-Advisors receive a dedicated 10-question assessment and must pass before their appointment activates. Advisors do not consume the five Representative seats or two Coordinator seats. They can work on community relations, feedback, learning and outreach, and can vote on only specified initiative categories. Sensitive reports must be escalated; they cannot access private IA case content.
+Advisors receive a dedicated 10-question assessment and must pass before their appointment activates. SELC has five Advisor positions, three Representative positions and two Coordinator positions, plus the Founder/Chair. Advisors do not consume Representative or Coordinator seats. Existing appointments beyond the new Representative cap remain active until a deliberate transition. They can work on community relations, feedback, learning and outreach, and can vote on only specified initiative categories. Sensitive reports must be escalated; they cannot access private IA case content.
 
 They may later apply for Representative without losing their documented Advisor contributions. That application must be accepted and the Representative certification completed before Representative permissions activate.
 
 ## Applications and appeals
 
-The Founder may reopen a **declined** Representative application, retaining the prior decision and notes, and may offer an Advisor certification to an undecided or declined Representative applicant. The offer does not activate Advisor permissions until the applicant completes certification.
+The Founder may reopen a **declined** Advisor or Representative application, retaining the prior decision and notes, and may offer an Advisor certification to an undecided or declined Representative applicant. The offer does not activate Advisor permissions until the applicant completes certification.
 
-A reopened application returns to review and can be accepted as a Representative if a seat is available, or declined again. Existing records and review history are preserved. Coordinator elevation continues to require Representative appointment, voting eligibility, and Coordinator certification.
+A reopened application returns to review and can be accepted into its eligible role if a seat is available, or declined again. Existing records and review history are preserved. Coordinator elevation continues to require Representative appointment, voting eligibility, and Coordinator certification.
 
 ## Validation before production deployment
 
