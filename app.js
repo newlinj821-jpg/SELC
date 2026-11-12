@@ -181,6 +181,7 @@ const NAV=[
  ['leader','◈','SELC members & advisors','Leadership',u=>participantRole(u)],
  ['availability','◷','My availability','Your work',u=>participantRole(u)&&u!=='founder'],
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
+ ['handbook','▤','My role handbook','Your work',u=>participantRole(u)],
  ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
  ['communityinbox','✉','Community Inbox','Committee',u=>participantRole(u)],
  ['memberdesk','✉','Member messages & feedback','Committee',u=>participantRole(u),'hidden'],
@@ -200,7 +201,7 @@ const NAV=[
  ['volunteer','✋','Staffing overview','Event operations',u=>committeeRole(u)],
   ['staffpath','✓','Apply to become Staff','Your work',u=>u==='representative'||u==='coordinator'],
  ['readiness','▣','Event readiness','Event operations',u=>committeeRole(u)],
- ['door','⌗','Check-in & tickets','Event operations',u=>committeeRole(u)],
+ 
  ['iacases','▤','Internal Affairs cases','Safety',u=>committeeRole(u)],
   ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
  ['banhistory','⌛','Ban history','Safety',u=>committeeRole(u)],
@@ -228,7 +229,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,registry:memberRegistryPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,handbook:roleHandbookPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,registry:memberRegistryPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -260,7 +261,7 @@ async function homePage(){
   ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
   ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',activeSELCEvents(staff?.events).length,'events']
  ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
- card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Community inbox','communityinbox'],['Applications','generalapps'],['Member registry','registry'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
+ card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Community inbox','communityinbox'],['Applications','generalapps'],['Member registry','registry'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
  if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
  setContent(markup);bindPageLinks();
 }
@@ -454,6 +455,18 @@ async function applicationsPage(){
   d.close();flash(action==='appoint'?'Application accepted; certification assigned.':'Application updated.');applicationsPage()
  }catch(e){setStatus($('[data-status]',d),e.message)}});
  });
+}
+async function roleHandbookPage(){
+ const selected=context.handbookRole||role();
+ const payload=await api('selc-handbook',{query:{role:selected}}),book=payload.handbook||{},roles=payload.accessibleRoles||[role()];
+ const section=(item,index)=>'<details class="hq-handbook-section" '+(index===0?'open':'')+'><summary><span class="hq-handbook-number">'+String(index+1).padStart(2,'0')+'</span><strong>'+esc(item[0])+'</strong><span class="hq-handbook-chevron">⌄</span></summary><div class="hq-handbook-copy">'+esc(item[1])+'</div></details>';
+ let markup=pageHeader('SELC / ROLE STANDARDS',book.name+' handbook',book.overview||'Official role procedures and obligations.');
+ markup+='<div class="hq-handbook-hero"><div><span class="hq-eyebrow">'+esc(book.eyebrow||'COMMITTEE OPERATIONS')+'</span><h2>'+esc(book.name||'Leadership')+' · Field Manual</h2><p>Version '+esc(payload.version)+' · Official appointment handbook · Accessible to your authorized role only</p></div><span class="hq-handbook-emblem">SELC</span></div>';
+ if(roles.length>1)markup+='<div class="hq-actions">'+roles.map(x=>btn(x.charAt(0).toUpperCase()+x.slice(1),'data-handbook-role="'+esc(x)+'"',x===selected?'primary':'')).join('')+'</div>';
+ markup+='<div class="hq-handbook-layout"><div><h2 class="hq-handbook-heading">Position responsibilities</h2>'+(book.sections||[]).map(section).join('')+'</div><div><h2 class="hq-handbook-heading">Standards applying to every position</h2>'+(payload.shared||[]).map(section).join('')+'</div></div>';
+ markup+=card('<h2>Using this handbook</h2><p>Read the role responsibilities alongside the shared standards. Duties are limited by your active certification and the Portal authorization system. Raise unclear rules with a Coordinator or the Founder before acting. A handbook is not permission to bypass an explicit system restriction.</p>');
+ setContent(markup);
+ $$('[data-handbook-role]').forEach(b=>b.onclick=()=>{context.handbookRole=b.dataset.handbookRole;roleHandbookPage().catch(failure)});
 }
 async function libraryPage(){
  const data=await api('leadership-library'),docs=data.articles||[];
@@ -760,7 +773,7 @@ async function eventPage(){
  const coordinator=role()==='coordinator',canManageDrafts=coordinator||owner();
  const [operational,calendar,proposalResult]=await Promise.all([api('staff-portal'),canManageDrafts?api('events').catch(()=>({events:[]})):Promise.resolve(null),canManageDrafts?api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]})):Promise.resolve(null)]);
  const evs=activeSELCEvents(operational.events),drafts=canManageDrafts?(calendar?.events||[]).filter(e=>e.published===false&&!e.deletedAt&&!e.cancelledAt):[],relatedProposals=proposalResult?.proposals||[];
- let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','Review RSVPs, event assignments, and guest lists. Coordinators may draft events here without publishing them.',coordinator?btn('Create event draft','data-new-event-draft','primary'):btn('Open check-in','data-page-link="door"'));
+ let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','Review RSVPs, event assignments, and guest lists. Coordinators may draft events here without publishing them.',coordinator?btn('Create event draft','data-new-event-draft','primary'):'');
  if(canManageDrafts)markup+=card('<h2>Unpublished event drafts</h2><p class="hq-muted">Drafts do not open RSVPs. Submit an event proposal for a committee vote before publication.</p>'+
   (drafts.length?drafts.map(e=>{
    const proposal=relatedProposals.find(p=>p.linkedEventId===e.id&&p.status!=='Declined');
@@ -771,10 +784,10 @@ async function eventPage(){
     (owner()&&proposal?.voteSummary?.passed&&proposal?.chairDecision==='approved'?btn('Publish approved event','data-publish-event="'+esc(e.id)+'"','primary'):'')+'</div></div>';
   }).join(''):empty('No event drafts','Create a draft to begin planning.')));
 
- markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+btn('Check in','data-event-door="'+esc(e.id)+'"')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming published events','New events will appear as they are scheduled.');
+ markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming published events','New events will appear as they are scheduled.');
  setContent(markup);bindPageLinks();
  $$('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
- $$('[data-event-door]').forEach(b=>b.onclick=()=>{context.eventId=b.dataset.eventDoor;openPage('door')});
+ 
  $$('[data-event-teacher]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eventTeacher));
  const editor=(prior={})=>{
   const opts=[['play','Play party'],['social','Social'],['workshop','Workshop / Class']];
@@ -1285,7 +1298,7 @@ async function accountPage(){
  let markup=pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is linked to your SELC appointment, but your public screen name can be different.');
  markup+=card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(context.me.isStaff&&['representative','coordinator'].includes(role())?'Staff + '+(role()==='coordinator'?'Coordinator':'Representative'):(RANK[role()]||role()))+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal handles your member profile, password, tickets and course records. A SELC screen name does not change your login.')+'</p>');
  if(me&&role()!=='founder'){
-  markup+=card('<h2>Public-facing SELC name</h2><p>Choose the name that appears in the committee directory and SELC replies. Your account name and sign-in stay unchanged.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Your SELC screen name</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label for="selcParticipation">Public participation label</label><select id="selcParticipation" name="publicParticipation"><option value="">SELC Representative (default)</option><option value="Venue + online" '+(me.publicParticipation==='Venue + online'?'selected':'')+'>Venue + online</option><option value="Online-first" '+(me.publicParticipation==='Online-first'?'selected':'')+'>Online-first</option><option value="Online + venue support" '+(me.publicParticipation==='Online + venue support'?'selected':'')+'>Online + venue support</option><option value="Community outreach" '+(me.publicParticipation==='Community outreach'?'selected':'')+'>Community outreach</option><option value="Education" '+(me.publicParticipation==='Education'?'selected':'')+'>Education</option></select><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile||!me.publicNameUpdatedAt?'checked':'')+'> Show my name and committee position on the public SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
+  markup+=card('<h2>Public-facing SELC name</h2><p>Choose the name that appears in the committee directory and SELC replies. Your account name and sign-in stay unchanged.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Your SELC screen name</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label for="selcParticipation">Public participation label</label><select id="selcParticipation" name="publicParticipation"><option value="">SELC Representative (default)</option><option value="Venue + online" '+(me.publicParticipation==='Venue + online'?'selected':'')+'>Venue + online</option><option value="Online-first" '+(me.publicParticipation==='Online-first'?'selected':'')+'>Online-first</option><option value="Online + venue support" '+(me.publicParticipation==='Online + venue support'?'selected':'')+'>Online + venue support</option><option value="Community outreach" '+(me.publicParticipation==='Community outreach'?'selected':'')+'>Community outreach</option><option value="Education" '+(me.publicParticipation==='Education'?'selected':'')+'>Education</option></select><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile!==false?'checked':'')+'> Show my name and committee position on the public SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
  }
  markup+=card('<h2>Connected account</h2><div class="hq-actions">'+(external?'<a class="hq-button" href="/community-leaders/#apply">Organizer account &amp; password help ↗</a>':'<a class="hq-button" href="'+PORTAL+'/member.html#account" rel="noopener noreferrer">Manage member account ↗</a>')+btn('Sign out of SELC','data-signout','danger')+'</div>');
  setContent(markup);
