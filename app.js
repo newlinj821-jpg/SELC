@@ -413,9 +413,10 @@ async function libraryPage(){
 }
 
 async function leadershipWorkPage(){
- const data=await api('leadership-queue'),items=data.items||[],counts=data.counts||{};
+ const data=await api('leadership-queue'),items=data.items||[],counts=data.counts||{},canDelegate=!!data.canDelegate,delegates=data.delegates||[];
  const categories={member:'Membership',role:'Role applications',selc:'SELC',ban:'Ban Reports',community:'Community'};
- let markup=pageHeader('LEADERSHIP / WORK IN PROGRESS','Leadership Action Center','See what needs attention, claim a review, and avoid two people working on the same application.',btn('Refresh','data-work-refresh'));
+ let markup=pageHeader('SELC / LEADERSHIP','Leadership Action Center','Coordinators delegate and supervise; Representatives independently resolve eligible reviews. Every assignment is recorded in Portal.',btn('Refresh','data-work-refresh'));
+ if(canDelegate)markup+=card('<p>Delegation is available for active SELC Representatives and Coordinators. Staff appointments remain separate, and assigned review work never grants additional enforcement authority.</p>');
  markup+='<div class="hq-stats">'+Object.entries(categories).filter(([k])=>counts[k]).map(([key,label])=>'<div class="hq-stat"><small>'+esc(label)+'</small><strong>'+number(counts[key]||0)+'</strong></div>').join('')+'</div>';
  markup+=items.length?Object.entries(categories).map(([kind,label])=>{
   const filtered=items.filter(x=>x.kind===kind);if(!filtered.length)return '';
@@ -426,11 +427,22 @@ async function leadershipWorkPage(){
       (row.dueAt?'<p class="hq-micro">Review target: '+esc(date(row.dueAt))+'</p>':'')+
       (row.claim?'<p class="hq-micro">'+(mine?'You claimed this review.':'Being reviewed by '+esc(row.claim.by))+ ' · until '+esc(date(row.claim.until))+'</p>':'<p class="hq-micro">Unassigned · available to claim</p>')+'</div><div class="hq-actions">'+
       (mine?btn('Release','data-queue-action="release" data-queue-kind="'+kind+'" data-queue-id="'+esc(row.id)+'"'):claimed?tag('Claimed'):btn('Claim','data-queue-action="claim" data-queue-kind="'+kind+'" data-queue-id="'+esc(row.id)+'"','primary'))+
+      (canDelegate&&delegates.length?btn(claimed?'Reassign':'Delegate','data-queue-delegate="yes" data-queue-kind="'+kind+'" data-queue-id="'+esc(row.id)+'"'):'')+
       btn('Open','data-page-link="'+route+'"')+'</div></div>';
    }).join(''));
  }).join(''):empty('Everything is up to date','New applications, Ban Reports, and community conversations appear here when they need attention.');
  setContent(markup);bindPageLinks();$('[data-work-refresh]')?.addEventListener('click',leadershipWorkPage);
- $$('[data-queue-action]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{
+ $('[data-queue-delegate]').forEach(button=>button.onclick=()=>{
+  const kind=button.dataset.queueKind,id=button.dataset.queueId,row=items.find(item=>item.kind===kind&&item.id===id);
+  if(!row)return;
+  const options=delegates.map(m=>'<option value="'+esc(m.accountId)+'"'+(row.claim?.by===m.name?' selected':'')+'>'+esc(m.name)+' · '+esc(m.role==='coordinator'?'Coordinator':'Representative')+'</option>').join('');
+  const dialog=modal('Delegate leadership review','<p>Assign <strong>'+esc(row.title)+'</strong> for <strong>'+esc(row.name)+'</strong> to an active SELC leader. The assignee may perform only actions already permitted by their own role.</p><form class="hq-form" id="delegateReview"><label>Assigned leader<select name="assigneeAccountId" required><option value="">Choose a leader</option>'+options+'</select></label><p class="hq-micro">Only Coordinators can reassign someone else’s work. Delegation does not permit Representatives to issue bans or approve advanced IA Staff appointments.</p><p data-status></p><button class="hq-button primary" type="submit">Save delegation</button></form>');
+  watchForm($('#delegateReview',dialog),async(values)=>{
+   await post('leadership-queue','delegate',{kind,id,assigneeAccountId:values.assigneeAccountId});
+   dialog.close();flash('Leadership review delegated and recorded.');await leadershipWorkPage();
+  });
+ });
+ $('[data-queue-action]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{
   await post('leadership-queue',b.dataset.queueAction,{kind:b.dataset.queueKind,id:b.dataset.queueId});
   flash(b.dataset.queueAction==='claim'?'Review assigned to you.':'Review released.');
   await leadershipWorkPage();
