@@ -191,7 +191,7 @@ const NAV=[
  ['myaccount','◎','My account','Your work']
 ];
 function setupHQNav(){
- const root=$('#hqNavigation');let last='';root.innerHTML=NAV.filter(item=>!item[4]||item[4](role())).map(([id,ico,label,group])=>{let groupPart='';if(group!==last){groupPart='<p class="nav-group">'+esc(group)+'</p>';last=group}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
+ const root=$('#hqNavigation');let last='';const groups={'Your work':'Overview','Leadership':'Leadership','Committee':'Community','Community':'Community','Partnerships':'Community','Education':'Resources','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>!item[4]||item[4](role())).map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
  root.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button){closeHQNav();openPage(button.dataset.page)}});
  $('#hqMenu').addEventListener('click',()=>{const open=!$('#hqSidebar').classList.contains('open');$('#hqSidebar').classList.toggle('open',open);$('#hqShade').classList.toggle('open',open);$('#hqMenu').setAttribute('aria-expanded',String(open))});
  $('#hqShade').addEventListener('click',closeHQNav);
