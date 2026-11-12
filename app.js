@@ -432,7 +432,7 @@ async function leadershipWorkPage(){
    }).join(''));
  }).join(''):empty('Everything is up to date','New applications, Ban Reports, and community conversations appear here when they need attention.');
  setContent(markup);bindPageLinks();$('[data-work-refresh]')?.addEventListener('click',leadershipWorkPage);
- $('[data-queue-delegate]').forEach(button=>button.onclick=()=>{
+ $$('[data-queue-delegate]').forEach(button=>button.onclick=()=>{
   const kind=button.dataset.queueKind,id=button.dataset.queueId,row=items.find(item=>item.kind===kind&&item.id===id);
   if(!row)return;
   const options=delegates.map(m=>'<option value="'+esc(m.accountId)+'"'+(row.claim?.by===m.name?' selected':'')+'>'+esc(m.name)+' · '+esc(m.role==='coordinator'?'Coordinator':'Representative')+'</option>').join('');
@@ -442,7 +442,7 @@ async function leadershipWorkPage(){
    dialog.close();flash('Leadership review delegated and recorded.');await leadershipWorkPage();
   });
  });
- $('[data-queue-action]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{
+ $$('[data-queue-action]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{
   await post('leadership-queue',b.dataset.queueAction,{kind:b.dataset.queueKind,id:b.dataset.queueId});
   flash(b.dataset.queueAction==='claim'?'Review assigned to you.':'Review released.');
   await leadershipWorkPage();
