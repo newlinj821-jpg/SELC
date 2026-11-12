@@ -704,7 +704,7 @@ async function iaCasesPage(){
  markup+=card('<p class="hq-micro">These are confidential records. Access is role-checked by the Portal. Do not share documents, identifying data or allegations outside authorized review channels. An allegation is not a finding.</p>');
  markup+=rows.length?rows.map((r,i)=>card('<div class="hq-row"><div class="grow"><strong>'+esc(r.caseNumber||'Case')+'</strong><p>'+esc(r.reportedPerson||'Subject not listed')+' · '+esc(date(r.createdAt))+'</p><p>'+esc(r.priority||'Untriaged')+' · '+esc(r.assignedTo||'Unassigned')+'</p></div>'+tag(r.status)+btn('Review case','data-open-ia="'+i+'"','primary')+'</div>')).join(''):empty('No IA cases available','Authorized cases will appear here when filed.');
  setContent(markup);
- $('[data-open-ia]').forEach(button=>button.onclick=()=>{
+ $$('[data-open-ia]').forEach(button=>button.onclick=()=>{
   const r=rows[Number(button.dataset.openIa)];if(!r)return;
   const sections=[['Original account',r.initialAccount],['Immediate safety steps',r.immediateActions],['Evidence and sources',r.evidenceDescription],['Witnesses',r.witnesses],['Reviewer notes',r.reviewNotes],['Decision rationale',r.decisionRationale],['Disposition',r.disposition],['Follow-up',r.followUp]];
   const history=(r.activity||[]).map(h=>'<div class="hq-row"><div class="grow"><strong>'+esc(h.actor||'Reviewer')+'</strong><p>'+esc(h.action||'Action recorded')+'</p><small>'+esc(date(h.at))+'</small></div></div>').join('');
