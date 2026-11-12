@@ -18,8 +18,8 @@ Staff, Dungeon Monitors, Educators, and certified IA Staff are **separate appoin
 | Publish/remove public-facing event reviews | No | Yes | Yes |
 | Propose and comment on committee initiatives | Yes | Yes | Yes |
 | Vote on education, events, outreach, community, accessibility | Yes | Yes | Yes |
-| Vote on pricing, organizational rules, equipment, work sessions or other reserved governance | No | Yes | Yes |
-| Vote in Coordinator elections | No | Yes | Yes |
+| Vote on pricing, organizational rules, equipment, work sessions or other committee governance | Yes | Yes | Yes |
+| Vote in Coordinator elections | Yes | Yes | Yes |
 | Read full membership registry | No | Yes | Yes |
 | Approve/deny routine membership applications | No | Yes | Yes |
 | Correct authorized member registry records | No | Yes | Yes |
@@ -44,7 +44,7 @@ Five Advisors / three Representatives / two Coordinators (ten appointed position
 
 ## Advisor scope
 
-Advisors receive a dedicated 10-question assessment and must pass before their appointment activates. SELC has five Advisor positions, three Representative positions and two Coordinator positions, plus the Founder/Chair. Advisors do not consume Representative or Coordinator seats. Existing appointments beyond the new Representative cap remain active until a deliberate transition. They can work on community relations, feedback, learning and outreach, and can vote on only specified initiative categories. Sensitive reports must be escalated; they cannot access private IA case content.
+Advisors receive a dedicated 10-question assessment and must pass before their appointment activates. SELC has five Advisor positions, three Representative positions and two Coordinator positions, plus the Founder/Chair. Advisors do not consume Representative or Coordinator seats. Existing appointments beyond the new Representative cap remain active until a deliberate transition. They can work on community relations, feedback, learning and outreach, and may vote on all committee proposals while role-specific implementation powers remain restricted. Sensitive reports must be escalated; they cannot access private IA case content.
 
 They may later apply for Representative without losing their documented Advisor contributions. That application must be accepted and the Representative certification completed before Representative permissions activate.
 
@@ -57,7 +57,7 @@ A reopened application returns to review and can be accepted into its eligible r
 ## Validation before production deployment
 
 - Test eligibility for an approved Advisor, an Advisor with an unrelated active Staff appointment, an Advisor with an expired or revoked account, a Representative, a Coordinator and the Founder.
-- Confirm Advisor voting changes quorum only on Advisor-eligible categories; Coordinator elections remain confined to Representatives/Coordinators.
+- Confirm Advisor voting counts toward all committee proposal and Coordinator-candidate ballots, without granting restricted execution rights.
 - Verify previously declined applications can be reopened, accepted or converted into an Advisor offer with complete audit history.
 - Verify no Advisor receives free admission, private IA files, member registry access, Staff/DM appointment decisions, publication permissions, or ban controls through the Advisor title.
 - Confirm each role sees only its permitted navigation and can complete its permitted actions without relying on disabled UI buttons for security.
