@@ -173,7 +173,7 @@ const NAV=[
  ['home','⌂','Overview','Your work',u=>!organizerRole(u)],
  ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
   ['admincenter','◈','Coordinator administration','Leadership',u=>u==='coordinator'],
- ['join','✎','Apply as Representative','Your work',u=>u==='member'||u==='advisor'],
+ ['join','✎','Apply to SELC','Your work',u=>u==='member'||u==='advisor'],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
  ['ballots','✓','Coordinator election','Your work',u=>u==='representative'||u==='coordinator'],
@@ -250,7 +250,7 @@ async function homePage(){
  if(!home)throw results[0].reason||new Error('The leadership workspace is unavailable.');
  context.data.home=home;
  if(advisor())return advisorHomePage(home);
- if(!leader()){const pendingCert=(home.myApplications||[]).some(a=>a.status==='Certification Pending');setContent(pageHeader('WELCOME TO SELC','Your next chapter','SELC membership requires approved SE membership, a separate application and acceptance, then certification.')+(pendingCert?card('<h2>Application accepted — certification required</h2><p>Complete your training to activate committee privileges.</p>'+btn('Begin SELC certification','data-page-link="certification"','primary')):card('<h2>Help build something meaningful</h2><p>Apply to join the committee. Acceptance alone never grants internal or voting privileges.</p>'+btn('Apply to be a Representative','data-page-link="join"','primary')))+(home.myApplications?.length?card('<h2>Your applications</h2>'+home.myApplications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>Submitted '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join('')):''));bindPageLinks();return}
+ if(!leader()){const pendingCert=(home.myApplications||[]).some(a=>a.status==='Certification Pending');setContent(pageHeader('WELCOME TO SELC','Your next chapter','SELC membership requires approved SE membership, a separate application and acceptance, then certification.')+(pendingCert?card('<h2>Application accepted — certification required</h2><p>Complete your training to activate committee privileges.</p>'+btn('Begin SELC certification','data-page-link="certification"','primary')):card('<h2>Help build something meaningful</h2><p>Apply to join the committee. Acceptance alone never grants internal or voting privileges.</p>'+btn('Apply to SELC','data-page-link="join"','primary')))+(home.myApplications?.length?card('<h2>Your applications</h2>'+home.myApplications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>Submitted '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join('')):''));bindPageLinks();return}
  const [conv,staff,bans]=results.slice(1).map(r=>r.status==='fulfilled'?r.value:null);
  const proposals=await api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]}));
  const cards=[['SELC POSITIONS',String((home.occupiedSeats||0)+(home.advisors||0))+'/10'],['COORDINATORS',String(home.coordinators||0)+'/2'],['OPEN CONVERSATIONS',number(conv?.openCount||0)],['BAN REPORTS PENDING',number(bans?.pendingCount||0)]];
@@ -267,15 +267,40 @@ async function homePage(){
 function bindPageLinks(root=$('#hqContent')){$$('[data-page-link]',root).forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.pageLink)))}
 const REPFIELDS=[['motivation','Why does serving this community matter to you?','Tell us what motivates you and what you hope to build together.'],['experience','What experiences and strengths would you bring?','Community work, kink education, organizing, technical skills, writing, advocacy, or anything else relevant.'],['collaboration','Describe how you handle disagreement or feedback.','We value people who can listen without losing their own voice.'],['consent','How would you support consent, privacy, and community care?','Include how you would handle sensitive information responsibly.'],['participation','How would you like to contribute?','In-person events, online planning, education, outreach, projects, and your realistic availability.'],['example','Tell us about a time you stepped up to help others.','What happened, what did you do, and what would you do differently?']];
 function textfield([name,label,hint],value='',required=true){return '<label for="f-'+esc(name)+'">'+esc(label)+'</label><textarea id="f-'+esc(name)+'" name="'+esc(name)+'" rows="4" placeholder="'+esc(hint||'')+'" '+(required?'required':'')+'>'+esc(value)+'</textarea>'}
+const ADVISORFIELDS=[
+ ['motivation','Why do you want to support SELC as an Advisor?','Describe the community or educational contribution you hope to make.'],
+ ['experience','What experiences, interests or skills would you bring?','Community knowledge, writing, accessibility, outreach, teaching support, or organizing.'],
+ ['collaboration','How do you handle disagreement and competing perspectives?','Explain how you listen and contribute constructively.'],
+ ['consent','How will you respect privacy, consent and the limits of the Advisor role?','Sensitive allegations and IA cases must be referred to authorized leadership.'],
+ ['participation','What projects or feedback would you like to work on?','Share your practical interests and realistic availability.'],
+ ['example','Describe a time you helped improve a group or situation.','What did you contribute, and what did you learn?']
+];
 async function joinPage(){
  const home=context.data.home||await api('selc-governance',{query:{scope:'home'}}),pending=home.myApplications||[];
- let markup=pageHeader('YOUR APPLICATION','Step forward','SELC Representatives help with learning, events, outreach, community connections and thoughtful leadership. Remote participation is welcome.');
- if(pending.length)markup+=card('<h2>Your application history</h2>'+pending.map(a=>'<div class="hq-row"><div class="grow"><strong>Representative application</strong><p>'+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join(''));
- if(!['member','advisor'].includes(role())){setContent(markup+card('<h2>You already have a Representative or Coordinator appointment</h2><p>Use the leadership sections to continue your work.</p>'));return}
- markup+=card('<h2>Tell us about yourself</h2><p>This is a chance to tell us what you care about—not a test of who can write the longest answer.</p><form id="repForm" class="hq-form">'+REPFIELDS.map(f=>textfield(f)).join('')+'<label class="checkline"><input type="checkbox" name="truthful" required> These responses reflect my own experience and intentions.</label><p data-status class="hq-form-status" aria-live="polite"></p><button type="submit" class="hq-button primary">Submit Representative application ↗</button></form>');
- setContent(markup);watchForm($('#repForm'),async(data,form)=>{if(!data.truthful)throw new Error('Confirm the accuracy of your application.');const answers=Object.fromEntries(REPFIELDS.map(x=>[x[0],data[x[0]]]));if(answers.motivation.length<80||answers.experience.length<80)throw new Error('Please expand your motivation and experience to at least 80 characters each.');await post('selc-governance','apply_representative',{answers});setStatus(form.querySelector('[data-status]'),'Your application was received.',true);flash('SELC application received.');await openPage('home')})
+ let markup=pageHeader('YOUR APPLICATION','Join SELC','Choose an Advisor or Representative path. Advisors focus on community, education and eligible votes; Representatives independently manage routine membership and organizational reviews. All appointments require approval and certification.');
+ if(pending.length)markup+=card('<h2>Your application history</h2>'+pending.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type==='advisor'?'Advisor':a.type==='coordinator'?'Coordinator':'Representative')+' application</strong><p>'+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join(''));
+ if(!['member','advisor'].includes(role())){setContent(markup+card('<h2>Your leadership appointment is already active</h2><p>Use your leadership sections for current responsibilities.</p>'));return}
+ const choices=role()==='advisor'?
+  '<option value="representative">Representative — advance from Advisor</option>':
+  '<option value="advisor">Advisor — community and education</option><option value="representative">Representative — organizational leadership</option>';
+ markup+=card('<h2>Select a leadership path</h2><p>Advisor positions are capped at five, Representative positions at three, and Coordinator positions at two. Existing appointments remain in place during the transition.</p><form id="repForm" class="hq-form"><label>Position to apply for<select name="targetRole" id="selcTargetRole" required>'+choices+'</select></label><div id="selcApplicationQuestions"></div><label class="checkline"><input type="checkbox" name="truthful" required> These responses reflect my experience and intentions.</label><p data-status class="hq-form-status" aria-live="polite"></p><button type="submit" class="hq-button primary">Submit SELC application</button></form>');
+ setContent(markup);
+ const selector=$('#selcTargetRole'),questions=$('#selcApplicationQuestions');
+ const render=()=>{const fields=selector.value==='advisor'?ADVISORFIELDS:REPFIELDS;questions.innerHTML=fields.map(f=>textfield(f)).join('')};
+ selector.addEventListener('change',render);render();
+ watchForm($('#repForm'),async(data,form)=>{
+  if(!data.truthful)throw new Error('Confirm the accuracy of your application.');
+  const target=String(data.targetRole||'');
+  if(!['advisor','representative'].includes(target)||(role()==='advisor'&&target!=='representative'))throw new Error('Choose a permitted SELC application path.');
+  const fields=target==='advisor'?ADVISORFIELDS:REPFIELDS;
+  const answers=Object.fromEntries(fields.map(f=>[f[0],data[f[0]]]));
+  if(String(answers.motivation||'').trim().length<80||String(answers.experience||'').trim().length<80)throw new Error('Please expand your motivation and experience to at least 80 characters each.');
+  await post('selc-governance',target==='advisor'?'apply_advisor':'apply_representative',{answers});
+  setStatus(form.querySelector('[data-status]'),'Your application was received.',true);
+  flash('SELC '+(target==='advisor'?'Advisor':'Representative')+' application received.');
+  await openPage('home');
+ });
 }
-
 async function certificationPage(){
  const data=await api('selc-governance',{query:{scope:'certification'}}),assignments=data.assignments||[];
  let markup=pageHeader('SELC / REQUIRED TRAINING','SELC certification','Complete training and assessment after appointment acceptance. Your new committee privileges activate only on a verified pass.');
