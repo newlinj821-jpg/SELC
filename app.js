@@ -420,12 +420,12 @@ async function applicationsPage(){
  if(!reviewer())return;
  const result=await api('selc-governance',{query:{scope:'applications'}}),rows=result.applications||[];
  setContent(pageHeader('LEADERSHIP / PRIVATE REVIEWS','SELC applications','Confidential application review for appointed Coordinators and designated administrators.')+
- (rows.length?rows.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.displayName)+' · '+(a.type==='coordinator'?'Coordinator advancement':a.pendingRole==='advisor'?'Advisor offer from Representative application':'Representative application')+'</strong><p>'+esc(date(a.createdAt))+' · '+esc(a.id)+'</p></div>'+tag(a.status)+btn('Open','data-openapp="'+esc(a.id)+'"')+'</div>')).join(''):empty('No applications here','Applicants and their responses will appear when submitted.')));
+ (rows.length?rows.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.displayName)+' · '+(a.type==='coordinator'?'Coordinator advancement':a.type==='advisor'?'Advisor application':a.pendingRole==='advisor'?'Advisor offer from Representative application':'Representative application')+'</strong><p>'+esc(date(a.createdAt))+' · '+esc(a.id)+'</p></div>'+tag(a.status)+btn('Open','data-openapp="'+esc(a.id)+'"')+'</div>')).join(''):empty('No applications here','Applicants and their responses will appear when submitted.')));
  $$('[data-openapp]').forEach(b=>b.onclick=()=>{const a=rows.find(x=>x.id===b.dataset.openapp);if(!a)return;
  const answers=Object.entries(a.answers||{}).map(([k,v])=>'<div class="hq-row"><div class="grow"><strong>'+esc(k.replaceAll('_',' '))+'</strong><p class="hq-prose">'+esc(v)+'</p></div></div>').join('');
  const waiting=a.status==='Certification Pending',closed=['Approved','Declined'].includes(a.status);
- const actionButtons=closed?(owner()&&a.status==='Declined'&&a.type==='representative'?
-  '<p class="hq-micro">Declined application · preserved history. Reopen it for a new Representative review, or offer Advisor certification instead.</p>'+btn('Reopen for review','data-action="reopen"','primary')+btn('Offer Advisor position','data-action="offer-advisor"'):
+ const actionButtons=closed?(owner()&&a.status==='Declined'&&['representative','advisor'].includes(a.type)?
+  '<p class="hq-micro">Declined application · preserved history. Reopen it for another review or, for declined Representative applicants, offer Advisor certification.</p>'+btn('Reopen for review','data-action="reopen"','primary')+(a.type==='representative'?btn('Offer Advisor position','data-action="offer-advisor"'):''):
   '<p>'+esc(a.status==='Approved'?'Position active after certification.':'Application closed without appointment.')+'</p>'):owner()
   ?(waiting?'<p>Accepted; awaiting certification. No new committee privileges have been granted.</p>':btn('Mark under review','data-action="review"')+btn('Accept & assign certification','data-action="appoint"','primary'))+btn(waiting?'Withdraw acceptance':'Decline','data-action="decline"','danger')
   :(waiting?'<p>Founder acceptance recorded; certification pending.</p>':btn('Mark under review','data-action="review"')+btn('Recommend','data-action="recommend"','primary')+btn('Not recommended','data-action="not-recommended"'));
@@ -446,7 +446,7 @@ async function applicationsPage(){
   else if(action==='decline')await post('selc-governance','decline',{id:a.id,notes:vals.notes});
   else if(action==='reopen'||action==='offer-advisor'){
    if(String(vals.notes||'').trim().length<15)throw new Error('Write at least 15 characters explaining the new decision.');
-   if(!confirmDecision(action==='reopen'?'Reopen this previously declined Representative application?':'Offer this applicant an SELC Advisor appointment, pending a passing Advisor certification?'))return;
+   if(!confirmDecision(action==='reopen'?'Reopen this previously declined SELC application?':'Offer this applicant an SELC Advisor appointment, pending a passing Advisor certification?'))return;
    await post('selc-governance',action==='reopen'?'reopen_application':'offer_advisor',{id:a.id,notes:vals.notes,publicProfile:!!$('#appReviewForm input[name=publicProfile]',d)?.checked});
   }
   else await post('selc-governance','review_application',{id:a.id,status:action==='review'?'Under Review':action==='recommend'?'Recommended':'Not Recommended',notes:vals.notes});
