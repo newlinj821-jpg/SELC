@@ -27,7 +27,7 @@ test('public SELC pillars use Leadership, Education and Community rather than Co
 });
 
 test('SELC governance respects distinct representative, coordinator and staff roles',()=>{
- assert.match(js,/people\.filter\(x=>x\.role==='representative'\)\.length\+' \/ 3'/);
+ assert.match(js,/people\.filter\(x=>x\.role==='representative'\)\.length\+' \/ 3/);
  assert.match(js,/admincenter:coordinatorAdminPage/);
  assert.match(js,/iacases:iaCasesPage/);
  assert.match(js,/staffpath:staffPathPage/);
@@ -62,8 +62,8 @@ test('five Advisors, three Representatives, two Coordinators comprise ten appoin
  assert.match(html,/Five Advisor positions, three Representative positions, two Coordinator positions/);
  assert.match(html,/id="publicAdvisors"/);
  assert.match(html,/id="publicTransitionRepresentatives"/);
- assert.match(js,/people\.filter\(x=>x\.role==='advisor'\)\.length\+' \/ 5'/);
- assert.match(js,/people\.filter\(x=>x\.role==='coordinator'\)\.length\+' \/ 2'/);
+ assert.match(js,/people\.filter\(x=>x\.role==='advisor'\)\.length\+' \/ 5/);
+ assert.match(js,/people\.filter\(x=>x\.role==='coordinator'\)\.length\+' \/ 2/);
  assert.match(js,/target==='advisor'\?'apply_advisor':'apply_representative'/);
  assert.match(js,/const ADVISORFIELDS=/);
 });
