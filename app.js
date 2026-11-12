@@ -644,7 +644,7 @@ async function eventPage(){
     catch(err){flash(err.message);el.disabled=false}
   });
  }
- if(owner())$('[data-publish-event]').forEach(el=>el.onclick=async()=>{
+ if(owner())$$('[data-publish-event]').forEach(el=>el.onclick=async()=>{
    const draft=drafts.find(e=>e.id===el.dataset.publishEvent);if(!draft)return;
    if(!confirmDecision('Publish the committee-approved event and open RSVPs?'))return;
    el.disabled=true;
