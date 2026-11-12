@@ -304,3 +304,12 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 .hq-handbook-copy{padding:0 20px 20px 51px;line-height:1.75;font-size:.95rem;white-space:pre-line;overflow-wrap:anywhere}
 .hq-handbook-section:focus-within{outline:2px solid #b96d82;outline-offset:2px}
 @media(max-width:860px){.hq-handbook-layout{grid-template-columns:1fr}.hq-handbook-emblem{width:65px;height:65px;font-size:1rem}.hq-handbook-copy{padding-left:20px}}
+
+
+/* Unified reference library lives beneath official role manuals. */
+.hq-handbook-extras{margin:30px 0 22px;padding:26px;border:1px solid rgba(176,132,143,.28);border-radius:16px;background:rgba(120,80,96,.055)}
+.hq-handbook-extras>.hq-row{align-items:center;gap:16px;margin-bottom:16px}
+.hq-handbook-extras>.hq-row h2{margin:5px 0;font-size:1.3rem}
+.hq-handbook-extras>.hq-row p{margin:5px 0 0;line-height:1.6}
+.hq-handbook-extras>.hq-card{margin-top:12px}
+@media(max-width:620px){.hq-handbook-extras{padding:18px}.hq-handbook-extras>.hq-row{align-items:flex-start;flex-wrap:wrap}}
