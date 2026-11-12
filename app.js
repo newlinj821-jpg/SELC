@@ -152,9 +152,9 @@ async function loadPublicLeadership(){
 }
 async function beginHeadquarters(){
  const session=await api('selc-auth');
- context.me={role:session.role,displayName:session.displayName,owner:session.owner};
+ context.me={role:session.role,displayName:session.displayName,owner:session.owner,isStaff:session.isStaff===true};
  $('#publicSite').classList.add('hidden');$('#headquarters').classList.remove('hidden');$('#headquarters').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
- $('#hqUserName').textContent=context.me.displayName||'Member';$('#hqInitials').textContent=initials(context.me.displayName);$('#hqRole').textContent=RANK[role()]||'Community Member';$('#hqRoleChip').textContent=(RANK[role()]||'Member').toUpperCase();
+ $('#hqUserName').textContent=context.me.displayName||'Member';$('#hqInitials').textContent=initials(context.me.displayName);const roleLabel=context.me.isStaff&&['representative','coordinator'].includes(role())?'Staff + '+(role()==='representative'?'Representative':'Coordinator'):(RANK[role()]||'Community Member');$('#hqRole').textContent=roleLabel;$('#hqRoleChip').textContent=roleLabel.toUpperCase();
  setupHQNav();const hash=location.hash.split('/')[1];await openPage(hash||(organizerRole(role())?'communityleaders':'home'));
 }
 const NAV=[
@@ -182,7 +182,7 @@ const NAV=[
  ['educators','✦','Education & workshops','Committee',u=>committeeRole(u)],
  ['generalapps','▧','Member & role applications','Event operations',u=>committeeRole(u)],
  ['events','▦','Events & RSVPs','Event operations',u=>committeeRole(u)],
- ['volunteer','✋','Volunteer shifts','Event operations',u=>committeeRole(u)],
+ ['volunteer','✋','Staffing overview','Event operations',u=>committeeRole(u)],
  ['readiness','▣','Event readiness','Event operations',u=>committeeRole(u)],
  ['door','⌗','Check-in & tickets','Event operations',u=>committeeRole(u)],
  ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
@@ -495,8 +495,8 @@ async function generalAppsPage(){
 }
 async function volunteerPage(){
  const data=await api('shifts'),events=activeSELCEvents(data.events),me=data.me||{},mine=events.reduce((n,e)=>n+e.slots.reduce((x,s)=>x+s.claims.filter(c=>c.mine).length,0),0);
- let html=pageHeader('EVENT OPERATIONS','Volunteer for an event','Upcoming events offer volunteer shifts automatically. Choose where you can help; Eros can still adjust the positions when needed.');
- html+='<div class="hq-stats"><div class="hq-stat"><small>YOUR SHIFTS</small><strong>'+mine+'</strong></div><div class="hq-stat"><small>EVENTS WITH SHIFTS</small><strong>'+events.length+'</strong></div></div>';
+ let html=pageHeader('EVENT OPERATIONS','Staffing overview','Staff and Dungeon Monitor volunteer sign-ups happen exclusively in the Staff Portal. SELC provides event staffing oversight and handover information.');
+ html+='<div class="hq-stats"><div class="hq-stat"><small>YOUR SHIFTS</small><strong>'+mine+'</strong></div><div class="hq-stat"><small>EVENTS WITH SHIFTS</small><strong>'+events.length+'</strong></div></div>'+card('<h2>Volunteer through the Staff Portal</h2><p>SELC leadership status does not replace Staff certification. Staff + Representative and Staff + Coordinator accounts claim, release and manage shifts in Portal.</p><a class="hq-button primary" href="'+PORTAL+'/staff.html#shifts">Open Staff Portal volunteering ↗</a>');
  if(!owner()&&!me.linked)html+=card('<h2>Connect your membership</h2><p>Your Staff profile must be linked to an approved Portal member account before volunteering.</p><a class="hq-button" href="'+PORTAL+'/member.html">Go to Member Portal</a>');
  else if(!owner()&&!me.certified)html+=card('<h2>Complete your Staff certification first</h2><p>Event shifts involve actual responsibilities. Current Staff certification is required, and Dungeon Monitor shifts separately require DM certification.</p><a class="hq-button" href="'+PORTAL+'/staff.html#cert">Open certification</a>');
  html+=events.map(e=>{
@@ -504,7 +504,7 @@ async function volunteerPage(){
   const shifts=e.slots.map(slot=>{
    const own=slot.claims.some(c=>c.mine);
    return '<div class="hq-row"><div class="grow"><strong>'+esc(slot.label)+(slot.role==='dm'?' · Certified DM':'')+'</strong><p>'+esc(slot.description||'Help make this event run smoothly.')+'</p><p class="hq-micro">'+slot.filled+'/'+slot.count+' filled'+(slot.closed?' · Closed to new volunteers':'')+(slot.claims.length?' · '+slot.claims.map(c=>esc(c.mine?'You':c.name)).join(', '):'')+'</p></div>'+
-    (owner()?btn(slot.positionClosed?'Reopen':'Close','data-position-toggle="'+esc(e.event.id)+'|'+esc(slot.id)+'|'+(slot.positionClosed?'open':'closed')+'"'):own?btn('Release','data-release-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','danger'):slot.closed?tag('Closed'):slot.open>0&&me.certified&&me.linked&&(slot.role!=='dm'||me.dm)?btn('Volunteer','data-claim-shift="'+esc(e.event.id)+'|'+esc(slot.id)+'"','primary'):tag(slot.open>0?'Requires qualification':'Full'))+'</div>';
+    (owner()?btn(slot.positionClosed?'Reopen':'Close','data-position-toggle="'+esc(e.event.id)+'|'+esc(slot.id)+'|'+(slot.positionClosed?'open':'closed')+'"'):tag(own?'Assigned to you':slot.closed?'Closed':slot.open>0?'Open in Staff Portal':'Full'))+'</div>';
   }).join('');
   return card(head+'<div class="hq-panel-list">'+shifts+'</div><div class="hq-actions">'+btn('Event handover notes','data-handover="'+esc(e.event.id)+'"')+(owner()?btn(e.recruitmentClosed?'Reopen all sign-ups':'Close all sign-ups','data-event-recruitment="'+esc(e.event.id)+'|'+(e.recruitmentClosed?'open':'closed')+'"')+btn('Manage volunteer positions','data-manage-shifts="'+esc(e.event.id)+'"','primary'):'')+'</div>');
  }).join('');
@@ -552,7 +552,7 @@ async function volunteerPage(){
    });
   }catch(e){flash(e.message)}
  });
- $$('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
+ $('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
   const claim=!!button.dataset.claimShift,ids=(button.dataset.claimShift||button.dataset.releaseShift).split('|'),[eventId,slotId]=ids;
   if(!claim&&!confirmDecision('Release your volunteer shift? This could leave the event short-staffed.'))return;
   button.disabled=true;try{const result=await post('shifts',claim?'claim':'release',{eventId,slotId});flash(result.message||'Shift updated.');await volunteerPage()}catch(error){flash(error.message);button.disabled=false}
