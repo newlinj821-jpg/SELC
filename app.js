@@ -14,7 +14,7 @@ const TOKEN_KEY='selc.session.v1';
 // This is a display safeguard; the Portal remains the authoritative event store.
 const isDiscontinuedEvent=e=>/\bkink\s+n\s+drinks\b/i.test(String(e?.event?.title||e?.title||e?.name||'').replace(/[^a-z0-9]+/gi,' ').trim());
 const activeSELCEvents=events=>(Array.isArray(events)?events:[]).filter(e=>!isDiscontinuedEvent(e));
-const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator',representative:'SELC Representative',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
+const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator · Administration',representative:'SELC Representative · Leadership',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
 const committeeRole=u=>['founder','coordinator','representative'].includes(u);
 const organizerRole=u=>['community-applicant','community-leader'].includes(u);
 const leader=()=>context.me&&['founder','coordinator','representative'].includes(context.me.role);
@@ -255,10 +255,14 @@ async function certificationPage(){
  if(completed.length)markup+=card('<h2>Your completed certifications</h2>'+completed.map(c=>'<div class="hq-row"><div class="grow"><strong>'+esc(c.type==='coordinator'?'SELC Coordinator':'SELC Representative')+' · Certified</strong><p>Completed '+esc(date(c.completedAt))+' · Version '+esc(c.version)+'</p><small>Record '+esc(c.id)+'</small></div>'+tag('Complete')+'</div>').join(''));
  if(!assignments.length){setContent(markup+(completed.length?'':empty('No outstanding certification','Accepted applications are assigned here. You cannot begin certification before acceptance.')));return}
  const lessons=[
- ['Structure & accountability','SELC is the internal Sanctum Eros committee. Only approved SE members may apply for a seat. Appointments and decisions follow documented committee authority, approval and accountability procedures. An outside Community Leader cannot vote or act as SELC Staff.'],
- ['Consent & safety','Consent is active and revocable. Stop an activity immediately when consent is withdrawn. Social participation can begin at age 18; dungeon play parties are 21+ and subject to venue rules.'],
- ['Confidentiality & reports','Keep member and incident information confidential. Use the established reporting process.'],
- ['Collaboration & escalation','Coordinate community programs, discuss concerns through the appropriate channels, and refer final decisions to the Founder.']
+  ['Authority and role boundaries','SELC Coordinators provide delegated administrative supervision; Representatives exercise committee leadership. Staff and Dungeon Monitor work is a separate appointment, certification, and Portal volunteering workflow. Nobody gains event shift credentials from SELC rank alone.'],
+  ['Informed consent and intervention','Consent is specific, ongoing, and revocable. Respond immediately when someone withdraws consent. Where risk is imminent, prioritize the designated venue response and seek trained on-site Staff or Dungeon Monitor support.'],
+  ['Confidentiality and case handling','All active SELC leadership may access IA work as part of their duties. Use only the authorized account and system, preserve records and evidence, avoid personal exports, limit disclosures, and record case access and decisions.'],
+  ['Allegations, evidence and fair review','A report is not a finding. Document first-hand and third-party information separately, investigate corroboration, preserve fairness, keep timelines, identify conflicts of interest and provide an impartial appeal path.'],
+  ['Member decisions and operational accountability','Use a single application or case record, document decisions, verify member identities, respect access holds and admission rules, and never approve your own Staff application or review a case with a personal conflict.'],
+  ['Committee governance and delegation','Use the leadership action queue to claim work. Proposals need a documented vote and implementation responsibility. Coordinators set priorities and supervise administration, while Representative participation remains meaningful.'],
+  ['Community education and inclusion','Make workshops accessible, use qualified instructors, communicate risks and boundaries, and support community leaders without granting them SELC or Staff access.'],
+  ['Scenario practice','For each question, choose the action that preserves individual safety, procedural fairness, data security, and role boundaries. Some problems require immediate protective action; others need documented review and escalation.']
  ];
  markup+=card('<h2>Read before assessment</h2><p>A score of '+esc(data.passPercent)+'% is required. Review and retry missed questions. Your completion is recorded against the accepted application.</p>'+lessons.map(([t,p],i)=>'<div class="hq-row"><div class="grow"><strong>'+(i+1)+'. '+esc(t)+'</strong><p class="hq-prose">'+esc(p)+'</p></div></div>').join(''));
  markup+=assignments.map(a=>card('<span class="hq-eyebrow">'+esc(a.type==='coordinator'?'COORDINATOR ADVANCEMENT':'REPRESENTATIVE ENTRY')+'</span><h2>'+esc(a.type==='coordinator'?'Coordinator certification':'Representative certification')+'</h2><form class="hq-form" data-cert-form="'+esc(a.id)+'">'+a.questions.map((q,i)=>'<fieldset><legend>'+(i+1)+'. '+esc(q.prompt)+'</legend>'+q.options.map(o=>'<label class="checkline"><input type="radio" name="'+esc(q.id)+'" value="'+esc(o.value)+'" required> '+esc(o.label)+'</label>').join('')+'</fieldset>').join('')+'<label class="checkline"><input type="checkbox" name="acknowledge" value="yes" required> I will uphold SELC consent, confidentiality, nonretaliation, impartiality and access-control rules.</label><p data-status class="hq-form-status" role="status"></p><button type="submit" class="hq-button primary">Submit certification assessment</button></form>')).join('');
@@ -299,7 +303,7 @@ async function ballotsPage(){
 async function applicationsPage(){
  if(!reviewer())return;
  const result=await api('selc-governance',{query:{scope:'applications'}}),rows=result.applications||[];
- setContent(pageHeader('LEADERSHIP / PRIVATE REVIEWS','SELC applications','Only you and active Coordinators can see and review these applications. The Founder makes final appointments.')+
+ setContent(pageHeader('LEADERSHIP / PRIVATE REVIEWS','SELC applications','Confidential application review for appointed Coordinators and designated administrators.')+
  (rows.length?rows.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.displayName)+' · '+(a.type==='coordinator'?'Coordinator advancement':'Representative application')+'</strong><p>'+esc(date(a.createdAt))+' · '+esc(a.id)+'</p></div>'+tag(a.status)+btn('Open','data-openapp="'+esc(a.id)+'"')+'</div>')).join(''):empty('No applications here','Applicants and their responses will appear when submitted.')));
  $$('[data-openapp]').forEach(b=>b.onclick=()=>{const a=rows.find(x=>x.id===b.dataset.openapp);if(!a)return;
  const answers=Object.entries(a.answers||{}).map(([k,v])=>'<div class="hq-row"><div class="grow"><strong>'+esc(k.replaceAll('_',' '))+'</strong><p class="hq-prose">'+esc(v)+'</p></div></div>').join('');
