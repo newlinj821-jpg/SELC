@@ -580,13 +580,39 @@ async function volunteerPage(){
 }
 
 async function eventPage(){
- const data=await api('staff-portal'),evs=activeSELCEvents(data.events);
- let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','The same RSVP decisions, assignments and guest lists as the Sanctum Eros Portal.',btn('Open check-in','data-page-link="door"'));
- markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+btn('Check in','data-event-door="'+esc(e.id)+'"')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming events','New events will appear as they are scheduled.');
+ const coordinator=role()==='coordinator';
+ const [operational,calendar]=await Promise.all([api('staff-portal'),coordinator?api('events').catch(()=>({events:[]})):Promise.resolve(null)]);
+ const evs=activeSELCEvents(operational.events),drafts=coordinator?(calendar?.events||[]).filter(e=>e.published===false&&!e.deletedAt&&!e.cancelledAt):[];
+ let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','Review RSVPs, event assignments, and guest lists. Coordinators may draft events here without publishing them.',coordinator?btn('Create event draft','data-new-event-draft','primary'):btn('Open check-in','data-page-link="door"'));
+ if(coordinator)markup+=card('<h2>Unpublished event drafts</h2><p class="hq-muted">Drafts are visible to leadership for planning. They do not open RSVPs or appear on the public calendar.</p>'+(drafts.length?drafts.map(e=>'<div class="hq-row"><div class="grow"><strong>'+esc(e.title)+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'play')+'</p></div>'+btn('Edit draft','data-edit-event-draft="'+esc(e.id)+'"')+'</div>').join(''):empty('No event drafts','Create a draft to begin planning.')));
+ markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+btn('Check in','data-event-door="'+esc(e.id)+'"')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming published events','New events will appear as they are scheduled.');
  setContent(markup);bindPageLinks();
  $$('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
  $$('[data-event-door]').forEach(b=>b.onclick=()=>{context.eventId=b.dataset.eventDoor;openPage('door')});
  $$('[data-event-teacher]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eventTeacher));
+ const editor=(prior={})=>{
+  const opts=[['play','Play party'],['social','Social'],['workshop','Workshop / Class']];
+  const str=x=>esc(x??'');
+  const form='<p class="hq-muted">Only an unpublished draft can be saved here. A Coordinator cannot publish an event using this form.</p><form class="hq-form" id="eventDraftForm">'+
+   '<label>Event title<input name="title" required minlength="6" maxlength="180" value="'+str(prior.title||'')+'"></label>'+
+   '<label>Type<select name="eventType">'+opts.map(([v,label])=>'<option value="'+v+'"'+(prior.eventType===v?' selected':'')+'>'+label+'</option>').join('')+'</select></label>'+
+   '<div class="hq-form-grid"><label>Starts<input type="datetime-local" name="start" required value="'+str(String(prior.start||'').slice(0,16))+'"></label><label>Ends<input type="datetime-local" name="end" value="'+str(String(prior.end||'').slice(0,16))+'"></label></div>'+
+   '<label>Attendance limit<input type="number" name="capacity" min="1" max="10000" required value="'+str(prior.capacity||20)+'"></label>'+
+   '<label>Workshop class ID (required for Workshop/Class)<input name="classId" value="'+str(prior.classId||'')+'"></label>'+
+   '<label>Description<textarea name="description" rows="5">'+str(prior.description||'')+'</textarea></label>'+
+   '<p data-status class="hq-form-status"></p><button class="hq-button primary" type="submit">Save unpublished draft</button></form>';
+  const dlg=modal(prior.id?'Edit event draft':'Create event draft',form);
+  watchForm($('#eventDraftForm',dlg),async values=>{
+   if(values.eventType==='workshop'&&!values.classId)throw new Error('Choose an existing SE Education class ID for a workshop.');
+   const payload={...prior,...values,capacity:Number(values.capacity),id:prior.id||undefined,published:false,rsvpOpen:false,hubVisible:false,freeAdmission:prior.freeAdmission===true};
+   await post('events','create_draft',payload);
+   dlg.close();flash('Unpublished event draft saved for leadership review.');await eventPage();
+  });
+ };
+ if(coordinator){
+  $('[data-new-event-draft]')?.addEventListener('click',()=>editor());
+  $$('[data-edit-event-draft]').forEach(el=>el.onclick=()=>{const item=drafts.find(x=>x.id===el.dataset.editEventDraft);if(item)editor(item)});
+ }
 }
 async function rsvpPage(eventId){
  context.eventId=eventId;load();
