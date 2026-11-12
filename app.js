@@ -14,8 +14,11 @@ const TOKEN_KEY='selc.session.v1';
 // This is a display safeguard; the Portal remains the authoritative event store.
 const isDiscontinuedEvent=e=>/\bkink\s+n\s+drinks\b/i.test(String(e?.event?.title||e?.title||e?.name||'').replace(/[^a-z0-9]+/gi,' ').trim());
 const activeSELCEvents=events=>(Array.isArray(events)?events:[]).filter(e=>!isDiscontinuedEvent(e));
-const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator · Administration',representative:'SELC Representative · Leadership',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
+const RANK={founder:'Founder & Chair',coordinator:'SELC Coordinator · Administration',representative:'SELC Representative · Leadership',advisor:'SELC Advisor · Community & Education',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
 const committeeRole=u=>['founder','coordinator','representative'].includes(u);
+const participantRole=u=>committeeRole(u)||u==='advisor';
+const advisor=()=>role()==='advisor';
+const advisorVoteCategories=new Set(['education','events','outreach','community','accessibility']);
 const organizerRole=u=>['community-applicant','community-leader'].includes(u);
 const leader=()=>context.me&&['founder','coordinator','representative'].includes(context.me.role);
 const reviewer=()=>context.me&&['founder','coordinator'].includes(context.me.role);
@@ -138,17 +141,26 @@ async function loadPublicLeadership(){
   const data=await api('selc-public',{token:'',timeout:5000});
   const host=$('#publicDirectory');if(!host)return;
   const people=Array.isArray(data.people)?data.people:[];
-  const bySeat=new Map(people.filter(p=>p.role!=='coordinator').map(p=>[Number(p.seat),p]));
+  const bySeat=new Map(people.filter(p=>p.role==='representative').map(p=>[Number(p.seat),p]));
+  const advisors=people.filter(p=>p.role==='advisor');
+  const grandfatheredRepresentatives=people.filter(p=>p.role==='representative'&&Number(p.seat)>3).sort((a,b)=>Number(a.seat)-Number(b.seat));
   const coordinators=people.filter(p=>p.role==='coordinator').slice(0,2);
   const coordinatorHost=$('#publicCoordinators');
   if(coordinatorHost)coordinatorHost.innerHTML=[0,1].map(n=>{
     const person=coordinators[n];
     return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Coordinator')+'</strong><small>'+esc(person?'SELC Coordinator':'Position available')+'</small></div>';
   }).join('');
-  host.innerHTML=[1,2,3,4,5].map(n=>{
+  host.innerHTML=[1,2,3].map(n=>{
     const person=bySeat.get(n);
     return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+esc(person?.publicParticipation||'SELC Representative')+'</small></div>';
   }).join('');
+  const transitionHost=$('#publicTransitionRepresentatives');
+  if(transitionHost){
+   transitionHost.innerHTML=grandfatheredRepresentatives.map(p=>'<div class="seat-card"><span>•</span><strong>'+esc(p.publicName||'Representative')+'</strong><small>Current Representative · legacy appointment</small></div>').join('');
+   transitionHost.classList.toggle('hidden',grandfatheredRepresentatives.length===0);
+  }
+  const advisorHost=$('#publicAdvisors');
+  if(advisorHost)advisorHost.innerHTML=advisors.length?advisors.map((person,i)=>'<div class="seat-card"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(person.publicName||'Advisor')+'</strong><small>SELC Advisor · '+esc(person.publicParticipation||'Community & Education')+'</small></div>').join(''):'<p class="directory-note">No Advisors have chosen to publish their names yet.</p>';
 }
 async function beginHeadquarters(){
  const session=await api('selc-auth');
@@ -161,27 +173,27 @@ const NAV=[
  ['home','⌂','Overview','Your work',u=>!organizerRole(u)],
  ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
   ['admincenter','◈','Coordinator administration','Leadership',u=>u==='coordinator'],
- ['join','✎','Apply to SELC','Your work',u=>u==='member'],
+ ['join','✎','Apply to SELC','Your work',u=>u==='member'||u==='advisor'],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
  ['ballots','✓','Coordinator election','Your work',u=>u==='representative'||u==='coordinator'],
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
- ['leader','◈','Leadership & appointments','Leadership',u=>u==='founder'||u==='coordinator'||u==='representative'],
- ['availability','◷','My availability','Your work',u=>committeeRole(u)&&u!=='founder'],
+ ['leader','◈','SELC members & advisors','Leadership',u=>participantRole(u)],
+ ['availability','◷','My availability','Your work',u=>participantRole(u)&&u!=='founder'],
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
  ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
- ['communityinbox','✉','Community Inbox','Committee',u=>committeeRole(u)],
- ['memberdesk','✉','Member messages & complaints','Committee',u=>committeeRole(u),'hidden'],
- ['suggestionsdesk','◇','Member suggestions','Committee',u=>committeeRole(u),'hidden'],
- ['feedbackdesk','▤','Event feedback review','Committee',u=>committeeRole(u),'hidden'],
- ['proposals','◉','Proposals & votes','Committee',u=>committeeRole(u)],
+ ['communityinbox','✉','Community Inbox','Committee',u=>participantRole(u)],
+ ['memberdesk','✉','Member messages & feedback','Committee',u=>participantRole(u),'hidden'],
+ ['suggestionsdesk','◇','Member suggestions','Committee',u=>participantRole(u),'hidden'],
+ ['feedbackdesk','▤','Event feedback review','Committee',u=>participantRole(u),'hidden'],
+ ['proposals','◉','Proposals & votes','Committee',u=>participantRole(u)],
  ['content','✎','Website content','Committee',u=>committeeRole(u)],
  ['chat','▤','Community chat','Community',u=>!['community-applicant'].includes(u)],
  ['requests','↗','Community conversations','Committee',u=>committeeRole(u)],
  ['communityleaders','◇','Community Leaders network','Partnerships'],
  ['applyeducator','✦','Become a Community Educator','Education',u=>!organizerRole(u)],
  ['educatorreviews','▤','Educator applications','Education',u=>u==='founder'||u==='coordinator'],
- ['educators','✦','Education & workshops','Committee',u=>committeeRole(u)],
+ ['educators','✦','Education & workshops','Committee',u=>participantRole(u)],
  ['registry','▤','Member registry','Leadership',u=>committeeRole(u)],
  ['generalapps','▧','Member & role applications','Event operations',u=>committeeRole(u)],
  ['events','▦','Events & RSVPs','Event operations',u=>committeeRole(u)],
@@ -220,16 +232,28 @@ async function openPage(page){
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
+async function advisorHomePage(home){
+ const [inbox,proposals]=await Promise.all([
+  api('committee-desk',{query:{scope:'messages'}}).catch(()=>({messages:[]})),
+  api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]}))
+ ]);
+ const eligible=(proposals.proposals||[]).filter(p=>p.status==='Discussion'&&advisorVoteCategories.has(p.category));
+ const markup=pageHeader('SELC / ADVISOR','Welcome back, '+esc((context.me.displayName||'Advisor').split(' ')[0]),'Support member communications, education, outreach and community improvement. Your voting rights apply to designated proposal categories.')+
+  '<div class="hq-stats"><div class="hq-stat"><small>SHARED MESSAGES</small><strong>'+number(inbox.messages?.length||0)+'</strong></div><div class="hq-stat"><small>ADVISOR-ELIGIBLE VOTES</small><strong>'+number(eligible.length)+'</strong></div></div>'+
+  card('<h2>Your Advisor responsibilities</h2><p>Participate in SELC chat, review opted-in member communications and event feedback, contribute educational ideas, and vote on eligible proposals. Private IA records, membership approvals, Staff appointments and bans remain outside the Advisor role.</p><div class="hq-actions">'+btn('Community inbox','data-page-link="communityinbox"','primary')+btn('Proposals and votes','data-page-link="proposals"')+btn('SELC chat','data-page-link="chat"')+btn('Apply for Representative','data-page-link="join"')+'</div>');
+ setContent(markup);bindPageLinks();
+}
 async function homePage(){
  const jobs=[api('selc-governance',{query:{scope:'home'}})];
  if(leader())jobs.push(api('community-requests'),api('staff-portal'),api('ban-reports'));
  const results=await Promise.allSettled(jobs),home=results[0].status==='fulfilled'?results[0].value:null;
  if(!home)throw results[0].reason||new Error('The leadership workspace is unavailable.');
  context.data.home=home;
- if(!leader()){const pendingCert=(home.myApplications||[]).some(a=>a.status==='Certification Pending');setContent(pageHeader('WELCOME TO SELC','Your next chapter','SELC membership requires approved SE membership, a separate application and acceptance, then certification.')+(pendingCert?card('<h2>Application accepted — certification required</h2><p>Complete your training to activate committee privileges.</p>'+btn('Begin SELC certification','data-page-link="certification"','primary')):card('<h2>Help build something meaningful</h2><p>Apply to join the committee. Acceptance alone never grants internal or voting privileges.</p>'+btn('Apply to be a Representative','data-page-link="join"','primary')))+(home.myApplications?.length?card('<h2>Your applications</h2>'+home.myApplications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>Submitted '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join('')):''));bindPageLinks();return}
+ if(advisor())return advisorHomePage(home);
+ if(!leader()){const pendingCert=(home.myApplications||[]).some(a=>a.status==='Certification Pending'),underReview=(home.myApplications||[]).some(a=>['Pending','Under Review','Recommended'].includes(a.status));setContent(pageHeader('WELCOME TO SELC','Your next chapter','SELC membership requires approved SE membership, a separate application and acceptance, then certification.')+(pendingCert?card('<h2>Application accepted — certification required</h2><p>Complete your training to activate committee privileges.</p>'+btn('Begin SELC certification','data-page-link="certification"','primary')):underReview?card('<h2>Your application is under review</h2><p>SELC leadership will review your answers. No committee permissions are granted until the application is accepted and certification completed.</p>'):card('<h2>Help build something meaningful</h2><p>Apply for an Advisor or Representative position. No committee privileges activate until acceptance and certification.</p>'+btn('Apply to SELC','data-page-link="join"','primary')))+(home.myApplications?.length?card('<h2>Your applications</h2>'+home.myApplications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>Submitted '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join('')):''));bindPageLinks();return}
  const [conv,staff,bans]=results.slice(1).map(r=>r.status==='fulfilled'?r.value:null);
  const proposals=await api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]}));
- const cards=[['SELC MEMBERS',String(home.occupiedSeats||0)+'/7'],['COORDINATORS',String(home.coordinators||0)+'/2'],['OPEN CONVERSATIONS',number(conv?.openCount||0)],['BAN REPORTS PENDING',number(bans?.pendingCount||0)]];
+ const cards=[['SELC POSITIONS',String((home.occupiedSeats||0)+(home.advisors||0))+'/10'],['COORDINATORS',String(home.coordinators||0)+'/2'],['OPEN CONVERSATIONS',number(conv?.openCount||0)],['BAN REPORTS PENDING',number(bans?.pendingCount||0)]];
  let markup=pageHeader('YOUR COMMUNITY / YOUR RESPONSIBILITY','Welcome back, '+(context.me.displayName||'').split(' ')[0],'Leadership is the work we do together—not just the title we hold.',btn('Start a proposal','data-page-link="proposals"','primary'));
  markup+='<div class="hq-stats">'+cards.map(([label,value])=>'<div class="hq-stat"><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>').join('')+'</div>';
  markup+='<div class="hq-grid">'+card('<h2>Where your attention can help</h2>'+[
@@ -243,20 +267,46 @@ async function homePage(){
 function bindPageLinks(root=$('#hqContent')){$$('[data-page-link]',root).forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.pageLink)))}
 const REPFIELDS=[['motivation','Why does serving this community matter to you?','Tell us what motivates you and what you hope to build together.'],['experience','What experiences and strengths would you bring?','Community work, kink education, organizing, technical skills, writing, advocacy, or anything else relevant.'],['collaboration','Describe how you handle disagreement or feedback.','We value people who can listen without losing their own voice.'],['consent','How would you support consent, privacy, and community care?','Include how you would handle sensitive information responsibly.'],['participation','How would you like to contribute?','In-person events, online planning, education, outreach, projects, and your realistic availability.'],['example','Tell us about a time you stepped up to help others.','What happened, what did you do, and what would you do differently?']];
 function textfield([name,label,hint],value='',required=true){return '<label for="f-'+esc(name)+'">'+esc(label)+'</label><textarea id="f-'+esc(name)+'" name="'+esc(name)+'" rows="4" placeholder="'+esc(hint||'')+'" '+(required?'required':'')+'>'+esc(value)+'</textarea>'}
+const ADVISORFIELDS=[
+ ['motivation','Why do you want to support SELC as an Advisor?','Describe the community or educational contribution you hope to make.'],
+ ['experience','What experiences, interests or skills would you bring?','Community knowledge, writing, accessibility, outreach, teaching support, or organizing.'],
+ ['collaboration','How do you handle disagreement and competing perspectives?','Explain how you listen and contribute constructively.'],
+ ['consent','How will you respect privacy, consent and the limits of the Advisor role?','Sensitive allegations and IA cases must be referred to authorized leadership.'],
+ ['participation','What projects or feedback would you like to work on?','Share your practical interests and realistic availability.'],
+ ['example','Describe a time you helped improve a group or situation.','What did you contribute, and what did you learn?']
+];
 async function joinPage(){
  const home=context.data.home||await api('selc-governance',{query:{scope:'home'}}),pending=home.myApplications||[];
- let markup=pageHeader('YOUR APPLICATION','Step forward','SELC Representatives help with learning, events, outreach, community connections and thoughtful leadership. Remote participation is welcome.');
- if(pending.length)markup+=card('<h2>Your application history</h2>'+pending.map(a=>'<div class="hq-row"><div class="grow"><strong>Representative application</strong><p>'+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join(''));
- if(role()!=='member'){setContent(markup+card('<h2>You are already on the committee</h2><p>Use the leadership sections to continue your work.</p>'));return}
- markup+=card('<h2>Tell us about yourself</h2><p>This is a chance to tell us what you care about—not a test of who can write the longest answer.</p><form id="repForm" class="hq-form">'+REPFIELDS.map(f=>textfield(f)).join('')+'<label class="checkline"><input type="checkbox" name="truthful" required> These responses reflect my own experience and intentions.</label><p data-status class="hq-form-status" aria-live="polite"></p><button type="submit" class="hq-button primary">Submit Representative application ↗</button></form>');
- setContent(markup);watchForm($('#repForm'),async(data,form)=>{if(!data.truthful)throw new Error('Confirm the accuracy of your application.');const answers=Object.fromEntries(REPFIELDS.map(x=>[x[0],data[x[0]]]));if(answers.motivation.length<80||answers.experience.length<80)throw new Error('Please expand your motivation and experience to at least 80 characters each.');await post('selc-governance','apply_representative',{answers});setStatus(form.querySelector('[data-status]'),'Your application was received.',true);flash('SELC application received.');await openPage('home')})
+ let markup=pageHeader('YOUR APPLICATION','Join SELC','Choose an Advisor or Representative path. Advisors focus on community, education and eligible votes; Representatives independently manage routine membership and organizational reviews. All appointments require approval and certification.');
+ if(pending.length)markup+=card('<h2>Your application history</h2>'+pending.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type==='advisor'?'Advisor':a.type==='coordinator'?'Coordinator':'Representative')+' application</strong><p>'+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join(''));
+ if(!['member','advisor'].includes(role())){setContent(markup+card('<h2>Your leadership appointment is already active</h2><p>Use your leadership sections for current responsibilities.</p>'));return}
+ if(pending.some(a=>['Pending','Under Review','Recommended','Certification Pending'].includes(a.status))){setContent(markup+card('<h2>An application is already in progress</h2><p>Finish the existing review or assigned certification before submitting another SELC application.</p>'+btn('Review my status','data-page-link="home"','primary')));bindPageLinks();return}
+ const choices=role()==='advisor'?
+  '<option value="representative">Representative — advance from Advisor</option>':
+  '<option value="advisor">Advisor — community and education</option><option value="representative">Representative — organizational leadership</option>';
+ markup+=card('<h2>Select a leadership path</h2><p>Advisor positions are capped at five, Representative positions at three, and Coordinator positions at two. Existing appointments remain in place during the transition.</p><form id="repForm" class="hq-form"><label>Position to apply for<select name="targetRole" id="selcTargetRole" required>'+choices+'</select></label><div id="selcApplicationQuestions"></div><label class="checkline"><input type="checkbox" name="truthful" required> These responses reflect my experience and intentions.</label><p data-status class="hq-form-status" aria-live="polite"></p><button type="submit" class="hq-button primary">Submit SELC application</button></form>');
+ setContent(markup);
+ const selector=$('#selcTargetRole'),questions=$('#selcApplicationQuestions');
+ const render=()=>{const fields=selector.value==='advisor'?ADVISORFIELDS:REPFIELDS;questions.innerHTML=fields.map(f=>textfield(f)).join('')};
+ selector.addEventListener('change',render);render();
+ watchForm($('#repForm'),async(data,form)=>{
+  if(!data.truthful)throw new Error('Confirm the accuracy of your application.');
+  const target=String(data.targetRole||'');
+  if(!['advisor','representative'].includes(target)||(role()==='advisor'&&target!=='representative'))throw new Error('Choose a permitted SELC application path.');
+  const fields=target==='advisor'?ADVISORFIELDS:REPFIELDS;
+  const answers=Object.fromEntries(fields.map(f=>[f[0],data[f[0]]]));
+  if(String(answers.motivation||'').trim().length<80||String(answers.experience||'').trim().length<80)throw new Error('Please expand your motivation and experience to at least 80 characters each.');
+  await post('selc-governance',target==='advisor'?'apply_advisor':'apply_representative',{answers});
+  setStatus(form.querySelector('[data-status]'),'Your application was received.',true);
+  flash('SELC '+(target==='advisor'?'Advisor':'Representative')+' application received.');
+  await openPage('home');
+ });
 }
-
 async function certificationPage(){
  const data=await api('selc-governance',{query:{scope:'certification'}}),assignments=data.assignments||[];
  let markup=pageHeader('SELC / REQUIRED TRAINING','SELC certification','Complete training and assessment after appointment acceptance. Your new committee privileges activate only on a verified pass.');
  const completed=data.completed||[];
- if(completed.length)markup+=card('<h2>Your completed certifications</h2>'+completed.map(c=>'<div class="hq-row"><div class="grow"><strong>'+esc(c.type==='coordinator'?'SELC Coordinator':'SELC Representative')+' · Certified</strong><p>Completed '+esc(date(c.completedAt))+' · Version '+esc(c.version)+'</p><small>Record '+esc(c.id)+'</small></div>'+tag('Complete')+'</div>').join(''));
+ if(completed.length)markup+=card('<h2>Your completed certifications</h2>'+completed.map(c=>'<div class="hq-row"><div class="grow"><strong>'+esc(c.type==='coordinator'?'SELC Coordinator':c.type==='advisor'?'SELC Advisor':'SELC Representative')+' · Certified</strong><p>Completed '+esc(date(c.completedAt))+' · Version '+esc(c.version)+'</p><small>Record '+esc(c.id)+'</small></div>'+tag('Complete')+'</div>').join(''));
  if(!assignments.length){setContent(markup+(completed.length?'':empty('No outstanding certification','Accepted applications are assigned here. You cannot begin certification before acceptance.')));return}
  const commonLessons=[
   {title:'Mandate, service and authority',objective:'Separate committee participation from operational control and account permissions.',steps:[
@@ -316,13 +366,18 @@ async function certificationPage(){
    {title:'Operational incident and release control',objective:'Prevent rushed changes from bypassing the committee process.',steps:['For event drafts, secure the correct committee vote and approval before releasing RSVPs.','Do not publish a draft that differs from the reviewed snapshot; restart review when material details change.','Use implementation milestones, operational handovers and audit entries to keep venue and community work coordinated.'],scenario:'A last-minute change alters a voted workshop from discussion to high-risk demonstration. Require review of instructor competence and event safety controls before it goes live.'}
   ]
  };
- const modulesFor=type=>[...commonLessons,...(roleLessons[type]||[])];
+ const advisorLessons=[
+ {title:'Advisor boundaries and participation',objective:'Participate meaningfully without independent administrative or safety authority.',steps:['Advisors advise on community, education and events; Representatives approve routine membership changes and Coordinators oversee higher authority.','Members must explicitly authorize shared correspondence; complaints and IA cases remain restricted.','SELC Advisor status does not grant free admissions, Staff permissions, or access to private member files.'],scenario:'A member asks an Advisor to approve their membership. Route the request to a Representative and offer only procedural guidance.'},
+ {title:'Member communications and community care',objective:'Support privacy-respecting communication and constructive feedback.',steps:['Use the authorized Community Inbox for opted-in messages, reviews and suggestions.','Escalate allegations, safeguarding issues and conflicts without attempting an investigation.','Keep replies factual, kind, and linked to the shared record.'],scenario:'A complaint alleges a consent violation. Stop reading and refer to authorized IA/leadership reporting channels.'},
+ {title:'Education, projects and accountable voting',objective:'Research, propose and vote within an Advisor remit.',steps:['Advisors may introduce proposals and vote on education, events, outreach, community and accessibility topics.','Governance, pricing, staffing, bans and organizational rules are reserved to elected leadership voters.','Disclose conflicts, document recommendations and follow approved project handovers.'],scenario:'An Advisor wants to vote on pricing: they may comment but cannot cast a binding ballot.'}
+ ];
+ const modulesFor=type=>type==='advisor'?advisorLessons:[...commonLessons,...(roleLessons[type]||[])];
  const renderModule=(m,i)=>'<details class="hq-card"><summary><strong>'+(i+1)+'. '+esc(m.title)+'</strong></summary>'+
   '<p class="hq-prose"><strong>Outcome:</strong> '+esc(m.objective)+'</p><ol class="hq-prose">'+m.steps.map(step=>'<li>'+esc(step)+'</li>').join('')+'</ol>'+
   '<p class="hq-prose"><strong>Applied scenario:</strong> '+esc(m.scenario)+'</p></details>';
- markup+=card('<h2>Assessment standard</h2><p>The assessment has 20 applied questions and requires '+esc(data.passPercent)+'% correct. The questions are graded on the Portal server. Review the course modules and retry missed questions; your result is linked to the accepted appointment.</p>');
- markup+=assignments.map(a=>card('<span class="hq-eyebrow">'+esc(a.type==='coordinator'?'COORDINATOR ADVANCEMENT':'REPRESENTATIVE ENTRY')+'</span>'+
-  '<h2>'+esc(a.type==='coordinator'?'Coordinator certification':'Representative certification')+'</h2>'+
+ markup+=card('<h2>Assessment standard</h2><p>Advisor assessments have 10 questions; Representative and Coordinator assessments have 20. A score of '+esc(data.passPercent)+'% is required. The questions are graded on the Portal server. Review the course modules and retry missed questions; your result is linked to the accepted appointment.</p>');
+ markup+=assignments.map(a=>card('<span class="hq-eyebrow">'+esc(a.type==='coordinator'?'COORDINATOR ADVANCEMENT':a.type==='advisor'?'ADVISOR DEVELOPMENT':'REPRESENTATIVE ENTRY')+'</span>'+
+  '<h2>'+esc(a.type==='coordinator'?'Coordinator certification':a.type==='advisor'?'Advisor certification':'Representative certification')+'</h2>'+
   '<p class="hq-prose">Read the modules below before completing the assessment. Expand each section for actions, boundaries and a practical example.</p>'+
   '<div class="hq-curriculum">'+modulesFor(a.type).map(renderModule).join('')+'</div>'+
   '<form class="hq-form" data-cert-form="'+esc(a.id)+'">'+a.questions.map((q,i)=>'<fieldset><legend>'+(i+1)+'. '+esc(q.prompt)+'</legend>'+q.options.map(o=>'<label class="checkline"><input type="radio" name="'+esc(q.id)+'" value="'+esc(o.value)+'" required> '+esc(o.label)+'</label>').join('')+'</fieldset>').join('')+
@@ -366,11 +421,13 @@ async function applicationsPage(){
  if(!reviewer())return;
  const result=await api('selc-governance',{query:{scope:'applications'}}),rows=result.applications||[];
  setContent(pageHeader('LEADERSHIP / PRIVATE REVIEWS','SELC applications','Confidential application review for appointed Coordinators and designated administrators.')+
- (rows.length?rows.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.displayName)+' · '+(a.type==='coordinator'?'Coordinator advancement':'Representative application')+'</strong><p>'+esc(date(a.createdAt))+' · '+esc(a.id)+'</p></div>'+tag(a.status)+btn('Open','data-openapp="'+esc(a.id)+'"')+'</div>')).join(''):empty('No applications here','Applicants and their responses will appear when submitted.')));
+ (rows.length?rows.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.displayName)+' · '+(a.type==='coordinator'?'Coordinator advancement':a.type==='advisor'?'Advisor application':a.pendingRole==='advisor'?'Advisor offer from Representative application':'Representative application')+'</strong><p>'+esc(date(a.createdAt))+' · '+esc(a.id)+'</p></div>'+tag(a.status)+btn('Open','data-openapp="'+esc(a.id)+'"')+'</div>')).join(''):empty('No applications here','Applicants and their responses will appear when submitted.')));
  $$('[data-openapp]').forEach(b=>b.onclick=()=>{const a=rows.find(x=>x.id===b.dataset.openapp);if(!a)return;
  const answers=Object.entries(a.answers||{}).map(([k,v])=>'<div class="hq-row"><div class="grow"><strong>'+esc(k.replaceAll('_',' '))+'</strong><p class="hq-prose">'+esc(v)+'</p></div></div>').join('');
  const waiting=a.status==='Certification Pending',closed=['Approved','Declined'].includes(a.status);
- const actionButtons=closed?'<p>'+esc(a.status==='Approved'?'Appointment active after certification.':'Application closed without appointment.')+'</p>':owner()
+ const actionButtons=closed?(owner()&&a.status==='Declined'&&['representative','advisor'].includes(a.type)?
+  '<p class="hq-micro">Declined application · preserved history. Reopen it for another review or, for declined Representative applicants, offer Advisor certification.</p>'+btn('Reopen for review','data-action="reopen"','primary')+(a.type==='representative'?btn('Offer Advisor position','data-action="offer-advisor"'):''):
+  '<p>'+esc(a.status==='Approved'?'Position active after certification.':'Application closed without appointment.')+'</p>'):owner()
   ?(waiting?'<p>Accepted; awaiting certification. No new committee privileges have been granted.</p>':btn('Mark under review','data-action="review"')+btn('Accept & assign certification','data-action="appoint"','primary'))+btn(waiting?'Withdraw acceptance':'Decline','data-action="decline"','danger')
   :(waiting?'<p>Founder acceptance recorded; certification pending.</p>':btn('Mark under review','data-action="review"')+btn('Recommend','data-action="recommend"','primary')+btn('Not recommended','data-action="not-recommended"'));
  const exceptionAvailable=owner()&&a.type==='coordinator'&&a.founderOverrideEligible===true&&!waiting&&!closed;
@@ -383,11 +440,16 @@ async function applicationsPage(){
   '<form class="hq-form" id="appReviewForm"><label>Notes for review</label><textarea name="notes" rows="4">'+esc(a.reviewNotes||'')+'</textarea>'+
   '<label>Public display name (optional)</label><input name="publicName" value="'+esc(a.displayName||'')+'">'+
   '<label class="checkline"><input type="checkbox" name="publicProfile"> Show this person’s name publicly with their consent</label>'+exceptionMarkup+
-  '<div class="hq-actions">'+actionButtons+'</div><p data-status class="hq-form-status"></p></form>';
+  '<div class="hq-actions">'+actionButtons+'</div><p data-status class="hq-form-status"></p></form>'+(a.reviewHistory?.length?'<section class="hq-card"><h3>Decision history</h3>'+a.reviewHistory.map(e=>'<p class="hq-micro">'+esc(date(e.at))+' · '+esc(e.action)+' · '+esc(e.reviewedBy||'SELC')+' — '+esc(e.notes||'')+'</p>').join('')+'</section>':'');
  const d=modal(a.displayName+' · '+a.type,reviewMarkup);
  $$('[data-action]',d).forEach(btnEl=>btnEl.onclick=async()=>{const vals=formValues($('#appReviewForm',d)),action=btnEl.dataset.action;try{
   if(action==='appoint'){const override=!!$('#appReviewForm input[name=founderOverride]',d)?.checked;if(override&&String(vals.founderOverrideReason||'').trim().length<20)throw new Error('Document the Founder exception with at least 20 characters.');if(!confirmDecision(override?'Record the Founder exception and assign certification?':'Accept this application and assign SELC certification? Appointment privileges activate only after a passing assessment.'))return;await post('selc-governance','appoint',{id:a.id,...vals,founderOverride:override,founderOverrideReason:override?vals.founderOverrideReason:'',publicProfile:!!$('#appReviewForm input[name=publicProfile]',d).checked})}
   else if(action==='decline')await post('selc-governance','decline',{id:a.id,notes:vals.notes});
+  else if(action==='reopen'||action==='offer-advisor'){
+   if(String(vals.notes||'').trim().length<15)throw new Error('Write at least 15 characters explaining the new decision.');
+   if(!confirmDecision(action==='reopen'?'Reopen this previously declined SELC application?':'Offer this applicant an SELC Advisor appointment, pending a passing Advisor certification?'))return;
+   await post('selc-governance',action==='reopen'?'reopen_application':'offer_advisor',{id:a.id,notes:vals.notes,publicProfile:!!$('#appReviewForm input[name=publicProfile]',d)?.checked});
+  }
   else await post('selc-governance','review_application',{id:a.id,status:action==='review'?'Under Review':action==='recommend'?'Recommended':'Not Recommended',notes:vals.notes});
   d.close();flash(action==='appoint'?'Application accepted; certification assigned.':'Application updated.');applicationsPage()
  }catch(e){setStatus($('[data-status]',d),e.message)}});
@@ -450,10 +512,11 @@ async function leadershipWorkPage(){
 }
 
 async function leaderPage(){
- const data=await api('selc-governance',{query:{scope:'members'}}),people=data.members||[];
- let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Representative positions and two separate Coordinator positions, plus Eros as Founder and Chair. Members keep one committee vote regardless of title.');
- markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.filter(x=>x.role==='representative').length+' / 5</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div></div>';
- markup+=card('<h2>Committee members</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role)+' · '+esc(p.availability?.status||'Available')+(p.availability?.until?' through '+esc(p.availability.until):'')+'</p></div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
+ const data=await api('selc-governance',{query:{scope:'members'}}),people=(data.members||[]).sort((a,b)=>({coordinator:0,representative:1,advisor:2}[a.role]??3)-({coordinator:0,representative:1,advisor:2}[b.role]??3)||String(a.displayName||'').localeCompare(String(b.displayName||'')));
+ let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Advisors, three Representatives and two Coordinators, plus Eros as Founder/Chair. Advisors vote on designated education and community proposals; organization-wide governance ballots remain reserved.');
+ markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.filter(x=>x.role==='representative').length+' / 3</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div><div class="hq-stat"><small>ADVISORS</small><strong>'+people.filter(x=>x.role==='advisor').length+' / 5</strong></div></div>';
+ if(people.filter(x=>x.role==='representative').length>3)markup+=card('<h3>Representative transition</h3><p>The new standard capacity is three Representatives. Existing appointments above this number remain valid during a deliberate transition. No one is automatically demoted; new Representative appointments stay paused until a vacancy opens within the three-seat cap.</p>');
+ markup+=card('<h2>Committee members and Advisors</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>'+(p.role==='advisor'?'Advisor · project and community participation':'Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role))+' · '+esc(p.availability?.status||'Available')+(p.availability?.until?' through '+esc(p.availability.until):'')+'</p></div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
  if(owner())markup+=card('<h2>Lead the appointment process</h2><p>Review and appoint Representatives or Coordinators from applications. Coordinator applications follow a documented selection process and committee voting where eligible.</p>'+btn('Review SELC applications','data-page-link="applications"','primary'));
  setContent(markup);bindPageLinks();$$('[data-remove]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Remove this SELC leadership appointment? Their regular membership remains separate.'))return;try{await post('selc-governance','remove',{accountId:b.dataset.remove});flash('Appointment ended.');leaderPage()}catch(e){flash(e.message)}});
 }
@@ -464,13 +527,13 @@ async function proposalPage(){
  markup+=rows.length?rows.map(p=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc((p.category||'').replaceAll('_',' '))+'</span><h2>'+esc(p.title)+'</h2><p>'+esc(p.description||'').slice(0,210)+'</p><p class="hq-micro">Started by '+esc(p.createdBy)+' · '+esc(date(p.createdAt))+' · '+(p.comments?.length||0)+' replies</p></div>'+tag(p.status)+btn('Discuss','data-proposal="'+esc(p.id)+'"')+'</div>')).join(''):empty('No ideas on the table yet','Start a proposal, invite perspectives, and move it toward a decision.');
  setContent(markup);
  $('[data-new-proposal]').onclick=()=>{
-  const d=modal('Bring an idea forward','<form class="hq-form" id="newProposal"><label>What is your idea called?</label><input name="title" required minlength="8" placeholder="Give it a clear name"><label>Area of community life</label><select name="category"><option value="education">Education & workshops</option><option value="events">Events & socials</option><option value="equipment">Equipment</option><option value="work_sessions">Venue work sessions</option><option value="rules">Rules & expectations</option><option value="pricing">Pricing & admission</option><option value="outreach">Community outreach</option><option value="other">Something else</option></select><label>What should happen and why?</label><textarea name="description" required rows="6" minlength="40"></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Start discussion</button></form>');
+  const d=modal('Bring an idea forward','<form class="hq-form" id="newProposal"><label>What is your idea called?</label><input name="title" required minlength="8" placeholder="Give it a clear name"><label>Area of community life</label><select name="category"><option value="education">Education & workshops</option><option value="events">Events & socials</option><option value="equipment">Equipment</option><option value="work_sessions">Venue work sessions</option><option value="rules">Rules & expectations</option><option value="pricing">Pricing & admission</option><option value="outreach">Community outreach</option><option value="community">Community initiatives</option><option value="accessibility">Accessibility</option><option value="other">Something else</option></select><label>What should happen and why?</label><textarea name="description" required rows="6" minlength="40"></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Start discussion</button></form>');
   watchForm($('#newProposal',d),async vals=>{await post('selc-governance','create_proposal',vals);d.close();flash('Proposal added for discussion.');proposalPage()})
  };
  $$('[data-proposal]').forEach(b=>b.onclick=()=>{const p=rows.find(x=>x.id===b.dataset.proposal);if(!p)return;
-  const tally=Object.values(p.votes||{}).reduce((a,v)=>(a[v.vote]=(a[v.vote]||0)+1,a),{yes:0,no:0,abstain:0});
-  const voteSummary=p.voteSummary||{},canTrack=reviewer()&&['Chair Approved','In Progress','Blocked','Completed'].includes(p.status);
-  const d=modal(p.title,'<p class="hq-eyebrow">'+esc(p.category||'')+' / '+esc(p.status)+'</p><p class="hq-prose">'+esc(p.description)+'</p><p>Committee votes: '+number(tally.yes)+' support · '+number(tally.no)+' oppose · '+number(tally.abstain)+' abstain</p><p class="hq-micro">'+number(voteSummary.participating||0)+' of '+number(voteSummary.eligible||0)+' eligible · quorum '+number(voteSummary.quorumNeeded||0)+' · '+(voteSummary.passed?'Majority reached':voteSummary.quorumMet?'Awaiting majority':'Awaiting quorum')+'</p><div class="hq-actions">'+btn('Support','data-pvote="yes"','primary')+btn('Oppose','data-pvote="no"')+btn('Abstain','data-pvote="abstain"')+'</div><hr style="border:0;border-top:1px solid #545058;margin:18px 0"><h3>Discussion ('+(p.comments?.length||0)+')</h3><div class="hq-panel-list">'+(p.comments||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+esc(m.from)+'</strong><p class="hq-prose">'+esc(m.message)+'</p><p class="hq-micro">'+esc(date(m.at))+'</p></div></div>').join('')+'</div><form class="hq-form" id="commentProposal"><label>Add your perspective</label><textarea name="message" required></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Add comment</button></form>'+(owner()&&p.status==='Discussion'?'<h3>Decision</h3><div class="hq-actions">'+btn('Approve proposal','data-chair="approved"','primary')+btn('Return for changes','data-chair="returned"')+btn('Decline','data-chair="declined"','danger')+'</div>':''));
+  const voteSummary=p.voteSummary||{},tally={yes:voteSummary.yes||0,no:voteSummary.no||0,abstain:voteSummary.abstain||0};
+  const canVote=!advisor()||advisorVoteCategories.has(p.category),canTrack=reviewer()&&['Chair Approved','In Progress','Blocked','Completed'].includes(p.status);
+  const d=modal(p.title,'<p class="hq-eyebrow">'+esc(p.category||'')+' / '+esc(p.status)+'</p><p class="hq-prose">'+esc(p.description)+'</p><p>Committee votes: '+number(tally.yes)+' support · '+number(tally.no)+' oppose · '+number(tally.abstain)+' abstain</p><p class="hq-micro">'+number(voteSummary.participating||0)+' of '+number(voteSummary.eligible||0)+' eligible · quorum '+number(voteSummary.quorumNeeded||0)+' · '+(voteSummary.passed?'Majority reached':voteSummary.quorumMet?'Awaiting majority':'Awaiting quorum')+'</p><div class="hq-actions">'+(canVote&&p.status==='Discussion'?btn('Support','data-pvote="yes"','primary')+btn('Oppose','data-pvote="no"')+btn('Abstain','data-pvote="abstain"'):'<p class="hq-micro">'+(advisor()?'Advisors may comment on this proposal, but its vote is reserved for Representatives and Coordinators.':'Voting is closed.')+'</p>')+'</div><hr style="border:0;border-top:1px solid #545058;margin:18px 0"><h3>Discussion ('+(p.comments?.length||0)+')</h3><div class="hq-panel-list">'+(p.comments||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+esc(m.from)+'</strong><p class="hq-prose">'+esc(m.message)+'</p><p class="hq-micro">'+esc(date(m.at))+'</p></div></div>').join('')+'</div><form class="hq-form" id="commentProposal"><label>Add your perspective</label><textarea name="message" required></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Add comment</button></form>'+(owner()&&p.status==='Discussion'?'<h3>Decision</h3><div class="hq-actions">'+btn('Approve proposal','data-chair="approved"','primary')+btn('Return for changes','data-chair="returned"')+btn('Decline','data-chair="declined"','danger')+'</div>':''));
   if(canTrack){
     const options=['Not Started','In Progress','Blocked','Completed'];
     const section=document.createElement('section');
