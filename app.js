@@ -181,8 +181,7 @@ const NAV=[
  ['leader','◈','SELC members & advisors','Leadership',u=>participantRole(u)],
  ['availability','◷','My availability','Your work',u=>participantRole(u)&&u!=='founder'],
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
- ['handbook','▤','My role handbook','Your work',u=>participantRole(u)],
- ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
+ ['handbook','▤','SELC Handbook Center','Your work',u=>participantRole(u)],
  ['communityinbox','✉','Community Inbox','Committee',u=>participantRole(u)],
  ['memberdesk','✉','Member messages & feedback','Committee',u=>participantRole(u),'hidden'],
  ['suggestionsdesk','◇','Member suggestions','Committee',u=>participantRole(u),'hidden'],
@@ -220,6 +219,8 @@ function setupHQNav(){
 function closeHQNav(){$('#hqSidebar').classList.remove('open');$('#hqShade').classList.remove('open');$('#hqMenu').setAttribute('aria-expanded','false')}
 async function signOut(){try{await post('selc-auth','logout')}catch{}clearAccess();$('#headquarters').classList.add('hidden');$('#headquarters').setAttribute('aria-hidden','true');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';history.replaceState(null,'',location.pathname);scrollTo(0,0);flash('Signed out of SELC. Your Portal account remains separate.')}
 async function openPage(page){
+ // Preserve old links while presenting a single source of handbook navigation.
+ if(page==='library')page='handbook';
  if(context.chatTimer){clearTimeout(context.chatTimer);context.chatTimer=null}
  if(context.editorPickListener){removeEventListener('message',context.editorPickListener);context.editorPickListener=null}
  const allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())));
@@ -229,7 +230,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,handbook:roleHandbookPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,registry:memberRegistryPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,handbook:roleHandbookPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,registry:memberRegistryPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -459,24 +460,29 @@ async function applicationsPage(){
 async function roleHandbookPage(){
  const selected=context.handbookRole||(role()==='founder'?'advisor':role());
  const payload=await api('selc-handbook',{query:{role:selected}}),book=payload.handbook||{},roles=payload.accessibleRoles||[role()];
+ // Supplementary articles remain editable in their existing storage; only a single handbook page is exposed.
+ const supplemental=committeeRole(role())?await api('leadership-library').catch(()=>null):null;
  const section=(item,index)=>'<details class="hq-handbook-section" '+(index===0?'open':'')+'><summary><span class="hq-handbook-number">'+String(index+1).padStart(2,'0')+'</span><strong>'+esc(item[0])+'</strong><span class="hq-handbook-chevron">⌄</span></summary><div class="hq-handbook-copy">'+esc(item[1])+'</div></details>';
- let markup=pageHeader('SELC / ROLE STANDARDS',book.name+' handbook',book.overview||'Official role procedures and obligations.');
+ let markup=pageHeader('SELC / ROLE STANDARDS','SELC Handbook Center',book.overview||'Official role procedures and obligations.');
  markup+='<div class="hq-handbook-hero"><div><span class="hq-eyebrow">'+esc(book.eyebrow||'COMMITTEE OPERATIONS')+'</span><h2>'+esc(book.name||'Leadership')+' · Field Manual</h2><p>Version '+esc(payload.version)+' · Official appointment handbook · Accessible to your authorized role only</p></div><span class="hq-handbook-emblem">SELC</span></div>';
  if(roles.length>1)markup+='<div class="hq-actions">'+roles.map(x=>btn(x.charAt(0).toUpperCase()+x.slice(1),'data-handbook-role="'+esc(x)+'"',x===selected?'primary':'')).join('')+'</div>';
  markup+='<div class="hq-handbook-layout"><div><h2 class="hq-handbook-heading">Position responsibilities</h2>'+(book.sections||[]).map(section).join('')+'</div><div><h2 class="hq-handbook-heading">Standards applying to every position</h2>'+(payload.shared||[]).map(section).join('')+'</div></div>';
+ if(supplemental)markup+=await appendSupplementalGuides(supplemental);
+ else if(committeeRole(role()))markup+=card('<h2>Supplemental resources temporarily unavailable</h2><p>The official manuals remain available above. Supplemental guide access can be retried later.</p>');
  markup+=card('<h2>Using this handbook</h2><p>Read the role responsibilities alongside the shared standards. Duties are limited by your active certification and the Portal authorization system. Raise unclear rules with a Coordinator or the Founder before acting. A handbook is not permission to bypass an explicit system restriction.</p>');
  setContent(markup);
- $$('[data-handbook-role]').forEach(b=>b.onclick=()=>{context.handbookRole=b.dataset.handbookRole;roleHandbookPage().catch(failure)});
+ if(supplemental)bindSupplementalGuides(supplemental);
+ $('[data-handbook-role]').forEach(b=>b.onclick=()=>{context.handbookRole=b.dataset.handbookRole;roleHandbookPage().catch(failure)});
 }
-async function libraryPage(){
- const data=await api('leadership-library'),docs=data.articles||[];
- let markup=pageHeader('KNOWLEDGE / SHARED PRACTICE','Staff & SELC Handbook','Venue operations, consent-response procedures, education, and leadership guidance. Official policies require Founder approval.',
- data.canCreate?btn('Write a guide','data-write-guide','primary'):'');
- markup+=docs.length?docs.map(row=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(row.category)+' / '+esc(row.access)+'</span><h2>'+esc(row.title)+'</h2><p>'+esc(row.summary||'Open this guide to read more.')+'</p><p class="hq-micro">'+esc(row.updatedBy)+' · '+esc(date(row.updatedAt))+' · version '+esc(row.version)+'</p></div>'+tag(row.status)+btn('Read','data-guide="'+esc(row.id)+'"')+'</div>')).join(''):empty('Your handbook is ready to build','Add procedures, role expectations, educator resources, and practical event guides here.');
- setContent(markup);
+async function appendSupplementalGuides(data){
+ const docs=data.articles||[];
+ const guideList=docs.length?docs.map(row=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(row.category)+' / '+esc(row.access)+'</span><h2>'+esc(row.title)+'</h2><p>'+esc(row.summary||'Open this guide to read more.')+'</p><p class="hq-micro">'+esc(row.updatedBy)+' · '+esc(date(row.updatedAt))+' · version '+esc(row.version)+'</p></div>'+tag(row.status)+btn('Read','data-guide="'+esc(row.id)+'"')+'</div>')).join(''):'<p class="hq-micro">No supplemental guides have been published yet. The official role manuals above are available now.</p>';
+ return '<section class="hq-handbook-extras"><div class="hq-row"><div class="grow"><span class="hq-eyebrow">REFERENCE LIBRARY</span><h2>Additional procedures and resources</h2><p>Optional Staff, educator, and leadership guides. These are separate references, not another position handbook.</p></div>'+(data.canCreate?btn('Write a guide','data-write-guide','primary'):'')+'</div>'+guideList+'</section>';
+}
+function bindSupplementalGuides(data){
  const editor=(doc={})=>{
   const dlg=modal(doc.id?'Edit a handbook guide':'Write a handbook guide','<form id="guideForm" class="hq-form"><label>Title</label><input name="title" value="'+esc(doc.title||'')+'" required minlength="6"><label>Short summary</label><textarea name="summary" rows="2">'+esc(doc.summary||'')+'</textarea><div class="hq-form-grid"><div><label>Category</label><select name="category">'+(data.categories||[]).map(c=>'<option '+(c===doc.category?'selected':'')+'>'+esc(c)+'</option>').join('')+'</select></div><div><label>Who may read this?</label><select name="access">'+['staff','selc','educator'].map(c=>'<option value="'+c+'" '+(c===(doc.access||'staff')?'selected':'')+'>'+esc(c.toUpperCase())+'</option>').join('')+'</select></div></div><label>Guide content</label><textarea name="body" rows="13" minlength="40" required>'+esc(doc.body||'')+'</textarea><label>Publishing status</label><select name="status"><option value="Draft" '+(doc.status==='Draft'?'selected':'')+'>Draft</option><option value="Published" '+(doc.status==='Published'?'selected':'')+'>Publish internally</option></select><label class="checkline"><input type="checkbox" name="official" '+(doc.official?'checked':'')+' '+(!owner()?'disabled':'')+'> Official organizational policy (Founder only)</label><p data-status class="hq-form-status"></p><button class="hq-button primary" type="submit">Save guide</button></form>');
-  watchForm($('#guideForm',dlg),async vals=>{await post('leadership-library','save',{id:doc.id,...vals,official:!!$('#guideForm input[name=official]',dlg).checked});dlg.close();flash('Handbook guide saved.');await libraryPage()});
+  watchForm($('#guideForm',dlg),async vals=>{await post('leadership-library','save',{id:doc.id,...vals,official:!!$('#guideForm input[name=official]',dlg).checked});dlg.close();flash('Handbook guide saved.');await roleHandbookPage()});
  };
  $('[data-write-guide]')?.addEventListener('click',()=>editor());
  $$('[data-guide]').forEach(b=>b.onclick=async()=>{
@@ -486,7 +492,6 @@ async function libraryPage(){
   }catch(error){flash(error.message)}
  });
 }
-
 async function leadershipWorkPage(){
  const data=await api('leadership-queue'),items=data.items||[],counts=data.counts||{},canDelegate=!!data.canDelegate,delegates=data.delegates||[];
  const categories={member:'Membership',role:'Role applications',selc:'SELC',ban:'Ban Reports',community:'Community'};
