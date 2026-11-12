@@ -457,7 +457,7 @@ async function applicationsPage(){
  });
 }
 async function roleHandbookPage(){
- const selected=context.handbookRole||role();
+ const selected=context.handbookRole||(role()==='founder'?'advisor':role());
  const payload=await api('selc-handbook',{query:{role:selected}}),book=payload.handbook||{},roles=payload.accessibleRoles||[role()];
  const section=(item,index)=>'<details class="hq-handbook-section" '+(index===0?'open':'')+'><summary><span class="hq-handbook-number">'+String(index+1).padStart(2,'0')+'</span><strong>'+esc(item[0])+'</strong><span class="hq-handbook-chevron">⌄</span></summary><div class="hq-handbook-copy">'+esc(item[1])+'</div></details>';
  let markup=pageHeader('SELC / ROLE STANDARDS',book.name+' handbook',book.overview||'Official role procedures and obligations.');
