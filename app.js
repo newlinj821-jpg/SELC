@@ -176,7 +176,7 @@ const NAV=[
  ['join','✎','Apply to SELC','Your work',u=>u==='member'||u==='advisor'],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
- ['ballots','✓','Coordinator election','Your work',u=>u==='representative'||u==='coordinator'],
+ ['ballots','✓','Coordinator election','Your work',u=>participantRole(u)&&u!=='founder'],
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
  ['leader','◈','SELC members & advisors','Leadership',u=>participantRole(u)],
  ['availability','◷','My availability','Your work',u=>participantRole(u)&&u!=='founder'],
