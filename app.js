@@ -380,7 +380,7 @@ async function leadershipWorkPage(){
 async function leaderPage(){
  const data=await api('selc-governance',{query:{scope:'members'}}),people=data.members||[];
  let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Representative positions and two separate Coordinator positions, plus Eros as Founder and Chair. Members keep one committee vote regardless of title.');
- markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.length+' / 5</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div></div>';
+ markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.filter(x=>x.role==='representative').length+' / 5</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div></div>';
  markup+=card('<h2>Committee members</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role)+' · '+esc(p.availability?.status||'Available')+(p.availability?.until?' through '+esc(p.availability.until):'')+'</p></div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
  if(owner())markup+=card('<h2>Lead the appointment process</h2><p>Review and appoint Representatives or Coordinators from applications. Coordinator appointments normally require a committee vote. During early formation, Eros may document a limited exception when fewer than two other Representatives can vote.</p>'+btn('Review SELC applications','data-page-link="applications"','primary'));
  setContent(markup);bindPageLinks();$$('[data-remove]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Remove this SELC leadership appointment? Their regular membership remains separate.'))return;try{await post('selc-governance','remove',{accountId:b.dataset.remove});flash('Appointment ended.');leaderPage()}catch(e){flash(e.message)}});
@@ -520,7 +520,7 @@ async function staffPathPage(){
 async function volunteerPage(){
  const data=await api('shifts'),events=activeSELCEvents(data.events),me=data.me||{},mine=events.reduce((n,e)=>n+e.slots.reduce((x,s)=>x+s.claims.filter(c=>c.mine).length,0),0);
  let html=pageHeader('EVENT OPERATIONS','Staffing overview','Staff and Dungeon Monitor volunteer sign-ups happen exclusively in the Staff Portal. SELC provides event staffing oversight and handover information.');
- html+='<div class="hq-stats"><div class="hq-stat"><small>YOUR SHIFTS</small><strong>'+mine+'</strong></div><div class="hq-stat"><small>EVENTS WITH SHIFTS</small><strong>'+events.length+'</strong></div></div>'+card('<h2>Volunteer through the Staff Portal</h2><p>SELC leadership status does not replace Staff certification. Staff + Representative and Staff + Coordinator accounts claim, release and manage shifts in Portal.</p><a class="hq-button primary" href="'+PORTAL+'/staff.html#shifts">Open Staff Portal volunteering ↗</a>');
+ html+='<div class="hq-stats"><div class="hq-stat"><small>YOUR LINKED STAFF SHIFTS</small><strong>'+mine+'</strong></div><div class="hq-stat"><small>EVENTS WITH SHIFTS</small><strong>'+events.length+'</strong></div></div>'+card('<h2>Volunteer through the Staff Portal</h2><p>SELC leadership status does not replace Staff certification. Staff + Representative and Staff + Coordinator accounts claim, release and manage shifts in Portal.</p><a class="hq-button primary" href="'+PORTAL+'/staff.html#shifts">Open Staff Portal volunteering ↗</a>');
  if(!owner()&&!me.linked)html+=card('<h2>Connect your membership</h2><p>Your Staff profile must be linked to an approved Portal member account before volunteering.</p><a class="hq-button" href="'+PORTAL+'/member.html">Go to Member Portal</a>');
  else if(!owner()&&!me.certified)html+=card('<h2>Complete your Staff certification first</h2><p>Event shifts involve actual responsibilities. Current Staff certification is required, and Dungeon Monitor shifts separately require DM certification.</p><a class="hq-button" href="'+PORTAL+'/staff.html#cert">Open certification</a>');
  html+=events.map(e=>{
@@ -576,11 +576,7 @@ async function volunteerPage(){
    });
   }catch(e){flash(e.message)}
  });
- $('[data-claim-shift],[data-release-shift]').forEach(button=>button.onclick=async()=>{
-  const claim=!!button.dataset.claimShift,ids=(button.dataset.claimShift||button.dataset.releaseShift).split('|'),[eventId,slotId]=ids;
-  if(!claim&&!confirmDecision('Release your volunteer shift? This could leave the event short-staffed.'))return;
-  button.disabled=true;try{const result=await post('shifts',claim?'claim':'release',{eventId,slotId});flash(result.message||'Shift updated.');await volunteerPage()}catch(error){flash(error.message);button.disabled=false}
- });
+
 }
 
 async function eventPage(){
