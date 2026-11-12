@@ -160,6 +160,7 @@ async function beginHeadquarters(){
 const NAV=[
  ['home','⌂','Overview','Your work',u=>!organizerRole(u)],
  ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
+  ['admincenter','◈','Coordinator administration','Leadership',u=>u==='coordinator'],
  ['join','✎','Apply to SELC','Your work',u=>u==='member'],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
@@ -213,7 +214,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -753,6 +754,32 @@ async function communityLeadersPage(){
 }
 
 
+async function coordinatorAdminPage(){
+ if(role()!=='coordinator')return openPage('home');
+ const results=await Promise.allSettled([
+  api('leadership-queue'),api('event-readiness'),api('ban-reports'),
+  api('selc-governance',{query:{scope:'applications'}}),
+  api('educator-applications')
+ ]);
+ const [tasks,readiness,bans,applications,educators]=results.map(r=>r.status==='fulfilled'?r.value:null);
+ const pending=(applications?.applications||[]).filter(x=>['Pending','Under Review','Recommended','Not Recommended'].includes(x.status)).length;
+ const educatorReviews=(educators?.review||[]).filter(x=>['Pending','Under Review','Changes Requested','Recommended'].includes(x.status)).length;
+ const actionCards=[
+  ['Leadership reviews',tasks?.items?.length||0,'work','Claim or delegate pending work'],
+  ['SELC applications',pending,'applications','Review Representative and Coordinator applications'],
+  ['Staff and member applications',(tasks?.counts?.role||0)+(tasks?.counts?.member||0),'generalapps','Verify and approve eligible Staff appointments'],
+  ['Internal Affairs','View','iacases','Inspect private cases and evidence using authorized access'],
+  ['Ban Reports',bans?.pendingCount||0,'banreports','Review reports, documented decisions and admission holds'],
+  ['Access appeals','Review','appeals','Support independent and impartial case review'],
+  ['Event readiness',readiness?.needsAttention||0,'readiness','Check staffing and operational gaps'],
+  ['Workshop review',educatorReviews,'educatorreviews','Evaluate educator candidates and course readiness']
+ ];
+ let markup=pageHeader('SELC / ADMINISTRATION','Coordinator administration','Manage committee operations with delegated administrative authority. All decisions and sensitive case work use individual accounts, explicit permissions, and audit records.');
+ markup+=card('<p>Coordinators supervise Representatives, coordinate operational reviews, oversee Staff applications and participate in sensitive case decisions. Staff and DM certification remain separate for physical event shifts.</p>');
+ markup+='<div class="hq-grid">'+actionCards.map(([name,count,route,desc])=>card('<span class="hq-eyebrow">'+esc(name)+'</span><h2>'+esc(count)+'</h2><p>'+esc(desc)+'</p>'+btn('Open','data-page-link="'+esc(route)+'"','primary'))).join('')+'</div>';
+ if(results.some(r=>r.status==='rejected'))markup+=card('<p class="hq-micro">Some administrative summaries are unavailable. Individual tools can still be opened and will show their own service status.</p>');
+ setContent(markup);bindPageLinks();
+}
 async function founderDeskPage(){
  if(!owner())return openPage('home');
  const sections=[
