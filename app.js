@@ -186,7 +186,8 @@ const NAV=[
   ['staffpath','✓','Apply to become Staff','Your work',u=>u==='representative'||u==='coordinator'],
  ['readiness','▣','Event readiness','Event operations',u=>committeeRole(u)],
  ['door','⌗','Check-in & tickets','Event operations',u=>committeeRole(u)],
- ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
+ ['iacases','▤','Internal Affairs cases','Safety',u=>committeeRole(u)],
+  ['banreports','⚑','Ban Reports','Safety',u=>committeeRole(u)],
  ['banhistory','⌛','Ban history','Safety',u=>committeeRole(u)],
  ['appeals','⚖','Access appeals','Safety',u=>u==='coordinator'||u==='founder'],
  ['myaccount','◎','My account','Your work']
@@ -212,7 +213,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -658,6 +659,21 @@ async function addBanAttendeePicker(dialog,form){
  }catch(e){panel.querySelector('p').textContent='You can still enter a verified member record or exact event RSVP manually. '+e.message}
 }
 
+async function iaCasesPage(){
+ if(!leader())return openPage('home');
+ const d=await api('ia-reports'),rows=d.reports||[];
+ let markup=pageHeader('CONFIDENTIAL / INTERNAL AFFAIRS','IA case registry','Restricted to authenticated SELC leadership. Review evidence, allegations, findings and case history only for committee responsibilities.');
+ markup+='<div class="hq-stats">'+[['OPEN',rows.filter(r=>r.status==='Open').length],['UNDER REVIEW',rows.filter(r=>r.status==='Under Review').length],['TOTAL CASES',rows.length]].map(([label,count])=>'<div class="hq-stat"><small>'+esc(label)+'</small><strong>'+number(count)+'</strong></div>').join('')+'</div>';
+ markup+=card('<p class="hq-micro">These are confidential records. Access is role-checked by the Portal. Do not share documents, identifying data or allegations outside authorized review channels. An allegation is not a finding.</p>');
+ markup+=rows.length?rows.map((r,i)=>card('<div class="hq-row"><div class="grow"><strong>'+esc(r.caseNumber||'Case')+'</strong><p>'+esc(r.reportedPerson||'Subject not listed')+' · '+esc(date(r.createdAt))+'</p><p>'+esc(r.priority||'Untriaged')+' · '+esc(r.assignedTo||'Unassigned')+'</p></div>'+tag(r.status)+btn('Review case','data-open-ia="'+i+'"','primary')+'</div>')).join(''):empty('No IA cases available','Authorized cases will appear here when filed.');
+ setContent(markup);
+ $('[data-open-ia]').forEach(button=>button.onclick=()=>{
+  const r=rows[Number(button.dataset.openIa)];if(!r)return;
+  const sections=[['Original account',r.initialAccount],['Immediate safety steps',r.immediateActions],['Evidence and sources',r.evidenceDescription],['Witnesses',r.witnesses],['Reviewer notes',r.reviewNotes],['Decision rationale',r.decisionRationale],['Disposition',r.disposition],['Follow-up',r.followUp]];
+  const history=(r.activity||[]).map(h=>'<div class="hq-row"><div class="grow"><strong>'+esc(h.actor||'Reviewer')+'</strong><p>'+esc(h.action||'Action recorded')+'</p><small>'+esc(date(h.at))+'</small></div></div>').join('');
+  modal('IA case · '+esc(r.caseNumber||r.id),'<p>'+tag(r.status)+' · '+esc(r.priority||'Untriaged')+'</p><p><strong>Subject:</strong> '+esc(r.reportedPerson||'Not recorded')+'</p><p><strong>Reported:</strong> '+esc(date(r.createdAt))+'</p>'+sections.filter(([,v])=>v).map(([label,value])=>'<section class="hq-card"><h3>'+esc(label)+'</h3><p class="hq-prose">'+esc(value)+'</p></section>').join('')+'<h3>Activity history</h3>'+(history||'<p>No activity recorded.</p>')+'<p class="hq-micro">Case access does not itself authorize enforcement, disclosure or destruction of evidence.</p>');
+ });
+}
 async function banReportsPage(){
  const d=await api('ban-reports'),rows=d.reports||[];
  let markup=pageHeader('CONFIDENTIAL / SAFETY','Ban Reports','Ban Reports are separate from IA investigations. An unresolved report places linked admission on hold—not a finding of misconduct.',btn('Submit Ban Report','data-new-ban','primary'));
