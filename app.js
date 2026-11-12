@@ -160,7 +160,7 @@ async function loadPublicLeadership(){
    transitionHost.classList.toggle('hidden',grandfatheredRepresentatives.length===0);
   }
   const advisorHost=$('#publicAdvisors');
-  if(advisorHost)advisorHost.innerHTML=advisors.length?advisors.map((person,i)=>'<div class="seat-card"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(person.publicName||'Advisor')+'</strong><small>SELC Advisor · '+esc(person.publicParticipation||'Community & Education')+'</small></div>').join(''):'<p class="directory-note">No Advisors have chosen to publish their names yet.</p>';
+  if(advisorHost)advisorHost.innerHTML=advisors.length?advisors.map((person,i)=>'<div class="seat-card"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(person.publicName||'Advisor')+'</strong><small>SELC Advisor+'</small></div>').join(''):'<p class="directory-note">No Advisors have chosen to publish their names yet.</p>';
 }
 async function beginHeadquarters(){
  const session=await api('selc-auth');
