@@ -21,6 +21,21 @@ test('all requested workspace entries are bound to actual routes',()=>{
  for(const id of ['home','join','coordinator','ballots','applications','work','library','leader','proposals','requests','educators','generalapps','events','volunteer','door','banreports','appeals'])assert.ok(js.includes("'"+id+"'"),id);
  for(const endpoint of ['selc-auth','selc-governance','shifts','education-programs','safety-appeal-review','leadership-library','leadership-queue'])assert.ok(js.includes(endpoint),endpoint);
 });
+test('public SELC pillars use Leadership, Education and Community rather than Consent branding',()=>{
+ assert.match(html,/LEADERSHIP<\/span><span>EDUCATION<\/span><span>COMMUNITY/);
+ assert.doesNotMatch(html,/CONSENT<\/span><span>EDUCATION<\/span><span>COMMUNITY/);
+});
+
+test('SELC governance respects distinct representative, coordinator and staff roles',()=>{
+ assert.match(js,/people\.filter\(x=>x\.role==='representative'\)\.length\+' \/ 5'/);
+ assert.match(js,/admincenter:coordinatorAdminPage/);
+ assert.match(js,/iacases:iaCasesPage/);
+ assert.match(js,/staffpath:staffPathPage/);
+ assert.doesNotMatch(js,/\[data-claim-shift\],\[data-release-shift\]/);
+ assert.match(js,/Staff and Dungeon Monitor volunteer sign-ups happen exclusively in the Staff Portal/);
+ assert.match(js,/Submit feedback|Leadership recommendation/);
+});
+
 test('SELC website authenticates against Portal, not a local user list',()=>{
  assert.match(js,/sanctumportal\.org/);
  assert.match(js,/Authorization.*Bearer/);
