@@ -595,10 +595,18 @@ async function volunteerPage(){
 
 async function eventPage(){
  const coordinator=role()==='coordinator';
- const [operational,calendar]=await Promise.all([api('staff-portal'),coordinator?api('events').catch(()=>({events:[]})):Promise.resolve(null)]);
- const evs=activeSELCEvents(operational.events),drafts=coordinator?(calendar?.events||[]).filter(e=>e.published===false&&!e.deletedAt&&!e.cancelledAt):[];
+ const [operational,calendar,proposalResult]=await Promise.all([api('staff-portal'),coordinator?api('events').catch(()=>({events:[]})):Promise.resolve(null),coordinator?api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]})):Promise.resolve(null)]);
+ const evs=activeSELCEvents(operational.events),drafts=coordinator?(calendar?.events||[]).filter(e=>e.published===false&&!e.deletedAt&&!e.cancelledAt):[],relatedProposals=proposalResult?.proposals||[];
  let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','Review RSVPs, event assignments, and guest lists. Coordinators may draft events here without publishing them.',coordinator?btn('Create event draft','data-new-event-draft','primary'):btn('Open check-in','data-page-link="door"'));
- if(coordinator)markup+=card('<h2>Unpublished event drafts</h2><p class="hq-muted">Drafts are visible to leadership for planning. They do not open RSVPs or appear on the public calendar.</p>'+(drafts.length?drafts.map(e=>'<div class="hq-row"><div class="grow"><strong>'+esc(e.title)+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'play')+'</p></div>'+btn('Edit draft','data-edit-event-draft="'+esc(e.id)+'"')+'</div>').join(''):empty('No event drafts','Create a draft to begin planning.')));
+ if(coordinator)markup+=card('<h2>Unpublished event drafts</h2><p class="hq-muted">Drafts do not open RSVPs. Submit an event proposal for a committee vote before publication.</p>'+
+  (drafts.length?drafts.map(e=>{
+   const proposal=relatedProposals.find(p=>p.linkedEventId===e.id&&p.status!=='Declined');
+   return '<div class="hq-row"><div class="grow"><strong>'+esc(e.title)+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'play')+'</p>'+
+    (proposal?'<p class="hq-micro">Committee review: '+esc(proposal.status)+' · '+(proposal.voteSummary?.passed?'Majority recorded':String(proposal.voteSummary?.participating||0)+' votes recorded')+'</p>':'<p class="hq-micro">Not yet submitted to committee</p>')+
+    '</div><div class="hq-actions">'+btn('Edit draft','data-edit-event-draft="'+esc(e.id)+'"')+
+    (proposal?btn('Open proposal','data-page-link="proposals"'):btn('Submit for committee vote','data-propose-event="'+esc(e.id)+'"','primary'))+'</div></div>';
+  }).join(''):empty('No event drafts','Create a draft to begin planning.')));
+
  markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+btn('Check in','data-event-door="'+esc(e.id)+'"')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming published events','New events will appear as they are scheduled.');
  setContent(markup);bindPageLinks();
  $$('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
@@ -625,7 +633,15 @@ async function eventPage(){
  };
  if(coordinator){
   $('[data-new-event-draft]')?.addEventListener('click',()=>editor());
-  $$('[data-edit-event-draft]').forEach(el=>el.onclick=()=>{const item=drafts.find(x=>x.id===el.dataset.editEventDraft);if(item)editor(item)});
+  $('[data-edit-event-draft]').forEach(el=>el.onclick=()=>{const item=drafts.find(x=>x.id===el.dataset.editEventDraft);if(item)editor(item)});
+  $('[data-propose-event]').forEach(el=>el.onclick=async()=>{
+    const item=drafts.find(x=>x.id===el.dataset.proposeEvent);if(!item)return;
+    if(!confirmDecision('Submit this unpublished event to SELC for discussion and a committee vote?'))return;
+    const details=(item.description||'').trim(),description=('Proposal to schedule '+item.title+' on '+date(item.start)+'. '+(details||'Review the audience, staffing, accessibility, safety, cost and available venue space.')).slice(0,12000);
+    el.disabled=true;
+    try{await post('selc-governance','create_proposal',{title:'Event: '+item.title,description,category:'events',linkedEventId:item.id});flash('Event proposal submitted for committee review.');await proposalPage()}
+    catch(err){flash(err.message);el.disabled=false}
+  });
  }
 }
 async function rsvpPage(eventId){
