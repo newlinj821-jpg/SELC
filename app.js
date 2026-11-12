@@ -257,18 +257,76 @@ async function certificationPage(){
  const completed=data.completed||[];
  if(completed.length)markup+=card('<h2>Your completed certifications</h2>'+completed.map(c=>'<div class="hq-row"><div class="grow"><strong>'+esc(c.type==='coordinator'?'SELC Coordinator':'SELC Representative')+' · Certified</strong><p>Completed '+esc(date(c.completedAt))+' · Version '+esc(c.version)+'</p><small>Record '+esc(c.id)+'</small></div>'+tag('Complete')+'</div>').join(''));
  if(!assignments.length){setContent(markup+(completed.length?'':empty('No outstanding certification','Accepted applications are assigned here. You cannot begin certification before acceptance.')));return}
- const lessons=[
-  ['Authority and role boundaries','SELC Coordinators provide delegated administrative supervision; Representatives exercise committee leadership. Staff and Dungeon Monitor work is a separate appointment, certification, and Portal volunteering workflow. Nobody gains event shift credentials from SELC rank alone.'],
-  ['Informed consent and intervention','Consent is specific, ongoing, and revocable. Respond immediately when someone withdraws consent. Where risk is imminent, prioritize the designated venue response and seek trained on-site Staff or Dungeon Monitor support.'],
-  ['Confidentiality and case handling','All active SELC leadership may access IA work as part of their duties. Use only the authorized account and system, preserve records and evidence, avoid personal exports, limit disclosures, and record case access and decisions.'],
-  ['Allegations, evidence and fair review','A report is not a finding. Document first-hand and third-party information separately, investigate corroboration, preserve fairness, keep timelines, identify conflicts of interest and provide an impartial appeal path.'],
-  ['Member decisions and operational accountability','Use a single application or case record, document decisions, verify member identities, respect access holds and admission rules, and never approve your own Staff application or review a case with a personal conflict.'],
-  ['Committee governance and delegation','Use the leadership action queue to claim work. Proposals need a documented vote and implementation responsibility. Coordinators set priorities and supervise administration, while Representative participation remains meaningful.'],
-  ['Community education and inclusion','Make workshops accessible, use qualified instructors, communicate risks and boundaries, and support community leaders without granting them SELC or Staff access.'],
-  ['Scenario practice','For each question, choose the action that preserves individual safety, procedural fairness, data security, and role boundaries. Some problems require immediate protective action; others need documented review and escalation.']
+ const commonLessons=[
+  {title:'Mandate, service and authority',objective:'Separate committee participation from operational control and account permissions.',steps:[
+    'A Representative contributes to policy, governance, applications, education, IA review and community accountability within the authorized workflow.',
+    'An appointment does not grant Staff, Dungeon Monitor or educator credentials. Each operational position has its own application, training and permission checks.',
+    'Use the role shown in your authenticated account. If a screen or case action is unavailable, request a documented permission review rather than borrowing credentials.'
+   ],scenario:'You are asked to oversee a play space because you are an SELC member. Arrange coverage by a qualified Dungeon Monitor; committee status does not substitute for DM certification.'},
+  {title:'Consent, boundaries and immediate intervention',objective:'Recognize when a concern needs a venue response rather than a committee discussion.',steps:[
+    'Consent is informed, specific, ongoing and withdrawable. A past agreement, relationship, or scene role never overrides a present stop or refusal.',
+    'If an immediate safety risk exists, pause the activity and involve authorized on-site Staff or a DM. Document facts only after people are safe.',
+    'Do not attempt to adjudicate a scene or perform an unfamiliar physical intervention solely because you are a committee member.'
+   ],scenario:'A participant withdraws consent mid-scene. Stop participation, call on the on-duty DM where needed, and preserve privacy; do not wait for a vote.'},
+  {title:'Confidential IA records and evidence security',objective:'Use comprehensive leadership access responsibly without moving data into uncontrolled channels.',steps:[
+    'SELC leadership can inspect IA affairs and active or historical ban records in authorized systems. Access does not itself authorize disclosure, ban enforcement or evidence deletion.',
+    'Use only your own login, preserve source materials and access history, and avoid screenshots, personal cloud exports and private group chats.',
+    'Keep allegations, witness accounts, third-party reports, established facts and conclusions labeled distinctly. Record the purpose of review and any next step.'
+   ],scenario:'A member asks you to forward a confidential allegation. Decline the disclosure and direct them to the established complaint and review channel.'},
+  {title:'Fact-finding, fairness and anti-retaliation',objective:'Respond to conflicting accounts without prejudgment or procedural shortcuts.',steps:[
+    'Identify the person and event involved; distinguish firsthand information, corroborated facts and unsupported assertions.',
+    'Document concerns promptly, identify missing information, invite appropriate responses and declare conflicts of interest before recommending any outcome.',
+    'Preserve a safe reporting channel, prohibit retaliation and use an independent reviewer when a committee member or decision-maker is involved.'
+   ],scenario:'A friend is named in a complaint. Disclose the relationship and recuse from recommendations or decisions that depend on your impartiality.'},
+  {title:'Membership, RSVP and admission operations',objective:'Know which checks must precede approval, ticketing and physical admission.',steps:[
+    'Confirm account and membership status, event eligibility, the 21+ play-party minimum, approved attendee names, capacity and any current safety holds.',
+    'Tickets and QR check-in remain separate from government-photo-ID collection. The guest acknowledgment flow uses age and venue-rule attestations with review.',
+    'Use the leadership work queue and event record to avoid duplicated approvals, preserve audit history and flag payment or eligibility issues for the correct team.'
+   ],scenario:'A report has placed an RSVP on hold. Do not override a ticket merely because payment is confirmed; route the safety hold to an authorized reviewer.'},
+  {title:'Ban Reports, restrictions and appeals',objective:'Understand the difference between receiving evidence, recommending a response and issuing an enforceable decision.',steps:[
+    'A Ban Report creates an interim safety review and may temporarily hold linked admission. It is not a substantiated finding or automatic permanent ban.',
+    'Representatives may read records and provide documented feedback, but may not issue, revoke or lift bans through their SELC position.',
+    'Use the formal appeal route, preserve independent review when possible and distinguish temporary protective measures from final dispositions.'
+   ],scenario:'A Representative strongly supports a ban. They record the basis and conflicts in the report; a separately authorized reviewer decides the enforcement action.'},
+  {title:'Committee proposals, voting and follow-through',objective:'Turn ideas and votes into traceable actions rather than informal chat decisions.',steps:[
+    'Create a proposal with a clear decision, evidence, affected groups and realistic costs or operational impacts.',
+    'Record eligible votes, quorum, conflicts, comments and the result before using the implementation workflow.',
+    'Track an accountable person, due date, status, blockers and change history. Coordinator-created events require the approved draft to match the voted version before publication.'
+   ],scenario:'An approved event draft changes capacity and content after the vote. It must be reviewed again rather than published using the old approval.'},
+  {title:'Community, education and inclusion',objective:'Build services that are credible, accessible and community-focused.',steps:[
+    'Evaluate educator competence, safety controls, learning objectives, participant choice and accessible alternatives before recommending a class.',
+    'Maintain the boundary between approved external Community Leaders and SELC membership; outside organizers do not inherit committee votes or private IA access.',
+    'Use respectful, direct communication and address disability, scheduling and sensory barriers without demanding unnecessary personal disclosure.'
+   ],scenario:'A participant needs an accessible workshop format. Work with the instructor on a safe, equivalent alternative and record accommodations only as needed.'},
+  {title:'Accountability, handovers and communication',objective:'Make committee work repeatable and reviewable across different members.',steps:[
+    'Claim or assign work through tracked queues, set realistic deadlines and document who will follow up with the reporter, applicant or event team.',
+    'Use the shared Community Inbox for messages members authorized SELC to see; correspondence addressed privately to Eros stays outside that shared queue.',
+    'Correct mistakes openly in the record, notify the appropriate people and preserve an auditable history rather than quietly overwriting decisions.'
+   ],scenario:'Two members are independently reviewing the same application. Coordinate an assigned reviewer and keep a single source of truth.'}
  ];
- markup+=card('<h2>Read before assessment</h2><p>A score of '+esc(data.passPercent)+'% is required. Review and retry missed questions. Your completion is recorded against the accepted application.</p>'+lessons.map(([t,p],i)=>'<div class="hq-row"><div class="grow"><strong>'+(i+1)+'. '+esc(t)+'</strong><p class="hq-prose">'+esc(p)+'</p></div></div>').join(''));
- markup+=assignments.map(a=>card('<span class="hq-eyebrow">'+esc(a.type==='coordinator'?'COORDINATOR ADVANCEMENT':'REPRESENTATIVE ENTRY')+'</span><h2>'+esc(a.type==='coordinator'?'Coordinator certification':'Representative certification')+'</h2><form class="hq-form" data-cert-form="'+esc(a.id)+'">'+a.questions.map((q,i)=>'<fieldset><legend>'+(i+1)+'. '+esc(q.prompt)+'</legend>'+q.options.map(o=>'<label class="checkline"><input type="radio" name="'+esc(q.id)+'" value="'+esc(o.value)+'" required> '+esc(o.label)+'</label>').join('')+'</fieldset>').join('')+'<label class="checkline"><input type="checkbox" name="acknowledge" value="yes" required> I will uphold SELC consent, confidentiality, nonretaliation, impartiality and access-control rules.</label><p data-status class="hq-form-status" role="status"></p><button type="submit" class="hq-button primary">Submit certification assessment</button></form>')).join('');
+ const roleLessons={
+  representative:[
+   {title:'Representative judgment and feedback',objective:'Provide useful leadership analysis without crossing enforcement authority.',steps:['Review the complete relevant IA and ban history through your authorized access.','Write specific feedback that separates evidence, uncertainty, proportionality and proposed follow-up.','Recuse when personally involved and escalate urgent concerns through the on-duty safety response.'],scenario:'A Ban Report asks you to support a decision. Submit your supported feedback rather than trying to impose the ban yourself.'},
+   {title:'Representative participation and working groups',objective:'Contribute to operations without duplicating the Staff or Coordinator workspace.',steps:['Choose focus areas and work with colleagues on governance, education, events or outreach.','Use the Staff Portal only if separately appointed and certified as Staff or DM.','Contribute votes and implementation updates within your own role.'],scenario:'A Coordinator is unavailable. Document the pending work and route it to the designated reviewer; do not assume unrestricted administrator credentials.'}
+  ],
+  coordinator:[
+   {title:'Coordinator administration and supervision',objective:'Use delegated administration with disciplined access controls and oversight.',steps:['Review event staffing coverage, member and role queues, application status and time-sensitive safety cases.','Close or reopen volunteer positions through the authorized staffing controls; Staff and DM shift claims still require separate qualification.','Delegate with an identified owner and an escalation route; avoid shared logins and undocumented overrides.'],scenario:'An event has an uncovered DM slot. Do not fill it with a Representative who lacks DM certification; recruit a qualified DM and log the staffing risk.'},
+   {title:'Enforcement decision quality and appeals',objective:'Make proportionate, documented enforcement decisions where separately authorized.',steps:['Verify identity and evidence, consider immediate risk and less restrictive measures, and record conflicts before taking action.','Preserve the distinction between a pending Ban Report hold, IA findings, restriction and ban disposition.','Where an appeal concerns your own decision, arrange an independent review and preserve the original record.'],scenario:'A former attendee disputes a temporary ban. Preserve the original rationale and route the appeal to a reviewer without the conflict.'},
+   {title:'Operational incident and release control',objective:'Prevent rushed changes from bypassing the committee process.',steps:['For event drafts, secure the correct committee vote and approval before releasing RSVPs.','Do not publish a draft that differs from the reviewed snapshot; restart review when material details change.','Use implementation milestones, operational handovers and audit entries to keep venue and community work coordinated.'],scenario:'A last-minute change alters a voted workshop from discussion to high-risk demonstration. Require review of instructor competence and event safety controls before it goes live.'}
+  ]
+ };
+ const modulesFor=type=>[...commonLessons,...(roleLessons[type]||[])];
+ const renderModule=(m,i)=>'<details class="hq-card"><summary><strong>'+(i+1)+'. '+esc(m.title)+'</strong></summary>'+
+  '<p class="hq-prose"><strong>Outcome:</strong> '+esc(m.objective)+'</p><ol class="hq-prose">'+m.steps.map(step=>'<li>'+esc(step)+'</li>').join('')+'</ol>'+
+  '<p class="hq-prose"><strong>Applied scenario:</strong> '+esc(m.scenario)+'</p></details>';
+ markup+=card('<h2>Assessment standard</h2><p>The assessment has 20 applied questions and requires '+esc(data.passPercent)+'% correct. The questions are graded on the Portal server. Review the course modules and retry missed questions; your result is linked to the accepted appointment.</p>');
+ markup+=assignments.map(a=>card('<span class="hq-eyebrow">'+esc(a.type==='coordinator'?'COORDINATOR ADVANCEMENT':'REPRESENTATIVE ENTRY')+'</span>'+
+  '<h2>'+esc(a.type==='coordinator'?'Coordinator certification':'Representative certification')+'</h2>'+
+  '<p class="hq-prose">Read the modules below before completing the assessment. Expand each section for actions, boundaries and a practical example.</p>'+
+  '<div class="hq-curriculum">'+modulesFor(a.type).map(renderModule).join('')+'</div>'+
+  '<form class="hq-form" data-cert-form="'+esc(a.id)+'">'+a.questions.map((q,i)=>'<fieldset><legend>'+(i+1)+'. '+esc(q.prompt)+'</legend>'+q.options.map(o=>'<label class="checkline"><input type="radio" name="'+esc(q.id)+'" value="'+esc(o.value)+'" required> '+esc(o.label)+'</label>').join('')+'</fieldset>').join('')+
+  '<label class="checkline"><input type="checkbox" name="acknowledge" value="yes" required> I have reviewed the course material and will follow the privacy, impartiality, safety, nonretaliation and access-control requirements of my role.</label>'+
+  '<p data-status class="hq-form-status" role="status"></p><button type="submit" class="hq-button primary">Submit certification assessment</button></form>')).join('');
  setContent(markup);
  document.querySelectorAll('[data-cert-form]').forEach(form=>watchForm(form,async(values,el)=>{
   const acknowledge=el.querySelector('[name="acknowledge"]').checked;
