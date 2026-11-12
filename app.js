@@ -170,9 +170,10 @@ const NAV=[
  ['availability','◷','My availability','Your work',u=>committeeRole(u)&&u!=='founder'],
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
  ['library','▤','Staff & SELC Handbook','Leadership',u=>committeeRole(u)],
- ['memberdesk','✉','Member messages & complaints','Committee',u=>committeeRole(u)],
- ['suggestionsdesk','◇','Member suggestions','Committee',u=>committeeRole(u)],
- ['feedbackdesk','▤','Event feedback review','Committee',u=>committeeRole(u)],
+ ['communityinbox','✉','Community Inbox','Committee',u=>committeeRole(u)],
+ ['memberdesk','✉','Member messages & complaints','Committee',u=>committeeRole(u),'hidden'],
+ ['suggestionsdesk','◇','Member suggestions','Committee',u=>committeeRole(u),'hidden'],
+ ['feedbackdesk','▤','Event feedback review','Committee',u=>committeeRole(u),'hidden'],
  ['proposals','◉','Proposals & votes','Committee',u=>committeeRole(u)],
  ['content','✎','Website content','Committee',u=>committeeRole(u)],
  ['chat','▤','Community chat','Community',u=>!['community-applicant'].includes(u)],
@@ -194,7 +195,7 @@ const NAV=[
  ['myaccount','◎','My account','Your work']
 ];
 function setupHQNav(){
- const root=$('#hqNavigation');let last='';const groups={'Your work':'Overview','Leadership':'Leadership','Committee':'Community','Community':'Community','Partnerships':'Community','Education':'Resources','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>!item[4]||item[4](role())).map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
+ const root=$('#hqNavigation');let last='';const groups={'Your work':'Overview','Leadership':'Leadership','Committee':'Community','Community':'Community','Partnerships':'Community','Education':'Resources','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
  root.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button){closeHQNav();openPage(button.dataset.page)}});
  $('#hqMenu').addEventListener('click',()=>{const open=!$('#hqSidebar').classList.contains('open');$('#hqSidebar').classList.toggle('open',open);$('#hqShade').classList.toggle('open',open);$('#hqMenu').setAttribute('aria-expanded',String(open))});
  $('#hqShade').addEventListener('click',closeHQNav);
@@ -214,7 +215,7 @@ async function openPage(page){
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
  load();
  try{
-  const pages={memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
+  const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,library:libraryPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,door:doorPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
   await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
@@ -234,7 +235,7 @@ async function homePage(){
   ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
   ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',activeSELCEvents(staff?.events).length,'events']
  ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
- card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Member messages','memberdesk'],['Suggestions','suggestionsdesk'],['Event feedback','feedbackdesk'],['Applications','generalapps'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
+ card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Community inbox','communityinbox'],['Applications','generalapps'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Door & tickets','door'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
  if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
  setContent(markup);bindPageLinks();
 }
@@ -808,7 +809,7 @@ async function founderDeskPage(){
  const sections=[
   ['Website approvals','content','Review and publish voted changes'],
   ['Event readiness','readiness','Identify staffing and operational gaps'],
-  ['Community messages','chat','Oversee participating rooms'],
+  ['Community inbox','communityinbox','Review opted-in member communications and feedback'],
   ['Volunteer management','volunteer','Manage positions, claims and coverage'],
   ['Education programs','educators','Review workshop planning'],
   ['Ban history','banhistory','Review current and prior restrictions'],
@@ -992,6 +993,21 @@ const deskRoleLabel=()=>RANK[role()]||'SELC Representative';
 function deskThreadHtml(row){
  const thread=row.kind==='incident'?[{from:'member',text:row.message||'',at:row.createdAt},...(row.thread||[])]:row.thread||[{from:'member',text:row.message||'',at:row.createdAt}];
  return '<div class="desk-conversation">'+thread.map(m=>'<div class="hq-message '+(m.from==='member'?'hq-member-message':'hq-selc-message')+'"><p>'+esc(m.text||'').replaceAll('\n','<br>')+'</p><small>'+esc(m.from==='member'?'Member':(m.by||'Sanctum Eros')+' — '+(m.role||deskRoleLabel()))+' · '+esc(date(m.at))+'</small></div>').join('')+'</div>';
+}
+async function communityInboxPage(){
+ const scopes=['messages','suggestions','feedback'];
+ const loaded=await Promise.allSettled(scopes.map(scope=>api('committee-desk',{query:{scope}})));
+ const data=loaded.map(x=>x.status==='fulfilled'?x.value:null);
+ const cards=[
+  ['Member messages & complaints',(data[0]?.messages||[]).length,'memberdesk','Read and respond to member-authorized conversations, complaints and opted-in reports'],
+  ['Suggestions',(data[1]?.suggestions||[]).length,'suggestionsdesk','Review ideas, respond where permitted and promote them to committee proposals'],
+  ['Event feedback',(data[2]?.reviews||[]).length,'feedbackdesk','Review member event experiences and approved public comments']
+ ];
+ let markup=pageHeader('COMMUNITY / CORRESPONDENCE','Community Inbox','One place to triage communications while preserving the independent privacy controls on each record.');
+ markup+='<div class="hq-grid">'+cards.map(([name,count,page,desc])=>card('<span class="hq-eyebrow">'+esc(name)+'</span><h2>'+number(count)+'</h2><p>'+esc(desc)+'</p>'+btn('Open','data-page-link="'+esc(page)+'"','primary'))).join('')+'</div>';
+ if(data.some(x=>!x))markup+=card('<p>One or more message services are temporarily unavailable. Open the relevant category to see its current status.</p>');
+ markup+=card('<p class="hq-micro">Private correspondence addressed directly to Eros is not included in SELC shared queues unless the sender explicitly authorized sharing. Incident records remain subject to IA access controls.</p>');
+ setContent(markup);bindPageLinks();
 }
 async function memberDeskPage(){
  const d=await api('committee-desk',{query:{scope:'messages'}}),rows=d.messages||[];
