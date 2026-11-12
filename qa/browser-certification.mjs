@@ -20,17 +20,8 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const base='http://127.0.0.1:'+server.address().port;
 const browser=await (process.env.QA_BROWSER==='webkit'?webkit:chromium).launch({headless:true});
 let role='member',certified=false,assessments=0;
-const answers={'r-role':'b','r-consent':'a','r-privacy':'c','r-evidence':'b','r-conflict':'a','r-network':'c','r-admission':'b','r-safety':'a'};
-const questions=[
- ['r-role','Who makes final SELC appointments?','b'],
- ['r-consent','What happens when consent is withdrawn?','a'],
- ['r-privacy','How should private records be handled?','c'],
- ['r-evidence','How should an allegation be handled?','b'],
- ['r-conflict','What do you do with a personal conflict?','a'],
- ['r-network','Do Community Leaders receive committee votes?','c'],
- ['r-admission','What is required for SELC membership?','b'],
- ['r-safety','How do you respond to retaliation?','a']
-].map(([id,prompt,correct])=>({id,prompt,options:['a','b','c'].map(value=>({value,label:'Answer '+value}))}));
+const answers={'r-role':'b','r-consent':'a','r-privacy':'c','r-evidence':'b','r-conflict':'a','r-network':'c','r-admission':'b','r-safety':'a',...Object.fromEntries(['r-reciprocity','r-information','r-training','r-scope','r-dispute','r-retaliation','r-scope-records','r-emergency','r-decision','r-confidentiality','r-accountability','r-accessibility'].map(id=>[id,'b']))};
+const questions=Object.entries(answers).map(([id,correct])=>({id,prompt:'Scenario: choose the correct leadership response for '+id.replaceAll('-',' '),options:['a','b','c'].map(value=>({value,label:'Answer '+value}))}));
 async function mockPortal(route){
  const req=route.request(),url=new URL(req.url()),service=url.pathname.split('/').pop(),method=req.method();
  const body=method==='POST'?req.postDataJSON():{};
@@ -50,7 +41,7 @@ async function mockPortal(route){
    assert.equal(body.id,'accepted-case');assert.equal(body.acknowledge,true);
    const passed=Object.entries(answers).every(([id,correct])=>body.answers?.[id]===correct);
    if(passed){certified=true;role='representative'}
-   data={passed,percent:passed?100:88,missed:passed?[]:['r-role'],member:passed?{role:'representative'}:undefined};
+   data={passed,percent:passed?100:95,missed:passed?[]:['r-role'],member:passed?{role:'representative'}:undefined};
   }else data={applications:[],members:[],ballots:[],proposals:[]};
  }else if(service==='community-leaders')data={role,canDiscuss:role==='community-leader',approvedLeader:role==='community-leader',directory:[],messages:[],sharedSafety:[]};
  else if(service==='community-chat'){
@@ -87,11 +78,11 @@ try{
  assert.equal((await page.locator('#hqRole').textContent()).trim(),'Community Member');
  await page.locator('#hqNavigation [data-page="certification"]').click();
  await page.locator('[data-cert-form="accepted-case"]').waitFor();
- assert.equal(await page.locator('[data-cert-form="accepted-case"] fieldset').count(),8);
+ assert.equal(await page.locator('[data-cert-form="accepted-case"] fieldset').count(),20);
  for(const [id,correct] of Object.entries(answers))await page.locator('[data-cert-form="accepted-case"] input[name="'+id+'"][value="'+(id==='r-role'?'a':correct)+'"]').check();
  await page.locator('[data-cert-form="accepted-case"] input[name="acknowledge"]').check();
  await page.locator('[data-cert-form="accepted-case"] [type=submit]').click();
- await page.getByText('Score 88%',{exact:false}).waitFor({timeout:8000});
+ await page.getByText('Score 95%',{exact:false}).waitFor({timeout:8000});
  assert.equal(certified,false,'A failed assessment cannot activate access');
  await page.locator('[data-cert-form="accepted-case"] input[name="r-role"][value="b"]').check();
  await page.locator('[data-cert-form="accepted-case"] [type=submit]').click();
@@ -136,7 +127,7 @@ try{
   await founderPage.locator('#hqMenu').click();
   await founderPage.locator('#hqNavigation [data-page="'+section+'"]').click();
   await founderPage.waitForFunction(name=>document.querySelector('#hqContent')?.textContent?.includes(name),{
-   founderdesk:'Founder command center',content:'Website & content management',chat:'Messages',readiness:'Event readiness',banhistory:'Current & previous bans',volunteer:'Volunteer for an event'
+   founderdesk:'Founder command center',content:'Website & content management',chat:'Messages',readiness:'Event readiness',banhistory:'Current & previous bans',volunteer:'Staffing overview'
   }[section],{timeout:12000});
  }
  assert.equal(founderErrors.length,0,'Founder browser JavaScript errors: '+founderErrors.join('; '));

@@ -4,7 +4,7 @@ The independent public website and private Leadership Headquarters for **Sanctum
 
 ## Site roles and boundaries
 
-SELC is the *internal* committee of Sanctum Eros, not an independent nonprofit or an organization-wide electorate. Eros is Founder & Chair and retains final approval over appointments, removals, publication, policy, financial decisions, and exceptional access. There are five Representative seats and at most two Coordinators, who remain counted within those five seats.
+SELC is the *internal* committee of Sanctum Eros, not an independent nonprofit or an organization-wide electorate. Eros is Founder & Chair and retains final approval over appointments, removals, publication, policy, financial decisions, and exceptional access. There are five Representative seats and up to two separate Coordinator seats (seven committee positions total), plus the Founder & Chair. Coordinator advancement uses one of the separate Coordinator seats and does not count toward the five Representative positions.
 
 **An SELC Representative must:**
 1. Hold an approved, active Sanctum Eros membership. Attending events or purchasing supporter membership is **not** required.
@@ -31,3 +31,7 @@ Existing Representatives seeking Coordinator appointment must complete the Coord
 Run source smoke checks with `node qa/smoke.mjs` and `node --test tests/*.test.mjs`. The `selc-smoke.yml` workflow validates source and syntax. The `selc-browser-certification.yml` workflow uses isolated Playwright sessions to verify committee acceptance, certification attempts, activation, and organizer isolation without creating or accessing real member data.
 
 **Deployment checks:** verify the production Netlify build for the exact merged `main` commit, public route navigation, Community Leaders verification and recovery, Portal sign-in/handoff, and authenticated operation with safe controlled test accounts. A successful preview build is not proof that private production workflows are live.
+
+## Dual Staff / SELC appointments
+
+A person can be both Sanctum Eros Staff and an SELC Representative or Coordinator. In the authenticated interfaces, show the combined title **Staff + Representative** or **Staff + Coordinator** after verifying both appointments. Staff/DM volunteer sign-up, shift release, complimentary admission and companion requests are handled exclusively from the Portal Staff workspace (`https://sanctumportal.org/staff.html#shifts`). SELC may display staffing coverage, handover notes, and authorized Founder management; it must not independently claim a shift or create Staff privileges for committee-only members. The Portal remains the authoritative record for event staff assignments.
