@@ -373,3 +373,19 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 .hq-modal .hq-form label{min-width:0;overflow-wrap:anywhere}
 @media(max-width:800px){.se-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.se-filters{grid-template-columns:1fr 1fr}.se-filters label:first-child{grid-column:1/-1}.se-review-grid{grid-template-columns:1fr}}
 @media(max-width:560px){#hqContent .hq-page-header{align-items:flex-start}#hqContent .hq-actions{width:100%}.se-work-panel{padding:15px}.se-metrics{gap:8px}.se-metrics>div{padding:17px 13px}.se-filters{grid-template-columns:1fr}.se-filters label:first-child{grid-column:auto}.se-member-row{flex-wrap:wrap}.se-member-main{flex-basis:calc(100% - 60px)}.se-member-row>.hq-button{width:100%;margin:0}.se-answer-grid{grid-template-columns:1fr}.se-wide-modal{width:calc(100vw - 12px);max-width:calc(100vw - 12px)!important}.se-wide-modal .login-inner{padding:18px}.se-review-actions>.hq-button{flex:1 1 140px}}
+
+/* Full, unabridged application review */
+.se-full-application>h3{font-size:1.16rem;margin:0 0 8px}
+.se-application-facts{display:flex;gap:10px 18px;flex-wrap:wrap;font-size:.79rem;color:#d3c9cf;padding:12px 0 18px;border-bottom:1px solid #413a43}
+.se-complete-answers{display:grid;grid-template-columns:1fr;gap:12px;margin-top:18px}
+.se-question-answer{background:#242329;border:1px solid rgba(219,198,206,.16);border-radius:12px;padding:18px;min-width:0}
+.se-question-heading{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+.se-question-heading>span{font-size:.73rem;color:#dd9cac;font-weight:800;padding-top:3px}
+.se-question-heading h3{font-size:.94rem;line-height:1.45;margin:0;color:#eee0e5;font-weight:680}
+.se-question-response{margin-left:28px;overflow-wrap:anywhere;white-space:pre-wrap}
+.se-question-response p{margin:0;line-height:1.72;color:#f7f2f4;font-size:.95rem}
+.se-unanswered{color:#b5aab1;font-size:.84rem}
+.se-nested-answers{display:grid;gap:10px;white-space:normal}
+.se-nested-answers>div{border-left:2px solid #92566b;padding-left:12px}
+.se-nested-answers strong{font-size:.79rem;display:block;color:#d9b5c0;margin-bottom:5px}
+@media(max-width:560px){.se-question-answer{padding:14px}.se-question-response{margin-left:0}}
