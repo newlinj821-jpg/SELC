@@ -666,53 +666,93 @@ async function requestsPage(filter='all'){
   $$('[data-rstatus]',dialog).forEach(b=>b.onclick=async()=>{try{await post('community-requests','update',{id:r.id,status:b.dataset.rstatus});dialog.close();requestsPage(filter)}catch(e){flash(e.message)}});
  });
 }
+
+const APP_LABELS={name:'Name',preferredName:'Preferred name',fetlife:'FetLife username',loginEmail:'Email',generalArea:'General area',about:'About the applicant',experience:'Experience',limits:'Limits and boundaries',whyJoin:'Why they want to join',communityConflict:'Handling community conflict',reviewAssist:'Review assistance',adminNotes:'Internal notes',eventTitle:'Event',requestType:'Request type',createdAt:'Submitted',updatedAt:'Updated'};
+const PRIVATE_APP_KEY=/password|hash|salt|secret|token|securityAnswer|authorization|credential|session|twoFactor|recoveryCode/i;
+function readableLabel(k){return APP_LABELS[k]||String(k).replace(/([a-z])([A-Z])/g,'$1 $2').replace(/[_-]/g,' ').replace(/^./,c=>c.toUpperCase())}
+function assistSummary(raw){
+ if(!raw)return '';
+ let a=raw;
+ if(typeof a==='string'){try{a=JSON.parse(a)}catch{return '<section class="se-review-assist"><h3>Review assistance</h3><p>'+esc(a)+'</p></section>'}}
+ if(!a||typeof a!=='object')return '';
+ const parts=[['Consent',a.consent],['Accountability',a.accountability],['Conduct and boundaries',a.conduct]].filter(([,v])=>v&&typeof v==='object'&&v.excerpt);
+ return '<section class="se-review-assist"><div class="se-section-head"><h3>Review assistance</h3><span>Supporting information only</span></div><p class="se-muted">This is not an approval, denial, or safety determination. Read the complete answers before deciding.</p>'+
+ (parts.length?'<div class="se-review-grid">'+parts.map(([name,v])=>'<article><strong>'+esc(name)+'</strong><p>'+esc(v.excerpt)+'</p></article>').join('')+'</div>':'')+
+ (Array.isArray(a.flags)&&a.flags.length?'<p><strong>Review flags:</strong> '+esc(a.flags.join(' · '))+'</p>':'')+
+ (Array.isArray(a.notes)&&a.notes.length?'<p class="se-muted">'+esc(a.notes.join(' '))+'</p>':'')+'</section>';
+}
+function applicationDetails(record){
+ const entries=Object.entries(record||{}).filter(([key,value])=>key!=='reviewAssist'&&!PRIVATE_APP_KEY.test(key)&&!['id','deletedAt','isTestAccount'].includes(key)&&value!==null&&value!==undefined&&value!==''&&!(Array.isArray(value)&&!value.length));
+ const priority=['name','preferredName','fetlife','loginEmail','generalArea','about','experience','limits','whyJoin','communityConflict'];
+ entries.sort(([a],[b])=>(priority.indexOf(a)<0?99:priority.indexOf(a))-(priority.indexOf(b)<0?99:priority.indexOf(b)));
+ return '<div class="se-answer-grid">'+entries.map(([key,value])=>'<article><span>'+esc(readableLabel(key))+'</span>'+(typeof value==='object'?'<pre>'+esc(JSON.stringify(value,null,2))+'</pre>':'<p>'+esc(typeof value==='boolean'?(value?'Yes':'No'):value)+'</p>')+'</article>').join('')+'</div>'+assistSummary(record?.reviewAssist);
+}
+function membershipDashboard(members){
+ const count=status=>members.filter(m=>String(m.status||'').toLowerCase()===status).length;
+ const flagged=members.filter(m=>/ban|restrict|re-vett/i.test(String(m.accessStatus||''))).length;
+ return '<div class="se-metrics">'+[['Member records',members.length],['Approved',count('approved')],['Pending',count('pending')],['Access concerns',flagged]].map(([l,n])=>'<div><strong>'+number(n)+'</strong><span>'+esc(l)+'</span></div>').join('')+'</div>';
+}
 async function memberRegistryPage(){
  if(!leader())return openPage('home');
- const result=await api('members'),members=(result.members||[]).filter(m=>m&&!m.deletedAt&&!m.isTestAccount);
+ const result=await api('members'),members=(Array.isArray(result.members)?result.members:[]).filter(m=>m&&!m.deletedAt&&!m.isTestAccount);
+ let search='',status='All',access='All';
  const statuses=['All','approved','pending','denied'],accessLevels=['All','Active','Restricted','Temp-Banned','Banned','Inactive','Re-vetting Required'];
- let filter='',status='All',access='All';
- let markup=pageHeader('SELC / MEMBER LEADERSHIP','Member registry','The authoritative Sanctum Eros membership registry, shared with the Portal. Representatives and Coordinators may review and correct permitted records; sensitive access decisions use authorized safety controls.');
- markup+=card('<div class="hq-form-grid"><label>Find member<input id="registrySearch" placeholder="Name, member number, FetLife username"></label><label>Membership<select id="registryStatus">'+statuses.map(v=>'<option value="'+esc(v)+'">'+esc(v==='All'?'All statuses':v)+'</option>').join('')+'</select></label><label>Venue access<select id="registryAccess">'+accessLevels.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+'</select></label></div><p class="hq-micro">Member registry data is confidential. A membership approval is not the same as an event RSVP, Staff role, or venue ban decision.</p>');
- markup+='<div id="registryResults"></div>';
- setContent(markup);
+ let html=pageHeader('SELC / MEMBERSHIP','Member management','Review member records and permitted corrections. Portal remains the authoritative membership database.',btn('Review applications','data-page-link="generalapps"','primary'));
+ html+='<section class="se-membership">'+membershipDashboard(members)+'<div class="se-work-panel"><div class="se-section-head"><div><h2>Member directory</h2><p class="se-muted">Confidential records · Activity is subject to role-based authorization</p></div></div><div class="se-filters"><label>Search<input id="registrySearch" type="search" placeholder="Name, FetLife, email or member ID"></label><label>Membership<select id="registryStatus">'+statuses.map(v=>'<option value="'+esc(v)+'">'+esc(v==='All'?'All statuses':v)+'</option>').join('')+'</select></label><label>Venue access<select id="registryAccess">'+accessLevels.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+'</select></label></div><div id="registryResults" aria-live="polite"></div></div></section>';
+ setContent(html);bindPageLinks();
  const render=()=>{
-  const selected=members.filter(m=>(status==='All'||String(m.status||'').toLowerCase()===status)&&(access==='All'||(m.accessStatus||'Active')===access)&&(!filter||[m.memberId,m.name,m.preferredName,m.fetlife,m.loginEmail].some(x=>String(x||'').toLowerCase().includes(filter))));
+  const selected=members.filter(m=>(status==='All'||String(m.status||'').toLowerCase()===status)&&(access==='All'||String(m.accessStatus||'Active').toLowerCase()===access.toLowerCase())&&(!search||[m.memberId,m.name,m.preferredName,m.fetlife,m.loginEmail].some(v=>String(v||'').toLowerCase().includes(search))));
   const target=$('#registryResults');
-  target.innerHTML='<p class="hq-micro">'+selected.length+' of '+members.length+' members</p>'+(selected.length?selected.slice(0,150).map(m=>card('<div class="hq-row"><div class="grow"><strong>'+esc(m.name||m.preferredName||'Member')+'</strong><p>'+esc(m.memberId||'No member number')+' · '+esc(m.fetlife?'@'+m.fetlife:(m.loginEmail||'No public username'))+'</p><p>'+esc(m.status||'Unknown')+' · Venue access: '+esc(m.accessStatus||'Active')+'</p></div>'+btn('Review & edit','data-registry-edit="'+esc(m.id)+'"','primary')+'</div>')).join(''):empty('No matching members','Change the filters to find another record.'));
+  target.innerHTML='<p class="se-muted">'+selected.length+' matching records'+(selected.length>150?' · Showing first 150':'')+'</p>'+(selected.length?'<div class="se-directory">'+selected.slice(0,150).map(m=>'<article class="se-member-row"><div class="se-avatar">'+esc(initials(m.preferredName||m.name))+'</div><div class="se-member-main"><strong>'+esc(m.preferredName||m.name||'Member')+'</strong><span>'+esc(m.memberId||'No member number')+' · '+esc(m.fetlife?'@'+m.fetlife:(m.loginEmail||'No username'))+'</span><div>'+tag(m.status)+tag(m.accessStatus||'Active')+'</div></div>'+btn('View profile','data-registry-edit="'+esc(m.id)+'"')+'</article>').join('')+'</div>':empty('No matching members','Adjust the search or filters.'));
   $$('[data-registry-edit]',target).forEach(button=>button.onclick=()=>{
-   const m=members.find(x=>x.id===button.dataset.registryEdit);if(!m)return;
-   const fields='<div class="hq-form-grid"><label>Member name<input name="name" required maxlength="120" value="'+esc(m.name||'')+'"></label><label>Contact<input name="contact" maxlength="180" value="'+esc(m.contact||'')+'"></label></div>'+
-    '<label>Attendance category<select name="attendanceCategory">'+['new','returning','established'].map(x=>'<option value="'+x+'"'+(x===(m.attendanceCategory||'new')?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>'+
-    '<label>Internal registry notes<textarea name="adminNotes" rows="4">'+esc(m.adminNotes||'')+'</textarea></label>'+
-    '<p class="hq-micro">Restricted, banned and temporarily suspended access must be handled through authorized safety and ban workflows; this form does not change venue restrictions or certifications.</p><p data-status></p><button class="hq-button primary" type="submit">Save registry correction</button>';
-   const dialog=modal('Registry · '+esc(m.memberId||m.name),' <p>Membership: '+esc(m.status||'Unknown')+' · Access: '+esc(m.accessStatus||'Active')+'</p><form class="hq-form" id="registryEditForm">'+fields+'</form><div class="hq-actions">'+btn('Application queue','data-page-link="generalapps"')+btn('Ban & restriction history','data-page-link="banhistory"')+'</div>');
-   bindPageLinks(dialog);
-   watchForm($('#registryEditForm',dialog),async values=>{await api('members',{method:'POST',body:{adminAction:'selc_registry_update',id:m.id,...values}});dialog.close();flash('Registry correction saved and audited.');await memberRegistryPage()});
+   const m=members.find(x=>String(x.id)===button.dataset.registryEdit);if(!m)return;
+   const form='<div class="hq-form-grid"><label>Member name<input name="name" required maxlength="120" value="'+esc(m.name||'')+'"></label><label>Contact<input name="contact" maxlength="180" value="'+esc(m.contact||'')+'"></label></div><label>Attendance category<select name="attendanceCategory">'+['new','returning','established'].map(x=>'<option value="'+x+'"'+(x===(m.attendanceCategory||'new')?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label><label>Internal registry notes<textarea name="adminNotes" rows="4">'+esc(m.adminNotes||'')+'</textarea></label><p class="se-muted">Access restrictions, bans and certifications require their separate authorized workflows.</p><p data-status class="hq-form-status"></p><button class="hq-button primary" type="submit">Save registry correction</button>';
+   const d=modal('Member · '+(m.preferredName||m.name||m.memberId||'Profile'),'<div class="se-app-detail">'+applicationDetails(m)+'</div><h3>Correct registry information</h3><form class="hq-form" id="registryEditForm">'+form+'</form><div class="hq-actions">'+btn('Applications','data-page-link="generalapps"')+btn('Restriction history','data-page-link="banhistory"')+'</div>');
+   d.classList.add('se-wide-modal');bindPageLinks(d);
+   watchForm($('#registryEditForm',d),async values=>{await api('members',{method:'POST',body:{adminAction:'selc_registry_update',id:m.id,...values}});d.close();flash('Registry correction saved.');await memberRegistryPage()});
   });
  };
- $('#registrySearch').addEventListener('input',e=>{filter=e.target.value.trim().toLowerCase();render()});
- $('#registryStatus').addEventListener('change',e=>{status=e.target.value;render()});
- $('#registryAccess').addEventListener('change',e=>{access=e.target.value;render()});
+ $('#registrySearch').oninput=e=>{search=e.target.value.trim().toLowerCase();render()};
+ $('#registryStatus').onchange=e=>{status=e.target.value;render()};
+ $('#registryAccess').onchange=e=>{access=e.target.value;render()};
  render();
 }
 async function generalAppsPage(){
- const [apps,members]=await Promise.all([api('applications'),api('members',{query:{status:'pending'}})]),all=apps.applications||[],roles=all.filter(a=>a.type!=='admission_assistance'),assistance=all.filter(a=>a.type==='admission_assistance'&&!a.eventArchived&&['Pending','Under Review','Approved'].includes(a.status)),reviewable=[...roles,...assistance],memberRows=members.members||[];
- let markup=pageHeader('MEMBERS & OPPORTUNITIES','Applications','SELC Representatives can help review routine membership and role applications. Elevated IA Staff accepted roles receive additional review.');
- markup+='<div class="hq-tabs"><button class="active" data-app-tab="membership">Membership ('+memberRows.length+')</button><button data-app-tab="roles">Roles & educators ('+roles.length+')</button><button data-app-tab="assistance">Admission Assistance ('+assistance.length+')</button></div>';
- markup+='<section id="membershipTab">'+(memberRows.length?memberRows.map(m=>card('<div class="hq-row"><div class="grow"><strong>'+esc(m.name||'Applicant')+'</strong><p>'+esc(m.fetlife?'@'+m.fetlife:m.loginEmail)+' · '+esc(date(m.createdAt))+'</p></div>'+tag(m.status)+btn('Review','data-member-app="'+esc(m.id)+'"')+'</div>')).join(''):empty('No pending memberships'))+'</section>';
- markup+='<section id="roleTab" hidden>'+(roles.length?roles.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.name||'Applicant')+'</strong><p>'+esc((a.type||'').replaceAll('_',' '))+' · '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+btn('Review','data-role-app="'+esc(a.id)+'"')+'</div>')).join(''):empty('No role applications'))+'</section>';
- markup+='<section id="assistanceTab" hidden>'+(assistance.length?assistance.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.name||'Applicant')+'</strong><p>Event: '+esc(a.eventTitle||a.event||'Unknown event')+' · '+esc(date(a.eventStart))+'</p><p>'+esc(a.requestType||'Admission Assistance')+'</p></div>'+tag(a.status)+btn('Review','data-role-app="'+esc(a.id)+'"')+'</div>')).join(''):empty('No current Admission Assistance requests','Requests for previous events are retained in Portal history but no longer appear in this queue.'))+'</section>';
- setContent(markup);
- $$('[data-app-tab]').forEach(b=>b.onclick=()=>{$$('[data-app-tab]').forEach(x=>x.classList.toggle('active',x===b));$('#membershipTab').hidden=b.dataset.appTab!=='membership';$('#roleTab').hidden=b.dataset.appTab!=='roles';$('#assistanceTab').hidden=b.dataset.appTab!=='assistance'});
- $$('[data-member-app]').forEach(b=>b.onclick=()=>{const m=memberRows.find(x=>x.id===b.dataset.memberApp);if(!m)return;
-  const details=['name','fetlife','loginEmail','generalArea','about','experience','limits','whyJoin','communityConflict','adminNotes','reviewAssist'].filter(k=>m[k]).map(k=>'<div class="hq-row"><div class="grow"><strong>'+esc(k)+'</strong><p class="hq-prose">'+esc(typeof m[k]==='object'?JSON.stringify(m[k]):m[k])+'</p></div></div>').join('');
-  const dlg=modal('Membership application','<div class="hq-card">'+details+'</div><form class="hq-form" id="memberReview"><label>Private review notes</label><textarea name="adminNotes" rows="4"></textarea><p data-status class="hq-form-status"></p><div class="hq-actions">'+btn('Approve','data-membership-decision="approved"','primary')+btn('Decline','data-membership-decision="denied"','danger')+btn('Keep pending','data-membership-decision="pending"')+'</div></form>');
-  $$('[data-membership-decision]',dlg).forEach(x=>x.onclick=async()=>{if(!confirmDecision('Record this membership decision?'))return;try{await api('members',{method:'POST',body:{adminAction:x.dataset.membershipDecision,id:m.id,...formValues($('#memberReview',dlg))}});dlg.close();flash('Membership updated.');generalAppsPage()}catch(e){setStatus($('[data-status]',dlg),e.message)}});
- });
- $$('[data-role-app]').forEach(b=>b.onclick=()=>{const a=reviewable.find(x=>x.id===b.dataset.roleApp);if(!a)return;const details=Object.entries(a).filter(([k,v])=>!['passwordHash','salt','securityAnswerHash'].includes(k)&&v!==null&&typeof v!=='object').slice(0,25).map(([k,v])=>'<div class="hq-row"><div class="grow"><strong>'+esc(k)+'</strong><p class="hq-prose">'+esc(v)+'</p></div></div>').join('');
-  const dlg=modal(a.type==='admission_assistance'?'Admission Assistance · '+(a.eventTitle||a.event||'Event'):'Role application','<div class="hq-card">'+(a.type==='admission_assistance'?'<h3>Event: '+esc(a.eventTitle||a.event||'Unknown event')+'</h3><p>'+esc(date(a.eventStart))+'</p>':'')+details+'</div><form class="hq-form" id="roleReview">'+(a.type==='admission_assistance'?'<label>Admission option</label><select name="approvedAdmissionType"><option value="free">Free admission</option><option value="discounted">Reduced admission</option><option value="barter">Barter</option></select><label>Approved amount (if reduced)</label><input type="number" min="0" name="approvedAmount">':'')+'<label>Internal notes</label><textarea name="adminNotes"></textarea><label>Message for applicant</label><textarea name="memberResponse"></textarea><p data-status class="hq-form-status"></p><div class="hq-actions">'+((['staff','staff_dm','dungeon_monitor','ia_staff'].includes(a.type)&&!reviewer())?(['Pending','Under Review','Recommended','Not Recommended'].includes(a.status)?btn('Recommend approval','data-role-decision="Recommended"','primary')+btn('Recommend decline','data-role-decision="Not Recommended"')+btn('Continue review','data-role-decision="Under Review"'):'<p class="hq-micro">This role has been decided. Only a Coordinator or authorized administrator may change its final status.</p>'):btn('Approve','data-role-decision="Approved"','primary')+btn('Decline','data-role-decision="Declined"','danger')+btn('Under review','data-role-decision="Under Review"'))+'</div></form>');
-  $$('[data-role-decision]',dlg).forEach(x=>x.onclick=async()=>{try{await api('applications',{method:'POST',body:{adminAction:'review',id:a.id,status:x.dataset.roleDecision,...formValues($('#roleReview',dlg))}});dlg.close();flash('Application updated.');generalAppsPage()}catch(e){setStatus($('[data-status]',dlg),e.message)}});
- });
+ const [apps,result]=await Promise.all([api('applications'),api('members',{query:{status:'pending'}})]);
+ const all=Array.isArray(apps.applications)?apps.applications:[],members=(Array.isArray(result.members)?result.members:[]).filter(m=>m&&!m.deletedAt);
+ const roles=all.filter(a=>a.type!=='admission_assistance'),assistance=all.filter(a=>a.type==='admission_assistance'&&!a.eventArchived&&['pending','under review','approved'].includes(String(a.status||'').toLowerCase()));
+ const buckets={membership:members,roles,assistance};let active='membership',filter='';
+ const header=pageHeader('SELC / APPLICATIONS','Application review','Complete application records, supporting information, and documented decisions.');
+ let html=header+'<div class="se-membership"><div class="se-metrics">'+[['Pending members',members.length],['Role applications',roles.length],['Admission assistance',assistance.length]].map(([l,n])=>'<div><strong>'+number(n)+'</strong><span>'+esc(l)+'</span></div>').join('')+'</div><section class="se-work-panel"><div class="se-section-head"><h2>Review queue</h2>'+btn('Member directory','data-page-link="registry"')+'</div><div class="se-app-tabs" role="group" aria-label="Application type">'+[['membership','Membership'],['roles','Roles and educators'],['assistance','Admission assistance']].map(([key,label])=>'<button type="button" data-app-tab="'+key+'" class="'+(key===active?'active':'')+'">'+label+' <span>'+buckets[key].length+'</span></button>').join('')+'</div><label class="se-app-search">Search applications<input id="seAppSearch" type="search" placeholder="Applicant, handle, type or event"></label><div id="seAppResults" aria-live="polite"></div></section></div>';
+ setContent(html);bindPageLinks();
+ const render=()=>{
+  const rows=buckets[active].filter(a=>!filter||[a.name,a.preferredName,a.fetlife,a.loginEmail,a.type,a.eventTitle,a.event,a.status].some(v=>String(v||'').toLowerCase().includes(filter)));
+  $('#seAppResults').innerHTML=rows.length?'<div class="se-directory">'+rows.map(a=>'<article class="se-member-row"><div class="se-avatar">'+esc(initials(a.name||a.preferredName||'SE'))+'</div><div class="se-member-main"><strong>'+esc(a.name||a.preferredName||'Applicant')+'</strong><span>'+esc(active==='membership'?(a.fetlife?'@'+a.fetlife:a.loginEmail||'Membership application'):active==='assistance'?(a.eventTitle||a.event||'Event assistance'):readableLabel(a.type||'Role application'))+'</span><div>'+tag(a.status||'Pending')+'</div></div>'+btn('Review application','data-review-id="'+esc(a.id)+'"')+'</article>').join('')+'</div>':empty('No applications found','Adjust the search or switch queues.');
+  $$('[data-review-id]').forEach(b=>b.onclick=()=>openReview(rows.find(a=>String(a.id)===b.dataset.reviewId),active));
+ };
+ function openReview(record,kind){
+  if(!record)return;
+  const isMember=kind==='membership',isAssistance=kind==='assistance';
+  const name=record.preferredName||record.name||'Applicant';
+  const elevated=['staff','staff_dm','dungeon_monitor','ia_staff'].includes(record.type)&&!reviewer();
+  const form=isMember?'<label>Private review notes<textarea name="adminNotes" rows="4">'+esc(record.adminNotes||'')+'</textarea></label>':(isAssistance?'<label>Admission option<select name="approvedAdmissionType"><option value="free">Free admission</option><option value="discounted">Reduced admission</option><option value="barter">Barter</option></select></label><label>Approved amount (if reduced)<input type="number" min="0" name="approvedAmount"></label>':'')+'<label>Internal notes<textarea name="adminNotes" rows="4">'+esc(record.adminNotes||'')+'</textarea></label><label>Message for applicant<textarea name="memberResponse" rows="3"></textarea></label>';
+  const buttons=isMember?btn('Approve','data-member-decision="approved"','primary')+btn('Decline','data-member-decision="denied"','danger')+btn('Keep pending','data-member-decision="pending"'):
+   elevated?btn('Recommend approval','data-role-decision="Recommended"','primary')+btn('Recommend decline','data-role-decision="Not Recommended"')+btn('Continue review','data-role-decision="Under Review"'):
+   btn('Approve','data-role-decision="Approved"','primary')+btn('Decline','data-role-decision="Declined"','danger')+btn('Under review','data-role-decision="Under Review"');
+  const dlg=modal((isMember?'Membership':isAssistance?'Admission assistance':'Role')+' · '+name,'<div class="se-app-detail"><p class="se-muted">Application details supplied by the Portal. Missing questions cannot be reconstructed from a partial saved record.</p>'+applicationDetails(record)+'</div><form class="hq-form" id="seReviewForm">'+form+'<p data-status class="hq-form-status"></p><div class="se-review-actions">'+buttons+'</div></form>');
+  dlg.classList.add('se-wide-modal');
+  $$('[data-member-decision]',dlg).forEach(b=>b.onclick=async()=>{
+   if(!await confirmDecision('Record this membership decision?'))return;
+   b.disabled=true;try{await api('members',{method:'POST',body:{adminAction:b.dataset.memberDecision,id:record.id,...formValues($('#seReviewForm',dlg))}});dlg.close();flash('Membership review saved.');await generalAppsPage()}catch(e){setStatus($('[data-status]',dlg),e.message)}finally{b.disabled=false}
+  });
+  $$('[data-role-decision]',dlg).forEach(b=>b.onclick=async()=>{
+   if(!await confirmDecision('Record this application decision?'))return;
+   b.disabled=true;try{await api('applications',{method:'POST',body:{adminAction:'review',id:record.id,status:b.dataset.roleDecision,...formValues($('#seReviewForm',dlg))}});dlg.close();flash('Application review saved.');await generalAppsPage()}catch(e){setStatus($('[data-status]',dlg),e.message)}finally{b.disabled=false}
+  });
+ }
+ $$('[data-app-tab]').forEach(b=>b.onclick=()=>{active=b.dataset.appTab;$$('[data-app-tab]').forEach(t=>t.classList.toggle('active',t===b));render()});
+ $('#seAppSearch').oninput=e=>{filter=e.target.value.trim().toLowerCase();render()};
+ render();
 }
 async function staffPathPage(){
  if(!['representative','coordinator'].includes(role()))return openPage('home');
