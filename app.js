@@ -681,11 +681,30 @@ function assistSummary(raw){
  (Array.isArray(a.flags)&&a.flags.length?'<p><strong>Review flags:</strong> '+esc(a.flags.join(' · '))+'</p>':'')+
  (Array.isArray(a.notes)&&a.notes.length?'<p class="se-muted">'+esc(a.notes.join(' '))+'</p>':'')+'</section>';
 }
+
+const MEMBER_QUESTION_ORDER=[
+['name','Name'],['age','Age'],['fetlife','FetLife username'],['loginEmail','Email'],['couple','Couple application'],['partner','Partner name'],['partnerAge','Partner age'],['partnerFetlife','Partner FetLife'],['partnerEmail','Partner email'],
+['contact','Contact information'],['generalArea','General area'],['referralSource','How did you hear about us?'],['hasCommunityReference','Do you have a community reference?'],['communityReferenceName','Reference name'],['communityReferenceRelationship','Relationship to reference'],['communityReferenceContact','Reference contact'],['communityReferenceContactPermission','Permission to contact reference'],
+['experience','Describe your experience'],['communityHistory','Community involvement and history'],['expectations','What do you expect from Sanctum Eros?'],
+['consentUnderstanding','What does consent mean to you?'],['freezeResponse','How would you respond if someone froze?'],['boundaryAccountability','How do you take accountability for a boundary violation?'],['rejectionBoundaryResponse','How would you respond when someone says no?'],['observedBoundaryResponse','What would you do if you witnessed a boundary violation?'],['privacyResponse','How do you protect member privacy?'],['communityConductResponse','How do you handle community conduct concerns?'],['safetyJudgment','How do you approach safety?'],
+['rulesCheck','Venue rules knowledge'],['priorVenueAction','Prior venue or organization actions'],['priorVenueActionDetails','Details of prior actions'],['priorSexCharge','Disclosed sexual offenses or charges'],['priorSexChargeDetails','Details disclosed'],['priorSeriousComplaint','Disclosed serious complaints'],['priorSeriousComplaintDetails','Complaint details'],['priorProtectiveOrder','Disclosed protective orders'],['priorProtectiveOrderDetails','Protective order details'],['safetyDisclosures','Other safety disclosures'],['acknowledgements','Applicant acknowledgements']];
+const APP_ADMIN_ONLY=new Set(['id','deletedAt','isTestAccount','reviewAssist','applicationVersion','createdAt','updatedAt','accountId','memberId','coupleRelationshipId','linkedPartnerMemberId','attendanceCategorySource','attendanceCategorySelectedAt','legacyAttendanceQuestionRequired','accessStatus','status','adminNotes','attendanceCategory','rulesSecretWord','notificationEmail','emailNotificationsOptIn','loginType','hasFetlife','rulesCheckPassed']);
+function applicationValue(value){
+ if(value===null||value===undefined||value==='')return '<em class="se-unanswered">No answer recorded</em>';
+ if(typeof value==='boolean')return '<p>'+(value?'Yes':'No')+'</p>';
+ if(Array.isArray(value))return value.length?value.map(v=>applicationValue(v)).join(''):'<em class="se-unanswered">No answer recorded</em>';
+ if(typeof value==='object')return '<div class="se-nested-answers">'+Object.entries(value).filter(([k])=>!PRIVATE_APP_KEY.test(k)).map(([key,v])=>'<div><strong>'+esc(readableLabel(key))+'</strong>'+applicationValue(v)+'</div>').join('')+'</div>';
+ return '<p>'+esc(value)+'</p>';
+}
 function applicationDetails(record){
- const entries=Object.entries(record||{}).filter(([key,value])=>key!=='reviewAssist'&&!PRIVATE_APP_KEY.test(key)&&!['id','deletedAt','isTestAccount'].includes(key)&&value!==null&&value!==undefined&&value!==''&&!(Array.isArray(value)&&!value.length));
- const priority=['name','preferredName','fetlife','loginEmail','generalArea','about','experience','limits','whyJoin','communityConflict'];
- entries.sort(([a],[b])=>(priority.indexOf(a)<0?99:priority.indexOf(a))-(priority.indexOf(b)<0?99:priority.indexOf(b)));
- return '<div class="se-answer-grid">'+entries.map(([key,value])=>'<article><span>'+esc(readableLabel(key))+'</span>'+(typeof value==='object'?'<pre>'+esc(JSON.stringify(value,null,2))+'</pre>':'<p>'+esc(typeof value==='boolean'?(value?'Yes':'No'):value)+'</p>')+'</article>').join('')+'</div>'+assistSummary(record?.reviewAssist);
+ const source=record||{},membership=('applicationVersion' in source)||('consentUnderstanding' in source)||('boundaryAccountability' in source);
+ const ordered=membership?MEMBER_QUESTION_ORDER:[];
+ const listed=new Set(ordered.map(([key])=>key));
+ const extra=Object.keys(source).filter(key=>!listed.has(key)&&!APP_ADMIN_ONLY.has(key)&&!PRIVATE_APP_KEY.test(key)).map(key=>[key,readableLabel(key)]);
+ const questions=ordered.concat(extra).filter(([key])=>!PRIVATE_APP_KEY.test(key)&&key!=='rulesSecretWord'&&(!(key.startsWith('partner')&&source.couple!=='Yes')||source[key]!==undefined&&source[key]!==null&&source[key]!==''));
+ const markup=questions.map(([key,label],index)=>'<article class="se-question-answer"><div class="se-question-heading"><span>'+String(index+1).padStart(2,'0')+'</span><h3>'+esc(label)+'</h3></div><div class="se-question-response">'+applicationValue(source[key])+'</div></article>').join('');
+ const facts=[['Application version',source.applicationVersion],['Submitted',source.createdAt?date(source.createdAt):''],['Status',source.status]].filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>'<span><strong>'+esc(k)+':</strong> '+esc(v)+'</span>').join('');
+ return '<div class="se-full-application"><h3>Complete application responses</h3><p class="se-muted">Full recorded answers appear below, without abbreviating or rewriting the applicant’s words. Unanswered fields are indicated.</p><div class="se-application-facts">'+facts+'</div><div class="se-complete-answers">'+markup+'</div></div>'+assistSummary(source.reviewAssist);
 }
 function membershipDashboard(members){
  const count=status=>members.filter(m=>String(m.status||'').toLowerCase()===status).length;
