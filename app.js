@@ -245,7 +245,7 @@ async function staffConnectionPage(){
  markup+=card('<h2>Your conversations</h2>'+(mine.length?mine.map(r=>'<div class="hq-row"><div class="grow"><strong>'+esc(r.title)+'</strong><p>'+esc(r.details||'').slice(0,130)+'</p><p class="hq-micro">'+esc(date(r.updatedAt))+'</p></div>'+tag(r.status)+btn('Open','data-staff-request="'+esc(r.id)+'"')+'</div>').join(''):'<p>Your messages and replies will appear here.</p>'));
  setContent(markup);bindPageLinks();
  watchForm($('#staffMessageForm'),async data=>{await post('community-requests','create',{kind:'staff_message',title:data.title,details:data.details});flash('Your message was sent to SELC.');await staffConnectionPage()});
- $('[data-staff-request]').forEach(b=>b.onclick=()=>{
+ $$('[data-staff-request]').forEach(b=>b.onclick=()=>{
   const r=mine.find(x=>x.id===b.dataset.staffRequest);if(!r)return;
   const dialog=modal(r.title,'<p>'+esc(r.details)+'</p><p class="hq-micro">Status: '+esc(r.status)+'</p>'+(r.messages||[]).map(m=>'<div class="hq-case-message"><strong>'+esc(m.by)+'</strong><p>'+esc(m.message)+'</p></div>').join('')+'<form class="hq-form" id="staffReplyForm"><label>Reply<textarea name="message" rows="3" minlength="2" required></textarea></label><p data-status></p><button class="hq-button primary" type="submit">Send reply</button></form>');
   watchForm($('#staffReplyForm',dialog),async vals=>{await post('community-requests','reply',{id:r.id,message:vals.message});dialog.close();flash('Reply sent.');await staffConnectionPage()});
