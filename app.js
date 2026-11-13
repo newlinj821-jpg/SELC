@@ -721,7 +721,7 @@ async function staffPathPage(){
  const steps=[
   ['Apply','Use the Member Portal Staff application. Give your preferred responsibilities, relevant experience, availability and examples of sound judgment. Your SELC position is not a substitute for this application.'],
   ['Verification','Your approved Portal membership, linked member identity and submitted application are reviewed. You cannot approve or verify your own Staff application.'],
-  ['Appointment','After acceptance, an active Staff role must be linked to your existing member identity. You retain your Representative or Coordinator role.'],
+  ['Staff role acceptance','After acceptance, an active Staff role must be linked to your existing member identity. You retain your Representative or Coordinator role.'],
   ['Certification','Complete the separate Staff certification (and Dungeon Monitor certification if applicable) before working a safety-sensitive shift.'],
   ['Volunteer','Open the Staff Portal and claim an available event position. Your shift and complimentary Staff admission are recorded in Portal, not SELC.']
  ];
