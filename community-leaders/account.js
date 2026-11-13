@@ -50,7 +50,7 @@ function updateState(data){
  if(own&&['Submitted','Needs Verification'].includes(own.status)){
   el.innerHTML='<h3>Application '+own.status+'</h3><p>Your application for '+escapeHTML(own.organization)+' is saved in the Portal and awaiting Founder review. You can return to this page to check its status.</p>';application.hidden=true;return;
  }
- el.innerHTML='<h3>Community Leaders application</h3><p>Signed in. Introduce your organization to apply. This is separate from membership, Staff, and committee appointments.</p>';
+ el.innerHTML='<h3>Community Leaders application</h3><p>Signed in. Introduce your organization to apply. This is separate from membership, Staff, and committee roles.</p>';
  application.hidden=false;
  if(own&&own.status==='Declined'){$('#applyStatus').textContent='Your previous application was declined. A new application will be reviewed separately.'}
 }

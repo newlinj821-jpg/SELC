@@ -118,7 +118,7 @@ try{
  founderPage.on('pageerror',e=>founderErrors.push(e.message));
  await founderPage.goto(base+'/?se_owner_handoff='+'a'.repeat(43),{waitUntil:'domcontentloaded'});
  await founderPage.waitForFunction(()=>document.querySelector('#hqRole')?.textContent?.includes('Founder'),undefined,{timeout:12000});
- assert.equal((await founderPage.locator('#hqRole').textContent()).trim(),'Founder & Chair');
+ assert.equal((await founderPage.locator('#hqRole').textContent()).trim(),'Founder/Director');
  assert.ok(!founderPage.url().includes('se_owner_handoff'),'Owner handoff code must be erased from browser history');
  assert.equal(await founderPage.locator('#hqNavigation [data-page="applications"]').count(),1);
  assert.equal(await founderPage.locator('#hqNavigation [data-page="work"]').count(),1);
