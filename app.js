@@ -583,7 +583,7 @@ async function proposalPage(){
     d.appendChild(section);
     watchForm(d.querySelector('#implementationForm'),async values=>{await post('selc-governance','track_proposal',{id:p.id,...values});d.close();flash('Implementation updated.');proposalPage()});
   }
-  $('[data-pvote]',d).forEach(x=>x.onclick=async()=>{try{await post('selc-governance','vote_proposal',{id:p.id,vote:x.dataset.pvote});flash('Vote recorded.');d.close();proposalPage()}catch(e){flash(e.message)}});
+  $$('[data-pvote]',d).forEach(x=>x.onclick=async()=>{try{await post('selc-governance','vote_proposal',{id:p.id,vote:x.dataset.pvote});flash('Vote recorded.');d.close();proposalPage()}catch(e){flash(e.message)}});
   watchForm($('#commentProposal',d),async vals=>{await post('selc-governance','comment_proposal',{id:p.id,message:vals.message});d.close();proposalPage()});
   $$('[data-chair]',d).forEach(x=>x.onclick=async()=>{const reason=prompt('Give a reason or brief summary for this decision:')||'';if(!reason)return;try{await post('selc-governance','decide_proposal',{id:p.id,decision:x.dataset.chair,reason});d.close();proposalPage()}catch(e){flash(e.message)}});
  });
@@ -679,7 +679,7 @@ async function memberRegistryPage(){
   const selected=members.filter(m=>(status==='All'||String(m.status||'').toLowerCase()===status)&&(access==='All'||(m.accessStatus||'Active')===access)&&(!filter||[m.memberId,m.name,m.preferredName,m.fetlife,m.loginEmail].some(x=>String(x||'').toLowerCase().includes(filter))));
   const target=$('#registryResults');
   target.innerHTML='<p class="hq-micro">'+selected.length+' of '+members.length+' members</p>'+(selected.length?selected.slice(0,150).map(m=>card('<div class="hq-row"><div class="grow"><strong>'+esc(m.name||m.preferredName||'Member')+'</strong><p>'+esc(m.memberId||'No member number')+' · '+esc(m.fetlife?'@'+m.fetlife:(m.loginEmail||'No public username'))+'</p><p>'+esc(m.status||'Unknown')+' · Venue access: '+esc(m.accessStatus||'Active')+'</p></div>'+btn('Review & edit','data-registry-edit="'+esc(m.id)+'"','primary')+'</div>')).join(''):empty('No matching members','Change the filters to find another record.'));
-  $('[data-registry-edit]',target).forEach(button=>button.onclick=()=>{
+  $$('[data-registry-edit]',target).forEach(button=>button.onclick=()=>{
    const m=members.find(x=>x.id===button.dataset.registryEdit);if(!m)return;
    const fields='<div class="hq-form-grid"><label>Member name<input name="name" required maxlength="120" value="'+esc(m.name||'')+'"></label><label>Contact<input name="contact" maxlength="180" value="'+esc(m.contact||'')+'"></label></div>'+
     '<label>Attendance category<select name="attendanceCategory">'+['new','returning','established'].map(x=>'<option value="'+x+'"'+(x===(m.attendanceCategory||'new')?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label>'+
@@ -783,7 +783,7 @@ async function volunteerPage(){
     await post('shifts','set_slots',{eventId,slots:result});
     dlg.close();flash('Volunteer positions saved.');volunteerPage();
    });
-   $('[data-remove-volunteer]',dlg).forEach(b=>b.onclick=async()=>{
+   $$('[data-remove-volunteer]',dlg).forEach(b=>b.onclick=async()=>{
     const [ev,slotId,staffId]=b.dataset.removeVolunteer.split('|');
     if(!staffId||!confirmDecision('Remove this volunteer from the shift?'))return;
     try{await post('shifts','remove_claim',{eventId:ev,slotId,staffId});dlg.close();flash('Volunteer removed.');volunteerPage()}catch(error){flash(error.message)}
@@ -1219,8 +1219,8 @@ async function contentManagementPage(){
   const votes=p.status==='Voting'&&!owner()?'<h3>Vote</h3><div class="hq-actions">'+btn('Support','data-content-vote="yes"','primary')+btn('Oppose','data-content-vote="no"')+btn('Abstain','data-content-vote="abstain"')+'</div>':'';
   const founder=owner()?'<h3>Founder review</h3><div class="hq-actions">'+(p.tally?.passed&&['Voting','Awaiting Founder'].includes(p.status)?btn('Approve & publish','data-content-decision="approve"','primary'):'')+(p.status==='Published'?btn('Rollback change','data-content-decision="rollback"'):'')+(p.status==='Voting'||p.status==='Awaiting Founder'?btn('Return for edits','data-content-decision="return"')+btn('Decline','data-content-decision="decline"','danger'):'')+'</div>':'';
   const dialog=modal('Review website text','<p><a target="_blank" rel="noopener noreferrer" href="'+base+esc(p.path)+'">View affected page ↗</a></p><h3>Current wording</h3>'+card('<p class="hq-prose">'+esc(p.original)+'</p>')+'<h3>Proposed wording</h3>'+card('<p class="hq-prose">'+esc(p.replacement)+'</p>')+'<p>'+tag(p.status)+' · '+number(p.tally?.yes)+' support · '+number(p.tally?.needed)+' required</p>'+votes+founder);
-  $('[data-content-vote]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','vote',{id:p.id,vote:x.dataset.contentVote});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
-  $('[data-content-decision]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','decide',{id:p.id,decision:x.dataset.contentDecision,reason:''});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
+  $$('[data-content-vote]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','vote',{id:p.id,vote:x.dataset.contentVote});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
+  $$('[data-content-decision]',dialog).forEach(x=>x.onclick=async()=>{try{await post('selc-content','decide',{id:p.id,decision:x.dataset.contentDecision,reason:''});dialog.close();contentManagementPage()}catch(e){flash(e.message)}});
  });
 }
 
