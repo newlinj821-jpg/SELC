@@ -379,7 +379,7 @@ async function certificationPage(){
  const roleLessons={
   representative:[
    {title:'Representative judgment and feedback',objective:'Provide useful leadership analysis without crossing enforcement authority.',steps:['Review the complete relevant IA and ban history through your authorized access.','Write specific feedback that separates evidence, uncertainty, proportionality and proposed follow-up.','Recuse when personally involved and escalate urgent concerns through the on-duty safety response.'],scenario:'A Ban Report asks you to support a decision. Submit your supported feedback rather than trying to impose the ban yourself.'},
-   {title:'Representative participation and working groups',objective:'Contribute to operations without duplicating the Staff or Coordinator workspace.',steps:['Choose focus areas and work with colleagues on governance, education, events or outreach.','Use the Staff Portal only if separately appointed and certified as Staff or DM.','Contribute votes and implementation updates within your own role.'],scenario:'A Coordinator is unavailable. Document the pending work and route it to the designated reviewer; do not assume unrestricted administrator credentials.'}
+   {title:'Representative participation and working groups',objective:'Contribute to operations without duplicating the Staff or Coordinator workspace.',steps:['Choose focus areas and work with colleagues on governance, education, events or outreach.','Use the Staff Portal when you also hold a separately accepted and certified Staff or DM role.','Contribute votes and implementation updates within your own role.'],scenario:'A Coordinator is unavailable. Document the pending work and route it to the designated reviewer; do not assume unrestricted administrator credentials.'}
   ],
   coordinator:[
    {title:'Coordinator administration and supervision',objective:'Use delegated administration with disciplined access controls and oversight.',steps:['Review event staffing coverage, member and role queues, application status and time-sensitive safety cases.','Close or reopen volunteer positions through the authorized staffing controls; Staff and DM shift claims still require separate qualification.','Delegate with an identified owner and an escalation route; avoid shared logins and undocumented overrides.'],scenario:'An event has an uncovered DM slot. Do not fill it with a Representative who lacks DM certification; recruit a qualified DM and log the staffing risk.'},
@@ -441,7 +441,7 @@ async function ballotsPage(){
 async function applicationsPage(){
  if(!reviewer())return;
  const result=await api('selc-governance',{query:{scope:'applications'}}),rows=result.applications||[];
- setContent(pageHeader('LEADERSHIP / PRIVATE REVIEWS','SELC applications','Confidential application review for appointed Coordinators and designated administrators.')+
+ setContent(pageHeader('LEADERSHIP / PRIVATE REVIEWS','SELC applications','Confidential application review for authorized Coordinators and designated administrators.')+
  (rows.length?rows.map(a=>card('<div class="hq-row"><div class="grow"><strong>'+esc(a.displayName)+' · '+(a.type==='coordinator'?'Coordinator advancement':a.type==='advisor'?'Advisor application':a.pendingRole==='advisor'?'Advisor offer from Representative application':'Representative application')+'</strong><p>'+esc(date(a.createdAt))+' · '+esc(a.id)+'</p></div>'+tag(a.status)+btn('Open','data-openapp="'+esc(a.id)+'"')+'</div>')).join(''):empty('No applications here','Applicants and their responses will appear when submitted.')));
  $$('[data-openapp]').forEach(b=>b.onclick=()=>{const a=rows.find(x=>x.id===b.dataset.openapp);if(!a)return;
  const answers=Object.entries(a.answers||{}).map(([k,v])=>'<div class="hq-row"><div class="grow"><strong>'+esc(k.replaceAll('_',' '))+'</strong><p class="hq-prose">'+esc(v)+'</p></div></div>').join('');
@@ -464,7 +464,7 @@ async function applicationsPage(){
   '<div class="hq-actions">'+actionButtons+'</div><p data-status class="hq-form-status"></p></form>'+(a.reviewHistory?.length?'<section class="hq-card"><h3>Decision history</h3>'+a.reviewHistory.map(e=>'<p class="hq-micro">'+esc(date(e.at))+' · '+esc(e.action)+' · '+esc(e.reviewedBy||'SELC')+' — '+esc(e.notes||'')+'</p>').join('')+'</section>':'');
  const d=modal(a.displayName+' · '+a.type,reviewMarkup);
  $$('[data-action]',d).forEach(btnEl=>btnEl.onclick=async()=>{const vals=formValues($('#appReviewForm',d)),action=btnEl.dataset.action;try{
-  if(action==='appoint'){const override=!!$('#appReviewForm input[name=founderOverride]',d)?.checked;if(override&&String(vals.founderOverrideReason||'').trim().length<20)throw new Error('Document the Founder exception with at least 20 characters.');if(!confirmDecision(override?'Record the Founder exception and assign certification?':'Accept this application and assign SELC certification? Appointment privileges activate only after a passing assessment.'))return;await post('selc-governance','appoint',{id:a.id,...vals,founderOverride:override,founderOverrideReason:override?vals.founderOverrideReason:'',publicProfile:!!$('#appReviewForm input[name=publicProfile]',d).checked})}
+  if(action==='appoint'){const override=!!$('#appReviewForm input[name=founderOverride]',d)?.checked;if(override&&String(vals.founderOverrideReason||'').trim().length<20)throw new Error('Document the Founder exception with at least 20 characters.');if(!confirmDecision(override?'Record the Founder exception and assign certification?':'Accept this application and assign SELC certification? Role permissions activate after certification is completed.'))return;await post('selc-governance','appoint',{id:a.id,...vals,founderOverride:override,founderOverrideReason:override?vals.founderOverrideReason:'',publicProfile:!!$('#appReviewForm input[name=publicProfile]',d).checked})}
   else if(action==='decline')await post('selc-governance','decline',{id:a.id,notes:vals.notes});
   else if(action==='reopen'||action==='offer-advisor'){
    if(String(vals.notes||'').trim().length<15)throw new Error('Write at least 15 characters explaining the new decision.');
@@ -550,12 +550,12 @@ async function leadershipWorkPage(){
 
 async function leaderPage(){
  const data=await api('selc-governance',{query:{scope:'members'}}),people=(data.members||[]).sort((a,b)=>({coordinator:0,representative:1,advisor:2}[a.role]??3)-({coordinator:0,representative:1,advisor:2}[b.role]??3)||String(a.displayName||'').localeCompare(String(b.displayName||'')));
- let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Advisors, three Representatives and two Coordinators, plus Eros as Founder/Director. All three appointed leadership tiers may discuss and vote on committee proposals; action and approval permissions remain role-specific.');
+ let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Advisors, three Representatives and two Coordinators, plus Eros as Founder/Director. All three accepted leadership tiers may discuss and vote on committee proposals; action and approval permissions remain role-specific.');
  markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.filter(x=>x.role==='representative').length+' / 3</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div><div class="hq-stat"><small>ADVISORS</small><strong>'+people.filter(x=>x.role==='advisor').length+' / 5</strong></div></div>';
  if(people.filter(x=>x.role==='representative').length>3)markup+=card('<h3>Representative transition</h3><p>The new standard capacity is three Representatives. Existing accepted roles above this number remain valid during a deliberate transition. No one is automatically demoted; new Representative accepted roles stay paused until a vacancy opens within the three-seat cap.</p>');
  markup+=card('<h2>Committee members and Advisors</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>'+(p.role==='advisor'?'Advisor · project and community participation':'Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role))+' · '+esc(p.availability?.status||'Available')+(p.availability?.until?' through '+esc(p.availability.until):'')+'</p></div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
  if(owner())markup+=card('<h2>Lead the role process</h2><p>Review and appoint Representatives or Coordinators from applications. Coordinator applications follow a documented selection process and committee voting where eligible.</p>'+btn('Review SELC applications','data-page-link="applications"','primary'));
- setContent(markup);bindPageLinks();$$('[data-remove]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Remove this SELC leadership role? Their regular membership remains separate.'))return;try{await post('selc-governance','remove',{accountId:b.dataset.remove});flash('Appointment ended.');leaderPage()}catch(e){flash(e.message)}});
+ setContent(markup);bindPageLinks();$$('[data-remove]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Remove this SELC leadership role? Their regular membership remains separate.'))return;try{await post('selc-governance','remove',{accountId:b.dataset.remove});flash('Leadership role ended.');leaderPage()}catch(e){flash(e.message)}});
 }
 async function proposalPage(){
  const [d,team]=await Promise.all([api('selc-governance',{query:{scope:'proposals'}}),api('selc-governance',{query:{scope:'members'}}).catch(()=>({members:[]}))]),rows=d.proposals||[],members=team.members||[];
@@ -721,7 +721,7 @@ async function staffPathPage(){
  const steps=[
   ['Apply','Use the Member Portal Staff application. Give your preferred responsibilities, relevant experience, availability and examples of sound judgment. Your SELC position is not a substitute for this application.'],
   ['Verification','Your approved Portal membership, linked member identity and submitted application are reviewed. You cannot approve or verify your own Staff application.'],
-  ['Appointment','Once approved, an active Staff role must be linked to your existing member identity. You retain your Representative or Coordinator role.'],
+  ['Appointment','After acceptance, an active Staff role must be linked to your existing member identity. You retain your Representative or Coordinator role.'],
   ['Certification','Complete the separate Staff certification (and Dungeon Monitor certification if applicable) before working a safety-sensitive shift.'],
   ['Volunteer','Open the Staff Portal and claim an available event position. Your shift and complimentary Staff admission are recorded in Portal, not SELC.']
  ];
@@ -1063,7 +1063,7 @@ async function founderDeskPage(){
  const digest=results[3].status==='fulfilled'?results[3].value:null;
  const pending=(content.proposals||[]).filter(x=>x.status==='Awaiting Founder').length;
  const unread=(chats.rooms||[]).reduce((n,x)=>n+Number(x.unread||0),0);
- setContent(pageHeader('FOUNDER & CHAIR','Founder command center','One place for decisions and operational oversight without crowding the workspace.')+
+ setContent(pageHeader('FOUNDER / DIRECTOR','Founder command center','One place for decisions and operational oversight without crowding the workspace.')+
   '<div class="hq-stats">'+
   card('<span class="hq-eyebrow">Approval queue</span><h2>'+number(pending)+'</h2><p>Content changes awaiting your decision</p>'+btn('Review decisions','data-go="content"','primary'))+
   card('<span class="hq-eyebrow">Event readiness</span><h2>'+number(readiness.needsAttention)+'</h2><p>Upcoming events requiring attention</p>'+btn('Review events','data-go="readiness"'))+
