@@ -233,7 +233,14 @@ async function openPage(page){
  load();
  try{
   const pages={communityinbox:communityInboxPage,memberdesk:memberDeskPage,suggestionsdesk:suggestionsDeskPage,feedbackdesk:feedbackDeskPage,availability:availabilityPage,admincenter:coordinatorAdminPage,founderdesk:founderDeskPage,content:contentManagementPage,chat:communityChatPage,banhistory:banHistoryPage,readiness:eventReadinessPage,home:homePage,join:joinPage,certification:certificationPage,coordinator:coordinatorPage,ballots:ballotsPage,applications:applicationsPage,leader:leaderPage,work:leadershipWorkPage,handbook:roleHandbookPage,staffconnection:staffConnectionPage,proposals:proposalPage,requests:()=>requestsPage('all'),communityleaders:communityLeadersPage,educators:educationProgramsPage,applyeducator:educatorApplicationPage,educatorreviews:educatorReviewsPage,registry:memberRegistryPage,generalapps:generalAppsPage,events:eventPage,volunteer:volunteerPage,staffpath:staffPathPage,iacases:iaCasesPage,banreports:banReportsPage,appeals:appealReviewPage,myaccount:accountPage};
-  await (pages[page]||homePage)();$('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
+  await (pages[page]||homePage)();
+  // Leadership applicants must be able to answer clarification requests in SELC,
+  // not only through their separately linked Portal application history.
+  if(page==='home'||page==='join'){
+   renderApplicantFollowups($('#hqContent'),context.data.home?.myApplications||[],'selc')
+    .catch(error=>console.error('SELC application follow-ups',error));
+  }
+  $('#hqContent')?.scrollTo?.({top:0,behavior:'instant'});
  }catch(error){if(error.status===401){clearAccess();$('#headquarters').classList.add('hidden');$('#publicSite').classList.remove('hidden');document.body.style.overflow='';openLogin();flash('Your session expired. Please sign in again.');return}failure(error)}
 }
 async function staffConnectionPage(){
@@ -1065,8 +1072,9 @@ async function appealReviewPage(){
 
 async function renderApplicantFollowups(root,items,kind){
  if(!root||!items?.length)return;
+ const openedPage=context.activePage;
  const results=await Promise.allSettled(items.map(async item=>({item,result:await api('application-followups',{query:{kind,id:item.id}})})));
- if(!root.isConnected)return;
+ if(!root.isConnected||context.activePage!==openedPage)return;
  const active=results.filter(x=>x.status==='fulfilled').map(x=>x.value).filter(x=>(x.result.followups||[]).length);
  if(!active.length)return;
  const section=document.createElement('section');section.className='hq-card';section.innerHTML='<h2>Questions from SELC</h2><p>Your original application remains unchanged. Respond to each follow-up below.</p>';
