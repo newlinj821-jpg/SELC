@@ -442,15 +442,17 @@ async function ballotsPage(){
 /* Applicant follow-ups are served by Portal for both SELC HQ and Member Portal. */
 function attachFollowupDesk(dialog,record,kind){
  const host=document.createElement('section');host.className='hq-card';host.innerHTML='<h3>Clarifications & assigned learning</h3><p class="se-muted">Select the original answer to request clarification. Replies remain attached to the application. Course assignments appear in the applicant’s Portal.</p><div data-followup-list></div><form class="hq-form" data-followup-form><label>Application answer<select name="questionKey" required></select></label><label>Clarification question<textarea name="question" minlength="8" maxlength="3000" required></textarea></label><p data-status></p><button type="submit" class="hq-button primary">Send clarification request</button></form><form class="hq-form" data-course-form><label>Assign certification or course<select name="courseType" required></select></label><label>Reason or guidance<textarea name="reason" rows="2" maxlength="500"></textarea></label><p data-status></p><button class="hq-button" type="submit">Assign course</button></form>';
- const source=kind==='selc'?(record.answers||{}):record;
- const omit=new Set(['id','accountId','memberId','memberRecordId','createdAt','updatedAt','deletedAt','status','adminNotes','reviewNotes','rulesSecretWord','reviewAssist','applicationVersion','isTestAccount','applicationKind','reviewHistory']);
- const keys=Object.keys(source).filter(k=>!omit.has(k)&&!PRIVATE_APP_KEY.test(k)&&['string','number','boolean'].includes(typeof source[k])&&source[k]!==null);
- const select=host.querySelector('[name=questionKey]');select.innerHTML=keys.map(k=>'<option value="'+esc(k)+'">'+esc(readableLabel(k))+'</option>').join('');
+ const select=host.querySelector('[name=questionKey]');
  const course=host.querySelector('[name=courseType]');
  dialog.querySelector('.se-app-detail')?.append(host);
  if(!host.isConnected)dialog.append(host);
  const render=async()=>{
   const data=await api('application-followups',{query:{kind,id:record.id}});
+  // The Portal supplies the authorized narrative-answer keys, never identity fields.
+  const source=kind==='selc'?(record.answers||{}):record;
+  select.innerHTML=(data.eligibleQuestions||[]).map(key=>'<option value="'+esc(key)+'">'+esc(readableLabel(key))+'</option>').join('');
+  host.querySelector('[data-followup-form] button[type=submit]').disabled=!select.options.length;
+
   host.querySelector('[data-followup-list]').innerHTML=(data.followups||[]).length?data.followups.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.questionLabel)+' · '+esc(x.status)+'</strong><p>'+esc(x.question)+'</p><p class="se-muted">Original: '+esc(x.originalAnswer)+'</p>'+(x.reply?'<p><strong>Applicant response:</strong> '+esc(x.reply)+'</p>':'')+'</div></div>').join(''):'<p class="se-muted">No clarification requests yet.</p>';
   course.innerHTML=(data.courses||[]).map(x=>'<option value="'+esc(x.type)+'">'+esc(x.label)+'</option>').join('');
   host.querySelector('[data-followup-list]').insertAdjacentHTML('beforeend',(data.assignments||[]).length?'<h4>Assigned learning</h4>'+(data.assignments||[]).map(a=>'<p><strong>'+esc(a.label)+'</strong> · '+esc(a.status)+'</p>').join(''):'');
