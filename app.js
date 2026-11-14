@@ -453,6 +453,7 @@ function attachFollowupDesk(dialog,record,kind){
   const data=await api('application-followups',{query:{kind,id:record.id}});
   host.querySelector('[data-followup-list]').innerHTML=(data.followups||[]).length?data.followups.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.questionLabel)+' · '+esc(x.status)+'</strong><p>'+esc(x.question)+'</p><p class="se-muted">Original: '+esc(x.originalAnswer)+'</p>'+(x.reply?'<p><strong>Applicant response:</strong> '+esc(x.reply)+'</p>':'')+'</div></div>').join(''):'<p class="se-muted">No clarification requests yet.</p>';
   course.innerHTML=(data.courses||[]).map(x=>'<option value="'+esc(x.type)+'">'+esc(x.label)+'</option>').join('');
+  host.querySelector('[data-followup-list]').insertAdjacentHTML('beforeend',(data.assignments||[]).length?'<h4>Assigned learning</h4>'+(data.assignments||[]).map(a=>'<p><strong>'+esc(a.label)+'</strong> · '+esc(a.status)+'</p>').join(''):'');
  };
  render().catch(e=>{host.querySelector('[data-followup-list]').textContent=e.message});
  watchForm(host.querySelector('[data-followup-form]'),async values=>{
