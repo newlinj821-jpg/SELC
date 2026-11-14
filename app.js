@@ -225,8 +225,9 @@ async function openPage(page){
  if(page==='library')page='handbook';
  if(context.chatTimer){clearTimeout(context.chatTimer);context.chatTimer=null}
  if(context.editorPickListener){removeEventListener('message',context.editorPickListener);context.editorPickListener=null}
- const allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())));
- if(!allowed)page=organizerRole(role())?'communityleaders':'home';context.activePage=page;
+ let allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())));
+ if(!allowed){page=organizerRole(role())?'communityleaders':'home';allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())))}
+ context.activePage=page;
  $$('#hqNavigation [data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
  $('#hqCurrentSection').textContent=allowed?.[2]?.toUpperCase()||'HEADQUARTERS';
  if(location.hash!=='#/'+page)history.replaceState(null,'','#/'+page);
@@ -493,7 +494,7 @@ async function applicationsPage(){
   :(waiting?'<p>Founder acceptance recorded; certification pending.</p>':btn('Mark under review','data-action="review"')+btn('Recommend','data-action="recommend"','primary')+btn('Not recommended','data-action="not-recommended"'));
  const exceptionAvailable=owner()&&a.type==='coordinator'&&a.founderOverrideEligible===true&&!waiting&&!closed;
  const exceptionMarkup=exceptionAvailable?
-   '<section class="hq-card"><h3>Early committee role exception</h3><p>There are '+number(a.eligibleVoters||0)+' other active eligible Representatives. Eros may authorize the Coordinator advancement while the committee is forming. Certification is still mandatory.</p>'+
+   '<section class="hq-card"><h3>Early committee role exception</h3><p>There are '+number(a.eligibleVoters||0)+' other eligible committee voters. Eros may authorize the Coordinator advancement while the committee is forming. Certification is still mandatory.</p>'+
    '<label class="checkline"><input type="checkbox" name="founderOverride"> Use the Founder exception instead of a successful vote</label>'+
    '<label>Reason (at least 20 characters)<textarea name="founderOverrideReason" rows="3" placeholder="Explain why a normal vote is not yet practical."></textarea></label></section>':
    (a.type==='coordinator'&&owner()&&!waiting&&!closed?'<p class="hq-micro">A successful Representative vote is required while two or more other eligible voters are active.</p>':'');
