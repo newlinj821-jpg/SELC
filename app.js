@@ -175,7 +175,7 @@ const NAV=[
  ['handbook','▤','Staff Handbook','Your work',u=>u==='staff'],
  ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
   ['admincenter','◈','Coordinator administration','Leadership',u=>u==='coordinator'],
- ['join','✎','Apply to SELC','Your work',u=>u==='member'||u==='advisor'],
+ ['join','✎','Apply to SELC','Your work',u=>['member','advisor','community-applicant','community-leader'].includes(u)],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
  ['ballots','✓','Coordinator election','Your work',u=>participantRole(u)&&u!=='founder'],
@@ -259,7 +259,7 @@ async function advisorHomePage(home){
  const eligible=(proposals.proposals||[]).filter(p=>p.status==='Discussion');
  const markup=pageHeader('SELC / ADVISOR','Welcome back, '+esc((context.me.displayName||'Advisor').split(' ')[0]),'Support member communications, education, outreach and community improvement. You may provide feedback and vote on committee proposals across all categories.')+
   '<div class="hq-stats"><div class="hq-stat"><small>SHARED MESSAGES</small><strong>'+number(inbox.messages?.length||0)+'</strong></div><div class="hq-stat"><small>ADVISOR-ELIGIBLE VOTES</small><strong>'+number(eligible.length)+'</strong></div></div>'+
-  card('<h2>Your Advisor responsibilities</h2><p>Participate in SELC chat, review opted-in member communications and event feedback, contribute educational ideas, and vote on committee proposals. Private IA records, membership approvals, Staff accepted roles and bans remain outside the Advisor role.</p><div class="hq-actions">'+btn('Community inbox','data-page-link="communityinbox"','primary')+btn('Proposals and votes','data-page-link="proposals"')+btn('SELC chat','data-page-link="chat"')+btn('Apply for Representative','data-page-link="join"')+'</div>');
+  card('<h2>Your Advisor responsibilities</h2><p>Participate in SELC chat, review opted-in member communications and event feedback, contribute educational ideas, and vote on committee proposals. Private IA records, membership approvals, Staff accepted roles and bans remain outside the Advisor role.</p><div class="hq-actions">'+btn('Community inbox','data-page-link="communityinbox"','primary')+btn('Proposals and votes','data-page-link="proposals"')+btn('SELC chat','data-page-link="chat"')+btn('Leadership progression','data-page-link="join"')+'</div>');
  setContent(markup);bindPageLinks();
 }
 async function homePage(){
@@ -298,13 +298,16 @@ const ADVISORFIELDS=[
 ];
 async function joinPage(){
  const home=context.data.home||await api('selc-governance',{query:{scope:'home'}}),pending=home.myApplications||[];
- let markup=pageHeader('YOUR APPLICATION','Join SELC','Choose an Advisor or Representative path. Advisors focus on community, education and eligible votes; Representatives independently manage routine membership and organizational reviews. All accepted roles require approval and certification.');
+ let markup=pageHeader('YOUR APPLICATION','Join SELC','Advisors may join with a verified Portal email account without Sanctum Eros membership. Representatives and Coordinators require approved active SE membership and separate advancement and certification.');
+ const hasSE=!!home.me?.hasApprovedSEMembership;
+ if(!hasSE)markup+=card('<h2>Expand your opportunities with SE membership</h2><p>Your SELC Advisor pathway does not require SE membership. Apply separately to Sanctum Eros to become eligible for Representative advancement, eligible SE events, educational opportunities and other member programs. SE membership is free and reviewed independently. Dungeon parties remain 21+.</p><p class="hq-micro">SE membership: '+esc(home.me?.seMembershipStatus||'Not a member')+'</p><div class="hq-actions"><a class="hq-button primary" href="https://sanctumportal.org/membership.html#apply">Apply for SE membership</a><a class="hq-button" href="https://sanctumportal.org/member.html">Sign in to Portal</a></div>');
  if(pending.length)markup+=card('<h2>Your application history</h2>'+pending.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type==='advisor'?'Advisor':a.type==='coordinator'?'Coordinator':'Representative')+' application</strong><p>'+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join(''));
- if(!['member','advisor'].includes(role())){setContent(markup+card('<h2>Your leadership role is already active</h2><p>Use your leadership sections for current responsibilities.</p>'));return}
+ if(!['member','advisor','community-applicant','community-leader'].includes(role())){setContent(markup+card('<h2>Your leadership role is already active</h2><p>Use your leadership sections for current responsibilities.</p>'));return}
  if(pending.some(a=>['Pending','Under Review','Recommended','Certification Pending'].includes(a.status))){setContent(markup+card('<h2>An application is already in progress</h2><p>Finish the existing review or assigned certification before submitting another SELC application.</p>'+btn('Review my status','data-page-link="home"','primary')));bindPageLinks();return}
+ if(role()==='advisor'&&!hasSE){setContent(markup+card('<h2>Your next leadership opportunity</h2><p>Once your separate SE membership application is approved, return here to apply for Representative advancement. Your Advisor role continues while an SE membership application is pending.</p>'));return}
  const choices=role()==='advisor'?
   '<option value="representative">Representative — advance from Advisor</option>':
-  '<option value="advisor">Advisor — community and education</option><option value="representative">Representative — organizational leadership</option>';
+  '<option value="advisor">Advisor — community and education</option>'+(hasSE?'<option value="representative">Representative — organizational leadership</option>':'');
  markup+=card('<h2>Select a leadership path</h2><p>Advisor positions are capped at five, Representative positions at three, and Coordinator positions at two. Existing accepted roles remain in place during the transition.</p><form id="repForm" class="hq-form"><label>Position to apply for<select name="targetRole" id="selcTargetRole" required>'+choices+'</select></label><div id="selcApplicationQuestions"></div><label class="checkline"><input type="checkbox" name="truthful" required> These responses reflect my experience and intentions.</label><p data-status class="hq-form-status" aria-live="polite"></p><button type="submit" class="hq-button primary">Submit SELC application</button></form>');
  setContent(markup);
  const selector=$('#selcTargetRole'),questions=$('#selcApplicationQuestions');
@@ -313,7 +316,7 @@ async function joinPage(){
  watchForm($('#repForm'),async(data,form)=>{
   if(!data.truthful)throw new Error('Confirm the accuracy of your application.');
   const target=String(data.targetRole||'');
-  if(!['advisor','representative'].includes(target)||(role()==='advisor'&&target!=='representative'))throw new Error('Choose a permitted SELC application path.');
+  if(!['advisor','representative'].includes(target)||(role()==='advisor'&&target!=='representative')||(target==='representative'&&!hasSE))throw new Error('Choose a permitted SELC application path.');
   const fields=target==='advisor'?ADVISORFIELDS:REPFIELDS;
   const answers=Object.fromEntries(fields.map(f=>[f[0],data[f[0]]]));
   if(String(answers.motivation||'').trim().length<80||String(answers.experience||'').trim().length<80)throw new Error('Please expand your motivation and experience to at least 80 characters each.');
