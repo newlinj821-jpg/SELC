@@ -52,6 +52,12 @@ $('#applyForm').onsubmit=async e=>{e.preventDefault();const form=e.currentTarget
  message(form,'Advisor application submitted. You can monitor your status in SELC Headquarters.',true);
  await showApplication()
  }catch(error){message(form,error.message)}finally{button.disabled=false}};
-if(token){showApplication().catch(()=>{token='';sessionStorage.removeItem(TOKEN_KEY);tab('signin')})}
+if(token){showApplication().catch(error=>{
+ // Preserve the session during temporary Portal/network failures. A 401/403
+ // should require a fresh sign-in, but an outage must not log applicants out.
+ const denied=/(session|expired|sign in|unauthori[sz]ed|permission|access denied)/i.test(String(error?.message||''));
+ if(denied){token='';sessionStorage.removeItem(TOKEN_KEY)}
+ tab('signin');message($('#signInForm'),denied?'Your session needs to be renewed. Sign in to continue.':'Could not load your application right now. Your session has been preserved; refresh to retry.');
+})}
 else if(location.hash==='#signin')tab('signin');
 })();
