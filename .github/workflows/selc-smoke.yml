@@ -15,8 +15,15 @@ jobs:
       - name: Validate SELC frontend and gateway syntax
         run: |
           node --check app.js
+          node --check advisor/advisor.js
+          node --check community-leaders/account.js
+          node --check teacher-materials.js
+          node --check se-education/public/app.js
+          node --check content-overrides.js
           node --check netlify/functions/portal-gateway.mjs
           node --check qa/smoke.mjs
           node --check qa/live-auth-release-gate.mjs
       - name: Validate public routes, Community Leaders and sign-in paths
         run: node qa/smoke.mjs
+      - name: Check SELC interaction and page contracts
+        run: node --test tests/*.test.mjs
