@@ -795,7 +795,7 @@ async function generalAppsPage(){
   const dlg=modal((isMember?'Membership':isAssistance?'Admission assistance':'Role')+' · '+name,'<div class="se-app-detail"><p class="se-muted">Application details supplied by the Portal. Missing questions cannot be reconstructed from a partial saved record.</p>'+applicationDetails(record)+'</div><form class="hq-form" id="seReviewForm">'+form+'<p data-status class="hq-form-status"></p><div class="se-review-actions">'+buttons+'</div></form>');
   dlg.classList.add('se-wide-modal');
   attachFollowupDesk(dlg,record,isMember?'membership':'role');
-  $('[data-member-decision]',dlg).forEach(b=>b.onclick=async()=>{
+  $$('[data-member-decision]',dlg).forEach(b=>b.onclick=async()=>{
    if(!await confirmDecision('Record this membership decision?'))return;
    b.disabled=true;try{await api('members',{method:'POST',body:{adminAction:b.dataset.memberDecision,id:record.id,...formValues($('#seReviewForm',dlg))}});dlg.close();flash('Membership review saved.');await generalAppsPage()}catch(e){setStatus($('[data-status]',dlg),e.message)}finally{b.disabled=false}
   });
