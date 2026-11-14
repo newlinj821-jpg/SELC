@@ -81,7 +81,7 @@ for(const selector of ['[data-educator-review]','[data-handover]','[data-leader-
  assert.ok(app.includes("$$('"+selector+"').forEach"),'Multi-button handler must use the collection selector: '+selector);
 }
 
-assert.match(home,/SELC certification before your committee role/);
+assert.match(home,/complete role certification after Founder acceptance/);
 assert.match(home,/Community Leaders is an independently approved network/);
 assert.match(purpose,/followed by SELC certification/);
 assert.match(app,/async function certificationPage\(\)/);
