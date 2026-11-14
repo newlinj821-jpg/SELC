@@ -44,6 +44,6 @@ test('SELC role-based navigation keeps private operations away from Advisors',()
  const nav=app.slice(app.indexOf('const NAV=['),app.indexOf('function setupHQNav()'));
  for(const route of ['registry','generalapps','events','iacases','banreports'])assert.match(nav,new RegExp("\\['"+route+"'.*committeeRole\\(u\\)"),route+' needs an authorization predicate');
  for(const route of ['communityinbox','proposals','chat','myaccount'])assert.ok(nav.includes("'"+route+"'"),route+' missing');
- assert.match(app,/const isReviewer/);
+ assert.match(app,/const reviewer=\(\)=>/);
  assert.match(app,/\['founder','coordinator'\]/);
 });
