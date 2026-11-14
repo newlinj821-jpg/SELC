@@ -54,6 +54,7 @@ assert.match(organizerJS,/email_reset_complete/);
 assert.match(organizerJS,/Verify email in the Portal/);
 assert.match(organizerCSS,/leader-account-choice/);
 assert.match(app,/committeeRole\(u\)/);
+assert.match(app,/\$\$\('\[data-member-decision\]',dlg\)\.forEach/,'All membership decision buttons must be wired');
 assert.doesNotMatch(app,/u!=='member'/);
 assert.match(app,/id="communityMessage"/);
 assert.match(app,/id="communitySafety"/);
