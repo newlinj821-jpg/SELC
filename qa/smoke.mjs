@@ -26,7 +26,8 @@ assert.match(home,/<a[^>]+href="\/community-leaders\/"[^>]*>COMMUNITY LEADERS &a
 assert.match(home,/href="\/purpose\/">GET TO KNOW US/);
 assert.match(home,/href="https:\/\/sanctumportal\.org\/selc-connect\.html"/);
 assert.match(home,/login-handoff/);
-assert.match(home,/selc-discontinued-events-1/);
+assert.match(app,/const isDiscontinuedEvent=/,'Discontinued party filter must exist');
+assert.match(app,/const activeSELCEvents=/,'Every SELC event view must use the discontinued-event filter');
 assert.match(app,/async function communityChatPage\(\)/);
 assert.match(app,/async function contentManagementPage\(\)/);
 assert.match(app,/async function founderDeskPage\(\)/);
