@@ -1086,6 +1086,7 @@ async function communityLeadersPage(){
    const item=(d.applications||[]).find(x=>x.id===button.dataset.leaderReview);
    if(!item)return;
    const dlg=modal('Review '+item.organization,'<p>Applicant: '+esc(item.leaderName)+'</p><p>'+esc(item.motivation)+'</p><form class="hq-form" id="leaderDecision"><label>Decision</label><select name="status"><option>Needs Verification</option><option>Approved</option><option>Declined</option></select><label>Review notes</label><textarea name="notes" rows="3"></textarea><p data-status></p><button class="hq-button primary">Save review</button></form>');
+   attachFollowupDesk(dlg,item,'community');
    watchForm($('#leaderDecision',dlg),async values=>{await post('community-leaders','review',{id:item.id,...values});dlg.close();flash('Community Leader review saved.');communityLeadersPage()});
  });
  $$('[data-leader-revoke]').forEach(button=>button.onclick=()=>{
