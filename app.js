@@ -438,6 +438,33 @@ async function ballotsPage(){
  const html=pageHeader('LEADERSHIP / ELECTIONS','Coordinator elections','Candidates sit out their own vote. Candidate votes are excluded from their own selection, and the result follows the recorded role process.')+(rows.length?rows.map(a=>card('<span class="hq-eyebrow">COORDINATOR CANDIDATE</span><h2>'+esc(a.name)+'</h2><p>'+esc(a.statement)+'</p><div class="hq-actions">'+btn('Support','data-ballot="'+esc(a.id)+'" data-vote="yes"','primary')+btn('Oppose','data-ballot="'+esc(a.id)+'" data-vote="no"')+btn('Abstain','data-ballot="'+esc(a.id)+'" data-vote="abstain"')+'</div>')).join(''):empty('No Coordinator elections are open','Applications and voting opportunities appear here when available.'));
  setContent(html);$$('[data-ballot]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Record your private vote? You can update it while voting remains open.'))return;try{await post('selc-governance','vote_coordinator',{id:b.dataset.ballot,vote:b.dataset.vote});flash('Your vote was recorded.')}catch(e){flash(e.message)}});
 }
+
+/* Applicant follow-ups are served by Portal for both SELC HQ and Member Portal. */
+function attachFollowupDesk(dialog,record,kind){
+ const host=document.createElement('section');host.className='hq-card';host.innerHTML='<h3>Clarifications & assigned learning</h3><p class="se-muted">Select the original answer to request clarification. Replies remain attached to the application. Course assignments appear in the applicant’s Portal.</p><div data-followup-list></div><form class="hq-form" data-followup-form><label>Application answer<select name="questionKey" required></select></label><label>Clarification question<textarea name="question" minlength="8" maxlength="3000" required></textarea></label><p data-status></p><button type="submit" class="hq-button primary">Send clarification request</button></form><form class="hq-form" data-course-form><label>Assign certification or course<select name="courseType" required></select></label><label>Reason or guidance<textarea name="reason" rows="2" maxlength="500"></textarea></label><p data-status></p><button class="hq-button" type="submit">Assign course</button></form>';
+ const source=kind==='selc'?(record.answers||{}):record;
+ const omit=new Set(['id','accountId','memberId','memberRecordId','createdAt','updatedAt','deletedAt','status','adminNotes','reviewNotes','rulesSecretWord','reviewAssist','applicationVersion','isTestAccount','applicationKind','reviewHistory']);
+ const keys=Object.keys(source).filter(k=>!omit.has(k)&&!PRIVATE_APP_KEY.test(k)&&['string','number','boolean'].includes(typeof source[k])&&source[k]!==null);
+ const select=host.querySelector('[name=questionKey]');select.innerHTML=keys.map(k=>'<option value="'+esc(k)+'">'+esc(readableLabel(k))+'</option>').join('');
+ const course=host.querySelector('[name=courseType]');
+ dialog.querySelector('.se-app-detail')?.append(host);
+ if(!host.isConnected)dialog.append(host);
+ const render=async()=>{
+  const data=await api('application-followups',{query:{kind,id:record.id}});
+  host.querySelector('[data-followup-list]').innerHTML=(data.followups||[]).length?data.followups.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.questionLabel)+' · '+esc(x.status)+'</strong><p>'+esc(x.question)+'</p><p class="se-muted">Original: '+esc(x.originalAnswer)+'</p>'+(x.reply?'<p><strong>Applicant response:</strong> '+esc(x.reply)+'</p>':'')+'</div></div>').join(''):'<p class="se-muted">No clarification requests yet.</p>';
+  course.innerHTML=(data.courses||[]).map(x=>'<option value="'+esc(x.type)+'">'+esc(x.label)+'</option>').join('');
+ };
+ render().catch(e=>{host.querySelector('[data-followup-list]').textContent=e.message});
+ watchForm(host.querySelector('[data-followup-form]'),async values=>{
+  await post('application-followups','request',{kind,id:record.id,questionKey:values.questionKey,questionLabel:readableLabel(values.questionKey),question:values.question});
+  flash('Clarification sent to the applicant.');host.querySelector('[name=question]').value='';await render()
+ });
+ watchForm(host.querySelector('[data-course-form]'),async values=>{
+  await post('application-followups','assign_course',{kind,id:record.id,courseType:values.courseType,reason:values.reason});
+  flash('Certification assigned to the applicant’s Portal.');await render()
+ });
+}
+
 async function applicationsPage(){
  if(!reviewer())return;
  const result=await api('selc-governance',{query:{scope:'applications'}}),rows=result.applications||[];
@@ -463,6 +490,7 @@ async function applicationsPage(){
   '<label class="checkline"><input type="checkbox" name="publicProfile" checked> List this person publicly (they can turn it off in My Account)</label>'+exceptionMarkup+
   '<div class="hq-actions">'+actionButtons+'</div><p data-status class="hq-form-status"></p></form>'+(a.reviewHistory?.length?'<section class="hq-card"><h3>Decision history</h3>'+a.reviewHistory.map(e=>'<p class="hq-micro">'+esc(date(e.at))+' · '+esc(e.action)+' · '+esc(e.reviewedBy||'SELC')+' — '+esc(e.notes||'')+'</p>').join('')+'</section>':'');
  const d=modal(a.displayName+' · '+a.type,reviewMarkup);
+ attachFollowupDesk(d,a,'selc');
  $$('[data-action]',d).forEach(btnEl=>btnEl.onclick=async()=>{const vals=formValues($('#appReviewForm',d)),action=btnEl.dataset.action;try{
   if(action==='appoint'){const override=!!$('#appReviewForm input[name=founderOverride]',d)?.checked;if(override&&String(vals.founderOverrideReason||'').trim().length<20)throw new Error('Document the Founder exception with at least 20 characters.');if(!confirmDecision(override?'Record the Founder exception and assign certification?':'Accept this application and assign SELC certification? Role permissions activate after certification is completed.'))return;await post('selc-governance','appoint',{id:a.id,...vals,founderOverride:override,founderOverrideReason:override?vals.founderOverrideReason:'',publicProfile:!!$('#appReviewForm input[name=publicProfile]',d).checked})}
   else if(action==='decline')await post('selc-governance','decline',{id:a.id,notes:vals.notes});
