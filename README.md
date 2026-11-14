@@ -4,9 +4,9 @@ The independent public website and private Leadership Headquarters for **Sanctum
 
 ## Site roles and boundaries
 
-SELC is the *internal* committee of Sanctum Eros, not an independent nonprofit or an organization-wide electorate. Eros is Founder & Chair and retains final approval over appointments, removals, publication, policy, financial decisions, and exceptional access. There are five Representative seats and up to two separate Coordinator seats (seven committee positions total), plus the Founder & Chair. Coordinator advancement uses one of the separate Coordinator seats and does not count toward the five Representative positions.
+SELC is the *internal* committee of Sanctum Eros, not an independent nonprofit or an organization-wide electorate. Eros is Founder & Chair and retains final approval over appointments, removals, publication, policy, financial decisions, and exceptional access. There are five Advisor seats, three Representative seats, and up to two separate Coordinator seats (ten leadership positions total), plus the Founder & Chair. Advisors may participate without SE membership after approval and certification. Representative and Coordinator appointments require active SE membership; Coordinator advancement uses a separate Coordinator seat.
 
-**An SELC Representative must:**
+**An SELC Advisor must:**\n1. Be 18 or older and use a verified email identity; SE membership is optional.\n2. Submit the independent Advisor application, obtain Founder approval, and pass the Advisor certification before role privileges or votes activate.\n3. Respect the limited Advisor permission boundary: no confidential member records, Internal Affairs cases, event admissions, or Staff privileges by virtue of being an Advisor.\n\n**An SELC Representative must:**
 1. Hold an approved, active Sanctum Eros membership. Attending events or purchasing supporter membership is **not** required.
 2. Complete a separate SELC application; approved SE membership alone does not qualify.
 3. Receive Founder acceptance after review.
@@ -14,7 +14,7 @@ SELC is the *internal* committee of Sanctum Eros, not an independent nonprofit o
 
 Existing Representatives seeking Coordinator appointment must complete the Coordinator application, meet the committee election requirement, receive Founder acceptance, and complete the **Coordinator certification** before advancement activates. Only the Founder and currently active Coordinators review SELC applications. Specialized Internal Affairs work has its own distinct authorization/certification and does not automatically follow every SELC role.
 
-**Community Leaders** is separate. An owner/authorized organizer of another kink organization may sign in using an existing Portal account **or** create a separate verified organizer-only account, without joining Sanctum Eros. The Founder reviews applications. Approved organizers may communicate with SELC, Eros, and each other, and propose minimized safety notices subject to controlled disclosure approval. They do **not** receive SELC votes, Staff roles, internal case-file access, tickets, member applications, or venue permissions. There is **no External Advisor role**.
+**Community Leaders** is separate. An owner/authorized organizer of another kink organization may sign in using an existing Portal account **or** create a separate verified organizer-only account, without joining Sanctum Eros. The Founder reviews applications. Approved organizers may communicate with SELC, Eros, and each other, and propose minimized safety notices subject to controlled disclosure approval. They do **not** receive SELC votes, Staff roles, internal case-file access, tickets, member applications, or venue permissions. Community Leaders is distinct from the SELC Advisor tier: organizer recognition never automatically grants Advisor status or voting rights.
 
 ## System integration
 
