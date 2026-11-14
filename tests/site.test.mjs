@@ -46,13 +46,13 @@ test('Advisor sits below Representative and can see only designated participatio
  assert.match(html,/id="publicAdvisors"/);
  assert.match(js,/role==='advisor'/);
  assert.match(js,/advisorHomePage/);
- assert.match(js,/advisorVoteCategories/);
+ assert.match(js,/const canVote=participantRole\(role\(\)\)/);
  assert.match(js,/advisorLessons/);
  assert.match(js,/type==='advisor'\?'Advisor certification'/);
  assert.match(js,/data-action="offer-advisor"/);
  assert.match(js,/data-action="reopen"/);
  assert.match(js,/pendingRole==='advisor'/);
- assert.match(js,/canVote=!advisor\(\)\|\|advisorVoteCategories\.has\(p\.category\)/);
+ assert.doesNotMatch(js,/advisorVoteCategories/,'Active Advisors vote on all eligible committee proposals');
  assert.doesNotMatch(js,/\['registry'[^\n]+participantRole/);
  assert.doesNotMatch(js,/\['iacases'[^\n]+participantRole/);
  assert.doesNotMatch(js,/\['door'[^\n]+participantRole/);
