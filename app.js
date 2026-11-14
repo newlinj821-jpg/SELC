@@ -297,7 +297,7 @@ const ADVISORFIELDS=[
  ['example','Describe a time you helped improve a group or situation.','What did you contribute, and what did you learn?']
 ];
 async function joinPage(){
- const home=context.data.home||await api('selc-governance',{query:{scope:'home'}}),pending=home.myApplications||[];
+ const home=await api('selc-governance',{query:{scope:'home'}}),pending=home.myApplications||[];context.data.home=home;
  let markup=pageHeader('YOUR APPLICATION','Join SELC','Advisors may join with a verified Portal email account without Sanctum Eros membership. Representatives and Coordinators require approved active SE membership and separate advancement and certification.');
  const hasSE=!!home.me?.hasApprovedSEMembership;
  if(!hasSE)markup+=card('<h2>Expand your opportunities with SE membership</h2><p>Your SELC Advisor pathway does not require SE membership. Apply separately to Sanctum Eros to become eligible for Representative advancement, eligible SE events, educational opportunities and other member programs. SE membership is free and reviewed independently. Dungeon parties remain 21+.</p><p class="hq-micro">SE membership: '+esc(home.me?.seMembershipStatus||'Not a member')+'</p><div class="hq-actions"><a class="hq-button primary" href="https://sanctumportal.org/membership.html#apply">Apply for SE membership</a><a class="hq-button" href="https://sanctumportal.org/member.html">Sign in to Portal</a></div>');
