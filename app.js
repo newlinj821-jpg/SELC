@@ -1055,6 +1055,31 @@ async function appealReviewPage(){
  });
 }
 
+
+async function renderApplicantFollowups(root,items,kind){
+ if(!root||!items?.length)return;
+ const results=await Promise.allSettled(items.map(async item=>({item,result:await api('application-followups',{query:{kind,id:item.id}})})));
+ if(!root.isConnected)return;
+ const active=results.filter(x=>x.status==='fulfilled').map(x=>x.value).filter(x=>(x.result.followups||[]).length);
+ if(!active.length)return;
+ const section=document.createElement('section');section.className='hq-card';section.innerHTML='<h2>Questions from SELC</h2><p>Your original application remains unchanged. Respond to each follow-up below.</p>';
+ for(const {item,result} of active)for(const f of result.followups){
+  const area=document.createElement('div');area.className='hq-row';
+  const label=document.createElement('strong');label.textContent=f.questionLabel+' · '+f.status;area.append(label);
+  const question=document.createElement('p');question.textContent=f.question;area.append(question);
+  if(f.reply){const answer=document.createElement('p');answer.textContent='Your reply: '+f.reply;area.append(answer)}
+  else if(f.status==='Awaiting Applicant'){
+   const form=document.createElement('form');form.className='hq-form';const input=document.createElement('textarea');input.required=true;input.minLength=2;input.maxLength=5000;input.rows=3;input.placeholder='Your response';form.append(input);
+   const submit=document.createElement('button');submit.type='submit';submit.className='hq-button primary';submit.textContent='Send clarification';form.append(submit);
+   const status=document.createElement('p');status.className='hq-form-status';form.append(status);
+   form.onsubmit=async e=>{e.preventDefault();submit.disabled=true;try{await post('application-followups','respond',{kind,id:item.id,followupId:f.id,reply:input.value});flash('Clarification sent.');const p=document.createElement('p');p.textContent='Your reply: '+input.value;form.replaceWith(p)}catch(err){setStatus(status,err.message)}finally{submit.disabled=false}};
+   area.append(form);
+  }
+  section.append(area);
+ }
+ root.append(section);
+}
+
 async function communityLeadersPage(){
  const d=await api('community-leaders'),canDiscuss=!!d.canDiscuss;
  let markup=pageHeader('SELC / COMMUNITY PARTNERSHIPS','Community Leaders','A verified network for people who organize kink education, socials, and community spaces. Membership in this program never grants SELC or Staff authority.');
@@ -1080,6 +1105,7 @@ async function communityLeadersPage(){
   markup+=card('<h2>Founder’s disclosure decisions</h2>'+d.pendingSafety.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.title)+'</strong><p>'+esc(x.summary)+'</p><p>Disclosure basis: '+esc(x.disclosureBasis)+'</p></div>'+btn('Approve','data-share-approve="'+esc(x.id)+'"')+btn('Decline','data-share-decline="'+esc(x.id)+'"')+'</div>').join(''));
  }
  setContent(markup);
+ renderApplicantFollowups($('#hqContent'),d.ownApplications||[],'community').catch(error=>console.error('Community application followups',error));
  const messageForm=$('#communityMessage');if(messageForm){const audience=messageForm.querySelector('#communityAudience'),recipient=messageForm.querySelector('#communityRecipientWrap');audience.onchange=()=>{recipient.hidden=audience.value!=='leader'};watchForm(messageForm,async values=>{if(values.audience==='leader'&&!values.recipientId)throw new Error('Choose an approved Community Leader.');await post('community-leaders','message',values);flash('Message sent to the selected audience.');communityLeadersPage()})}
  const shareForm=$('#communitySafety');if(shareForm)watchForm(shareForm,async values=>{await post('community-leaders','propose_safety_share',{...values,acknowledgeSensitive:values.acknowledgeSensitive==='on'});flash('Notice submitted for Founder review.');communityLeadersPage()});
  $$('[data-leader-review]').forEach(button=>button.onclick=()=>{
