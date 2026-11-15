@@ -1196,9 +1196,7 @@ async function founderDeskPage(){
  if(!owner())return openPage('home');
  const sections=[
   ['Website approvals','content','Review and publish voted changes'],
-  ['Event readiness','readiness','Identify staffing and operational gaps'],
   ['Community inbox','communityinbox','Review opted-in member communications and feedback'],
-  ['Volunteer management','volunteer','Manage positions, claims and coverage'],
   ['Education programs','educators','Review workshop planning'],
   ['Ban history','banhistory','Review current and prior restrictions'],
   ['Member applications','generalapps','Membership and role decisions'],
