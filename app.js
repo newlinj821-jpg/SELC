@@ -183,7 +183,7 @@ const NAV=[
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
  ['leader','◈','SELC team','Leadership',u=>participantRole(u)],
  ['availability','◷','My availability','Your work',u=>participantRole(u)&&u!=='founder'],
- ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
+ ['work','▣','Action Queue','Leadership',u=>committeeRole(u)],
  ['handbook','▤','SELC Handbook Center','Your work',u=>participantRole(u)],
  ['communityinbox','✉','Community Inbox','Committee',u=>participantRole(u)],
  ['memberdesk','✉','Member messages & feedback','Committee',u=>participantRole(u),'hidden'],
@@ -209,7 +209,7 @@ const NAV=[
  ['myaccount','◎','My account','Your work']
 ];
 function setupHQNav(){
- const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','communityinbox','proposals','generalapps','events','volunteer','readiness','iacases','banreports','banhistory','appeals','certification','coordinator','ballots','join','work','registry','staffpath']);const groups={'Your work':'Account','Leadership':'Management','Committee':'Management','Community':'Management','Partnerships':'Management','Education':'Management','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
+ const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','communityinbox','proposals','events','iacases','appeals','certification','coordinator','ballots','join','work']);const groups={'Your work':'Account','Leadership':'Management','Committee':'Management','Community':'Management','Partnerships':'Management','Education':'Management','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
  root.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button){closeHQNav();openPage(button.dataset.page)}});
  $('#hqMenu').addEventListener('click',()=>{const open=!$('#hqSidebar').classList.contains('open');$('#hqSidebar').classList.toggle('open',open);$('#hqShade').classList.toggle('open',open);$('#hqMenu').setAttribute('aria-expanded',String(open))});
  $('#hqShade').addEventListener('click',closeHQNav);
@@ -281,16 +281,33 @@ async function homePage(){
  if(role()==='staff')return staffConnectionPage();
  if(!leader()){const pendingCert=(home.myApplications||[]).some(a=>a.status==='Certification Pending'),underReview=(home.myApplications||[]).some(a=>['Pending','Under Review','Recommended'].includes(a.status));setContent(pageHeader('WELCOME TO SELC','Your next chapter','SELC is an internal Sanctum Eros management team. Approved members may apply for Representative positions; Coordinators advance from active Representatives.')+(pendingCert?card('<h2>Application accepted — certification required</h2><p>Complete your training to activate committee privileges.</p>'+btn('Begin SELC certification','data-page-link="certification"','primary')):underReview?card('<h2>Your application is under review</h2><p>SELC leadership will review your answers. No committee permissions are granted until the application is accepted and certification completed.</p>'):card('<h2>Help build something meaningful</h2><p>Apply for a Representative seat. Appointment requires active membership, acceptance and certification.</p>'+btn('Apply to SELC','data-page-link="join"','primary')))+(home.myApplications?.length?card('<h2>Your applications</h2>'+home.myApplications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>Submitted '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join('')):''));bindPageLinks();return}
  const [conv,staff,bans]=results.slice(1).map(r=>r.status==='fulfilled'?r.value:null);
- const proposals=await api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]}));
- const cards=[['SELC POSITIONS',String(home.occupiedSeats||0)+'/6'],['COORDINATORS',String(home.coordinators||0)+'/2'],['OPEN CONVERSATIONS',number(conv?.openCount||0)],['BAN REPORTS PENDING',number(bans?.pendingCount||0)]];
- let markup=pageHeader('YOUR COMMUNITY / YOUR RESPONSIBILITY','Welcome back, '+(context.me.displayName||'').split(' ')[0],'Leadership is the work we do together—not just the title we hold.',btn('Start a proposal','data-page-link="proposals"','primary'));
+ const [queue,readiness]=await Promise.all([
+  api('leadership-queue').catch(()=>null),
+  api('event-readiness').catch(()=>null)
+ ]);
+ const items=queue?.items||[],counts=queue?.counts||{},scheduled=activeSELCEvents(staff?.events),checks=activeSELCEvents(readiness?.events);
+ const pending=items.filter(item=>!item.claim||item.claim.mine),mine=items.filter(item=>item.claim?.mine);
+ const cards=[
+  ['OPEN REVIEWS',queue?number(items.length):'—'],
+  ['ASSIGNED TO YOU',queue?number(mine.length):'—'],
+  ['EVENTS TO PREPARE',readiness?number(checks.filter(e=>!e.ready).length):'—'],
+  ['MEMBER MESSAGES',number(conv?.openCount||0)]
+ ];
+ let markup=pageHeader('SELC / SANCTUM EROS','Management dashboard','One shared source for membership reviews, event operations, staffing and safety. Your permissions determine which actions you can take.',btn('Open action queue','data-page-link="work"','primary'));
  markup+='<div class="hq-stats">'+cards.map(([label,value])=>'<div class="hq-stat"><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>').join('')+'</div>';
- markup+='<div class="hq-grid">'+card('<h2>Where your attention can help</h2>'+[
-  ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
-  ['Member messages and event requests',conv?.openCount||0,'communityinbox'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',activeSELCEvents(staff?.events).length,'events']
- ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
- card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Community inbox','communityinbox'],['Applications','generalapps'],['Member registry','registry'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
- if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
+ if(!queue)markup+=card('<h2>Action queue is temporarily unavailable</h2><p>Use the direct management screens below. No reviews or case records have been changed.</p>');
+ markup+='<div class="hq-grid">'+
+ card('<h2>Reviews that need attention</h2><p class="hq-muted">Assignments and review status come from the Portal. Claim or delegate reviews in the Action Center to avoid duplicated work.</p>'+
+ (queue?(pending.length?pending.slice(0,8).map(item=>{
+  const title=(item.kind==='community'?'Member request':item.kind==='ban'?'Safety report':item.kind==='member'?'Member application':item.kind==='selc'?'Leadership application':'Role application');
+  return '<div class="hq-row"><div class="grow"><strong>'+esc(title)+'</strong><p>'+esc(item.name||'Review')+' · '+esc(item.status||'Pending')+(item.claim?.mine?' · Assigned to you':'')+'</p></div>'+btn('Review','data-page-link="work"')+'</div>';
+ }).join(''):empty('No unassigned reviews','The queue has no pending or personal assignments.')):'<p>Check the Action Center for current reviews.</p>')+
+ '<div class="hq-actions">'+btn('Full action queue','data-page-link="work"','primary')+btn('Membership reviews','data-page-link="generalapps"')+'</div>')+
+ card('<h2>Event operations</h2><p>'+number(scheduled.length)+' upcoming event(s) in the Portal'+(readiness?' · '+number(checks.filter(e=>!e.ready).length)+' need preparation':'')+'.</p><div class="hq-actions">'+
+ btn('Events & RSVPs','data-page-link="events"','primary')+btn('Staffing','data-page-link="volunteer"')+btn('Readiness','data-page-link="readiness"')+'</div>')+
+ card('<h2>Member support</h2><p>'+number(conv?.openCount||0)+' open member conversation(s). Keep messages and event feedback inside the approved Portal workflow.</p><div class="hq-actions">'+btn('Messages & feedback','data-page-link="communityinbox"','primary')+btn('SELC applications','data-page-link="applications"')+'</div>')+
+ card('<h2>Safety & accountability</h2><p>'+number(bans?.pendingCount||0)+' Ban Report(s) pending. Allegations are not findings; final enforcement remains role-restricted.</p><div class="hq-actions">'+btn('Safety cases','data-page-link="iacases"','primary')+btn('Ban reports','data-page-link="banreports"')+btn('Access appeals','data-page-link="appeals"')+'</div>')+'</div>';
+ markup+=card('<h2>Committee</h2><p>Two Coordinators, four Representatives and two Advisors. Advisors contribute member experience and proposals but cannot independently approve members, staff or bans.</p><div class="hq-actions">'+btn('Management team','data-page-link="leader"')+btn('Proposals','data-page-link="proposals"')+'</div>');
  setContent(markup);bindPageLinks();
 }
 function bindPageLinks(root=$('#hqContent')){$$('[data-page-link]',root).forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.pageLink)))}
@@ -548,7 +565,7 @@ function bindSupplementalGuides(data){
 }
 async function leadershipWorkPage(){
  const data=await api('leadership-queue'),items=data.items||[],counts=data.counts||{},canDelegate=!!data.canDelegate,delegates=data.delegates||[];
- const categories={member:'Membership',role:'Role applications',selc:'SELC',ban:'Ban Reports',community:'Community'};
+ const categories={member:'Membership',role:'Role applications',selc:'SELC',ban:'Ban Reports',community:'Member requests'};
  let markup=pageHeader('SELC / LEADERSHIP','Leadership Action Center','Coordinators delegate and supervise; Representatives independently resolve eligible reviews. Every assignment is recorded in Portal.',btn('Refresh','data-work-refresh'));
  if(canDelegate)markup+=card('<p>Delegation is available for active SELC Representatives and Coordinators. Staff accepted roles remain separate, and assigned review work never grants additional enforcement authority.</p>');
  markup+='<div class="hq-stats">'+Object.entries(categories).filter(([k])=>counts[k]).map(([key,label])=>'<div class="hq-stat"><small>'+esc(label)+'</small><strong>'+number(counts[key]||0)+'</strong></div>').join('')+'</div>';
