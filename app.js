@@ -19,7 +19,7 @@ const committeeRole=u=>['founder','coordinator','representative'].includes(u);
 const participantRole=u=>committeeRole(u)||u==='advisor';
 const advisor=()=>role()==='advisor';
 // All active SELC role tiers may vote on committee proposals.
-const organizerRole=u=>['community-applicant','community-leader'].includes(u);
+const organizerRole=u=>['community-applicant','community-leader'].includes(u); // legacy accounts remain able to access their account
 const leader=()=>context.me&&['founder','coordinator','representative'].includes(context.me.role);
 const reviewer=()=>context.me&&['founder','coordinator'].includes(context.me.role);
 const owner=()=>context.me?.role==='founder';
@@ -167,7 +167,7 @@ async function beginHeadquarters(){
  context.me={role:session.role,displayName:session.displayName,owner:session.owner,isStaff:session.isStaff===true};
  $('#publicSite').classList.add('hidden');$('#headquarters').classList.remove('hidden');$('#headquarters').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
  $('#hqUserName').textContent=context.me.displayName||'Member';$('#hqInitials').textContent=initials(context.me.displayName);const roleLabel=context.me.isStaff&&['representative','coordinator'].includes(role())?'Staff + '+(role()==='representative'?'Representative':'Coordinator'):(RANK[role()]||'Community Member');$('#hqRole').textContent=roleLabel;$('#hqRoleChip').textContent=roleLabel.toUpperCase();
- setupHQNav();const hash=location.hash.split('/')[1];await openPage(hash||(organizerRole(role())?'communityleaders':'home'));
+ setupHQNav();const hash=location.hash.split('/')[1];await openPage(hash||(organizerRole(role())?'myaccount':'home'));
 }
 const NAV=[
  ['home','⌂','Overview','Your work',u=>!organizerRole(u)],
@@ -192,8 +192,6 @@ const NAV=[
  ['content','✎','Website content','Committee',u=>committeeRole(u)],
  ['chat','▤','Community chat','Community',u=>!['community-applicant'].includes(u)],
  ['requests','↗','Community conversations','Committee',u=>committeeRole(u)],
- ['communityleaders','◇','Community Leaders network','Partnerships'],
- ['applyeducator','✦','Become a Community Educator','Education',u=>!organizerRole(u)],
  ['educatorreviews','▤','Educator applications','Education',u=>u==='founder'||u==='coordinator'],
  ['educators','✦','Education & workshops','Committee',u=>participantRole(u)],
  ['registry','▤','Member registry','Leadership',u=>committeeRole(u)],
@@ -210,7 +208,7 @@ const NAV=[
  ['myaccount','◎','My account','Your work']
 ];
 function setupHQNav(){
- const root=$('#hqNavigation');let last='';const groups={'Your work':'Overview','Leadership':'Leadership','Committee':'Community','Community':'Community','Partnerships':'Community','Education':'Resources','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
+ const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','communityinbox','proposals','generalapps','events','volunteer','readiness','iacases','banreports','appeals','handbook','certification','coordinator','ballots','join','work','registry','banhistory','staffpath','educators']);const groups={'Your work':'Overview','Leadership':'Leadership','Committee':'Community','Community':'Community','Partnerships':'Community','Education':'Resources','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
  root.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button){closeHQNav();openPage(button.dataset.page)}});
  $('#hqMenu').addEventListener('click',()=>{const open=!$('#hqSidebar').classList.contains('open');$('#hqSidebar').classList.toggle('open',open);$('#hqShade').classList.toggle('open',open);$('#hqMenu').setAttribute('aria-expanded',String(open))});
  $('#hqShade').addEventListener('click',closeHQNav);
@@ -223,10 +221,11 @@ async function signOut(){try{await post('selc-auth','logout')}catch{}clearAccess
 async function openPage(page){
  // Preserve old links while presenting a single source of handbook navigation.
  if(page==='library')page='handbook';
+ if(['communityleaders','applyeducator'].includes(page))page=organizerRole(role())?'myaccount':'home';
  if(context.chatTimer){clearTimeout(context.chatTimer);context.chatTimer=null}
  if(context.editorPickListener){removeEventListener('message',context.editorPickListener);context.editorPickListener=null}
  let allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())));
- if(!allowed){page=organizerRole(role())?'communityleaders':'home';allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())))}
+ if(!allowed){page=organizerRole(role())?'myaccount':'home';allowed=NAV.find(n=>n[0]===page&&(!n[4]||n[4](role())))}
  context.activePage=page;
  $$('#hqNavigation [data-page]').forEach(b=>b.classList.toggle('active',b.dataset.page===page));
  $('#hqCurrentSection').textContent=allowed?.[2]?.toUpperCase()||'HEADQUARTERS';
@@ -1114,7 +1113,7 @@ async function communityLeadersPage(){
   const directory=d.directory||[];
   markup+=card('<h2>Message Community Leaders, SELC or Eros</h2><p>Messages are visible only to the selected recipients. Other Sanctum Eros Staff do not receive Community Leaders messages.</p><form id="communityMessage" class="hq-form"><label>Send to</label><select name="audience" id="communityAudience"><option value="network">All approved organizers and SELC</option><option value="committee">SELC committee</option><option value="founder">Founder / Eros only</option><option value="leader">One Community Leader</option></select><div id="communityRecipientWrap" hidden><label>Choose an approved organizer</label><select name="recipientId"><option value="">Select a recipient</option>'+directory.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.organization||p.name||'Community Leader')+'</option>').join('')+'</select></div><label>Subject</label><input name="topic" minlength="5" maxlength="140" required><label>Your message</label><textarea name="message" rows="5" minlength="20" maxlength="5000" required></textarea><p data-status></p><button class="hq-button primary">Send message</button></form>');
   markup+=card('<h2>Conversations</h2>'+((d.messages||[]).length?(d.messages||[]).map(m=>'<div class="hq-row"><div class="grow"><strong>'+esc(m.topic)+'</strong><p class="hq-prose">'+esc(m.message)+'</p><small>'+esc(m.organization||'Organizer')+' · '+esc(m.by||'Leader')+' · '+esc(m.audience==='network'?'Network':m.audience==='committee'?'SELC committee':m.audience==='founder'?'Founder only':'Direct leader')+' · '+esc(date(m.at))+'</small></div></div>').join(''):empty('No conversations yet','Start a message with the network, SELC, Eros or another approved organizer.')));
-  markup+=card('<h2>Reviewed safety notices</h2><p>Updates approved for the Community Leaders network.</p>'+((d.sharedSafety||[]).length?d.sharedSafety.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.title)+'</strong><p class="hq-prose">'+esc(x.summary)+'</p><small>'+esc(x.sourceOrganization||'Source')+' · '+esc(x.sourceDisposition||'Reported')+' · '+esc(date(x.at))+'</small></div></div>').join(''):empty('No shared notices','Approved network notices appear here.')));
+  markup+=card('<h2>Reviewed safety notices</h2><p>Updates approved for the Retired network.</p>'+((d.sharedSafety||[]).length?d.sharedSafety.map(x=>'<div class="hq-row"><div class="grow"><strong>'+esc(x.title)+'</strong><p class="hq-prose">'+esc(x.summary)+'</p><small>'+esc(x.sourceOrganization||'Source')+' · '+esc(x.sourceDisposition||'Reported')+' · '+esc(date(x.at))+'</small></div></div>').join(''):empty('No shared notices','Approved network notices appear here.')));
   markup+=card('<h2>Propose a reviewed safety notice</h2><p>Submit a brief notice for Founder review.</p><form id="communitySafety" class="hq-form"><label>Category</label><select name="category"><option value="incident">Incident report</option><option value="restriction">Organization restriction</option><option value="ban">Organization-issued ban</option><option value="practice">Policy guidance</option></select><label>Status at source organization</label><select name="sourceDisposition"><option value="Reported">Reported, unverified</option><option value="Under Review">Under review</option><option value="Organization Restriction">Organization restriction</option><option value="Organization Ban">Organization ban</option><option value="Organizational Guidance">Organizational guidance</option></select><label>Notice title</label><input name="title" minlength="5" maxlength="140" required><label>Subject name (only if necessary and legally appropriate)</label><input name="subjectName" maxlength="140"><label>Minimized factual summary</label><textarea name="summary" minlength="80" maxlength="3500" rows="5" required></textarea><label>Documented consent or other lawful disclosure basis</label><textarea name="disclosureBasis" minlength="50" maxlength="1500" rows="3" required></textarea><label><input name="acknowledgeSensitive" type="checkbox" required> I have removed raw IA evidence, unnecessary identities, and unsupported allegations.</label><p data-status></p><button class="hq-button">Request Founder review</button></form>');
  }
  if(d.canReview){
@@ -1141,7 +1140,7 @@ async function communityLeadersPage(){
  $$('[data-leader-revoke]').forEach(button=>button.onclick=()=>{
   const id=button.dataset.leaderRevoke,person=(d.directory||[]).find(x=>x.id===id);if(!person)return;
   const dlg=modal('Revoke Community Leaders access','<p>This only closes the private organizer network. It does not ban someone from Sanctum Eros, modify an IA case, or change an SE membership.</p><form id="leaderRevoke" class="hq-form"><label>Reason for revocation</label><textarea name="reason" rows="3" minlength="10" required></textarea><p data-status></p><button class="hq-button danger">Revoke organizer access</button></form>');
-  watchForm($('#leaderRevoke',dlg),async values=>{await post('community-leaders','revoke_leader',{accountId:id,...values});dlg.close();flash('Community Leaders network access revoked.');communityLeadersPage()});
+  watchForm($('#leaderRevoke',dlg),async values=>{await post('community-leaders','revoke_leader',{accountId:id,...values});dlg.close();flash('Retired network access revoked.');communityLeadersPage()});
  });
  $$('[data-share-revoke]').forEach(button=>button.onclick=async()=>{
   if(!await confirmDecision('Withdraw this shared safety notice from other Community Leaders? Existing Portal references will be marked as withdrawn.'))return;
@@ -1457,7 +1456,7 @@ async function accountPage(){
  ]);
  const me=(committee?.members||[]).find(p=>p.accountId===home?.me?.accountId)||null;
  let markup=pageHeader('YOUR ACCOUNT',external?'Community Leaders account':'Your SELC space',external?'Your verified account does not grant Sanctum Eros membership or committee access.':'Your Portal account is linked to your SELC role, but your public screen name can be different.');
- markup+=card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(context.me.isStaff&&['representative','coordinator'].includes(role())?'Staff + '+(role()==='coordinator'?'Coordinator':'Representative'):(RANK[role()]||role()))+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Community Leaders network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal handles your member profile, password, tickets and course records. A SELC screen name does not change your login.')+'</p>');
+ markup+=card('<div class="hq-row"><div class="grow"><strong>'+esc(context.me.displayName)+'</strong><p>'+esc(context.me.isStaff&&['representative','coordinator'].includes(role())?'Staff + '+(role()==='coordinator'?'Coordinator':'Representative'):(RANK[role()]||role()))+'</p></div>'+tag('Active session')+'</div>'+(shared?.roles?.length?'<h3>Your connected roles</h3><div class="hq-actions">'+shared.roles.map(r=>tag(r)).join('')+'</div>':'')+'<p>'+(external?'Use the Retired network to check application status and collaborate after approval. Account recovery uses the Portal email service.':'Your personal Portal handles your member profile, password, tickets and course records. A SELC screen name does not change your login.')+'</p>');
  if(me&&role()!=='founder'){
   markup+=card('<h2>Public-facing SELC name</h2><p>Your public directory listing is enabled by default. You can turn it off at any time. Separately, choose the name shown publicly; this never changes your account login.</p><form class="hq-form" id="selcIdentityForm"><label for="selcScreenName">Public display name (separate from your login)</label><input id="selcScreenName" name="publicName" required minlength="2" maxlength="80" value="'+esc(me.screenName||me.displayName||'')+'"><label class="hq-check"><input type="checkbox" name="publicProfile" '+(me.publicProfile!==false?'checked':'')+'> Show my public display name and leadership role on the SELC website</label><p class="hq-micro">When this is turned off, your name remains visible to authorized committee members but not in the public directory.</p><p data-status role="status"></p><button class="hq-button primary" type="submit">Save my SELC name</button></form>');
  }
