@@ -362,7 +362,7 @@ async function certificationPage(){
     'Preserve a safe reporting channel, prohibit retaliation and use an independent reviewer when a committee member or decision-maker is involved.'
    ],scenario:'A friend is named in a complaint. Disclose the relationship and recuse from recommendations or decisions that depend on your impartiality.'},
   {title:'Membership, RSVP and admission operations',objective:'Know which checks must precede approval, ticketing and physical admission.',steps:[
-    'Confirm account and membership status, event eligibility, the 21+ play-party minimum, approved attendee names, capacity and any current safety holds.',
+    'Confirm account and membership status, event eligibility, the 21+ Dungeon Night minimum, approved attendee names, capacity and any current safety holds.',
     'Tickets and QR check-in remain separate from government-photo-ID collection. The guest acknowledgment flow uses age and venue-rule attestations with review.',
     'Use the leadership work queue and event record to avoid duplicated approvals, preserve audit history and flag payment or eligibility issues for the correct team.'
    ],scenario:'A report has placed an RSVP on hold. Do not override a ticket merely because payment is confirmed; route the safety hold to an authorized reviewer.'},
@@ -916,7 +916,7 @@ async function eventPage(){
  
  $$('[data-event-teacher]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eventTeacher));
  const editor=(prior={})=>{
-  const opts=[['play','Play party'],['social','Social'],['workshop','Workshop / Class']];
+  const opts=[['play','Dungeon Night'],['social','Social'],['workshop','Workshop / Class']];
   const str=x=>esc(x??'');
   const form='<p class="hq-muted">Only an unpublished draft can be saved here. A Coordinator cannot publish an event using this form.</p><form class="hq-form" id="eventDraftForm">'+
    '<label>Event title<input name="title" required minlength="6" maxlength="180" value="'+str(prior.title||'')+'"></label>'+
