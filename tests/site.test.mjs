@@ -33,5 +33,5 @@ test('governance and staff permissions remain separated',()=>{
  assert.match(js,/staffpath:staffPathPage/);
  assert.match(js,/const reviewer=\(\)=>/);
  assert.match(js,/credentials:'omit'/);
- assert.match(js,/role==='advisor'/);
+ assert.match(js,/const advisor=\(\)=>false/);
 });
