@@ -108,6 +108,7 @@ function startPublic(){
  });
  loadPublicLeadership().catch(()=>{});
  const params=new URLSearchParams(location.search);
+ if(params.get('apply')==='advisor')openLogin();
  const ownerCode=params.get('se_owner_handoff');
  if(ownerCode){
   // The code was minted only after the Portal verified its existing Owner session.
@@ -168,7 +169,7 @@ async function beginHeadquarters(){
  context.me={role:session.role,displayName:session.displayName,owner:session.owner,isStaff:session.isStaff===true};
  $('#publicSite').classList.add('hidden');$('#headquarters').classList.remove('hidden');$('#headquarters').setAttribute('aria-hidden','false');document.body.style.overflow='hidden';
  $('#hqUserName').textContent=context.me.displayName||'Member';$('#hqInitials').textContent=initials(context.me.displayName);const roleLabel=context.me.isStaff&&['representative','coordinator'].includes(role())?'Staff + '+(role()==='representative'?'Representative':'Coordinator'):(RANK[role()]||'Community Member');$('#hqRole').textContent=roleLabel;$('#hqRoleChip').textContent=roleLabel.toUpperCase();
- setupHQNav();const hash=location.hash.split('/')[1];await openPage(hash||(organizerRole(role())?'myaccount':'home'));
+ setupHQNav();const hash=location.hash.split('/')[1];const advisorApplicant=new URLSearchParams(location.search).get('apply')==='advisor';await openPage(hash||(advisorApplicant&&role()==='member'?'join':organizerRole(role())?'myaccount':'home'));
 }
 const NAV=[
  ['home','⌂','Overview','Your work',u=>!organizerRole(u)],
@@ -185,18 +186,18 @@ const NAV=[
  ['availability','◷','My availability','Your work',u=>participantRole(u)&&u!=='founder'],
  ['work','▣','Action Queue','Leadership',u=>committeeRole(u)],
  ['handbook','▤','SELC Handbook Center','Your work',u=>participantRole(u)],
- ['communityinbox','✉','Community Inbox','Committee',u=>participantRole(u)],
+ ['communityinbox','✉','Member messages & feedback','Committee',u=>participantRole(u)],
  ['memberdesk','✉','Member messages & feedback','Committee',u=>participantRole(u),'hidden'],
  ['suggestionsdesk','◇','Member suggestions','Committee',u=>participantRole(u),'hidden'],
  ['feedbackdesk','▤','Event feedback review','Committee',u=>participantRole(u),'hidden'],
  ['proposals','◉','Proposals & votes','Committee',u=>participantRole(u)],
  ['content','✎','Website content','Committee',u=>committeeRole(u)],
- ['chat','▤','Community chat','Community',u=>!['community-applicant'].includes(u)],
+ ['chat','▤','Private SELC chat','Committee',u=>participantRole(u)],
  ['requests','↗','Community conversations','Committee',u=>committeeRole(u)],
  ['educatorreviews','▤','Educator applications','Education',u=>u==='founder'||u==='coordinator'],
  ['educators','✦','Education & workshops','Committee',u=>participantRole(u)],
  ['registry','▤','Member registry','Leadership',u=>committeeRole(u)],
- ['generalapps','▧','Member & role applications','Event operations',u=>committeeRole(u)],
+ ['generalapps','▧','Membership applications','Event operations',u=>committeeRole(u)],
  ['events','▦','Events & RSVPs','Event operations',u=>committeeRole(u)],
  ['volunteer','✋','Staffing overview','Event operations',u=>committeeRole(u)],
   ['staffpath','✓','Apply to become Staff','Your work',u=>u==='representative'||u==='coordinator'],
@@ -209,7 +210,7 @@ const NAV=[
  ['myaccount','◎','My account','Your work']
 ];
 function setupHQNav(){
- const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','communityinbox','proposals','events','iacases','appeals','certification','coordinator','ballots','join','work']);const groups={'Your work':'Account','Leadership':'Management','Committee':'Management','Community':'Management','Partnerships':'Management','Education':'Management','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
+ const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','generalapps','communityinbox','chat','proposals','events','iacases','appeals','certification','coordinator','ballots','join','work']);const groups={'Your work':'Account','Leadership':'Management','Committee':'Management','Community':'Management','Partnerships':'Management','Education':'Management','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
  root.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button){closeHQNav();openPage(button.dataset.page)}});
  $('#hqMenu').addEventListener('click',()=>{const open=!$('#hqSidebar').classList.contains('open');$('#hqSidebar').classList.toggle('open',open);$('#hqShade').classList.toggle('open',open);$('#hqMenu').setAttribute('aria-expanded',String(open))});
  $('#hqShade').addEventListener('click',closeHQNav);
@@ -222,6 +223,7 @@ async function signOut(){try{await post('selc-auth','logout')}catch{}clearAccess
 async function openPage(page){
  // Preserve old links while presenting a single source of handbook navigation.
  if(page==='library')page='handbook';
+ if(page==='chat'&&!participantRole(role()))page='home';
  if(['communityleaders','applyeducator'].includes(page))page=organizerRole(role())?'myaccount':'home';
  if(context.chatTimer){clearTimeout(context.chatTimer);context.chatTimer=null}
  if(context.editorPickListener){removeEventListener('message',context.editorPickListener);context.editorPickListener=null}
@@ -248,7 +250,7 @@ async function staffConnectionPage(){
  const data=await api('community-requests').catch(()=>({requests:[]}));
  const mine=(data.requests||[]).filter(r=>r.kind==='staff_message'||r.submitterKind==='staff');
  let markup=pageHeader('STAFF / SELC','Your connection to SELC','You are part of the Sanctum Eros team. You can ask questions, share ideas and follow conversations with leadership without applying for a committee role.');
- markup+=card('<h2>Working together</h2><p>Contact SELC about event support, Staff suggestions, educational needs or practical improvements. You can also join the Staff & Educators room for ongoing collaboration. Your Staff role is separate from SELC voting and administrative roles.</p><div class="hq-actions">'+btn('Staff & Educators chat','data-page-link="chat"','primary')+btn('Read Staff Handbook','data-page-link="handbook"')+'</div>');
+ markup+=card('<h2>Working together</h2><p>Contact SELC about event support, Staff suggestions, educational needs or practical improvements. Member support and event operations stay within the Portal and SELC. Your Staff role is separate from SELC voting and administrative roles.</p><div class="hq-actions">'+btn('Read Staff Handbook','data-page-link="handbook"')+'</div>');
  markup+=card('<h2>Send a message to SELC</h2><form class="hq-form" id="staffMessageForm"><label>Subject<input name="title" minlength="6" maxlength="160" required placeholder="What would you like to discuss?"></label><label>Message<textarea name="details" minlength="20" rows="5" required placeholder="Share the question, suggestion or support you need."></textarea></label><p class="hq-form-status" data-status></p><button class="hq-button primary" type="submit">Send to SELC</button></form>');
  markup+=card('<h2>Your conversations</h2>'+(mine.length?mine.map(r=>'<div class="hq-row"><div class="grow"><strong>'+esc(r.title)+'</strong><p>'+esc(r.details||'').slice(0,130)+'</p><p class="hq-micro">'+esc(date(r.updatedAt))+'</p></div>'+tag(r.status)+btn('Open','data-staff-request="'+esc(r.id)+'"')+'</div>').join(''):'<p>Your messages and replies will appear here.</p>'));
  setContent(markup);bindPageLinks();
@@ -267,7 +269,7 @@ async function advisorHomePage(home){
  const eligible=(proposals.proposals||[]).filter(p=>p.status==='Discussion');
  const markup=pageHeader('SELC / ADVISOR','Welcome back, '+esc((context.me.displayName||'Advisor').split(' ')[0]),'Support member communications, events and internal improvements. You may provide feedback and vote on committee proposals across all categories.')+
   '<div class="hq-stats"><div class="hq-stat"><small>SHARED MESSAGES</small><strong>'+number(inbox.messages?.length||0)+'</strong></div><div class="hq-stat"><small>ADVISOR-ELIGIBLE VOTES</small><strong>'+number(eligible.length)+'</strong></div></div>'+
-  card('<h2>Your Advisor responsibilities</h2><p>Participate in SELC chat, review opted-in member communications and event feedback, contribute educational ideas, and vote on committee proposals. Private IA records, membership approvals, Staff accepted roles and bans remain outside the Advisor role.</p><div class="hq-actions">'+btn('Community inbox','data-page-link="communityinbox"','primary')+btn('Proposals and votes','data-page-link="proposals"')+btn('SELC chat','data-page-link="chat"')+btn('Leadership progression','data-page-link="join"')+'</div>');
+  card('<h2>Your Advisor responsibilities</h2><p>Participate in the private SELC chat, review opted-in member communications and event feedback, contribute educational ideas, and vote on committee proposals. Private IA records, membership approvals, Staff accepted roles and bans remain outside the Advisor role.</p><div class="hq-actions">'+btn('Member messages','data-page-link="communityinbox"','primary')+btn('Private SELC chat','data-page-link="chat"')+btn('Proposals and votes','data-page-link="proposals"')+btn('SELC chat','data-page-link="chat"')+btn('Leadership progression','data-page-link="join"')+'</div>');
  setContent(markup);bindPageLinks();
 }
 async function homePage(){
@@ -302,12 +304,12 @@ async function homePage(){
   const title=(item.kind==='community'?'Member request':item.kind==='ban'?'Safety report':item.kind==='member'?'Member application':item.kind==='selc'?'Leadership application':'Role application');
   return '<div class="hq-row"><div class="grow"><strong>'+esc(title)+'</strong><p>'+esc(item.name||'Review')+' · '+esc(item.status||'Pending')+(item.claim?.mine?' · Assigned to you':'')+'</p></div>'+btn('Review','data-page-link="work"')+'</div>';
  }).join(''):empty('No unassigned reviews','The queue has no pending or personal assignments.')):'<p>Check the Action Center for current reviews.</p>')+
- '<div class="hq-actions">'+btn('Full action queue','data-page-link="work"','primary')+btn('Membership reviews','data-page-link="generalapps"')+'</div>')+
+ '<div class="hq-actions">'+btn('Full action queue','data-page-link="work"','primary')+btn('Membership applications','data-page-link="generalapps"')+'</div>')+
  card('<h2>Event operations</h2><p>'+number(scheduled.length)+' upcoming event(s) in the Portal'+(readiness?' · '+number(checks.filter(e=>!e.ready).length)+' need preparation':'')+'.</p><div class="hq-actions">'+
  btn('Events & RSVPs','data-page-link="events"','primary')+btn('Staffing','data-page-link="volunteer"')+btn('Readiness','data-page-link="readiness"')+'</div>')+
  card('<h2>Member support</h2><p>'+number(conv?.openCount||0)+' open member conversation(s). Keep messages and event feedback inside the approved Portal workflow.</p><div class="hq-actions">'+btn('Messages & feedback','data-page-link="communityinbox"','primary')+(reviewer()?btn('SELC applications','data-page-link="applications"'):'')+'</div>')+
  card('<h2>Safety & accountability</h2><p>'+number(bans?.pendingCount||0)+' Ban Report(s) pending. Allegations are not findings; final enforcement remains role-restricted.</p><div class="hq-actions">'+btn('Safety cases','data-page-link="iacases"','primary')+btn('Ban reports','data-page-link="banreports"')+(reviewer()?btn('Access appeals','data-page-link="appeals"'):'')+'</div>')+'</div>';
- markup+=card('<h2>Committee</h2><p>Two Coordinators, four Representatives and two Advisors. Advisors contribute member experience and proposals but cannot independently approve members, staff or bans.</p><div class="hq-actions">'+btn('Management team','data-page-link="leader"')+btn('Proposals','data-page-link="proposals"')+'</div>');
+ markup+=card('<h2>Committee</h2><p>Two Coordinators, four Representatives and two Advisors. Advisors contribute member experience and proposals but cannot independently approve members, staff or bans.</p><div class="hq-actions">'+btn('Private SELC chat','data-page-link="chat"','primary')+btn('Management team','data-page-link="leader"')+btn('Proposals','data-page-link="proposals"')+'</div>');
  setContent(markup);bindPageLinks();
 }
 function bindPageLinks(root=$('#hqContent')){$$('[data-page-link]',root).forEach(b=>b.addEventListener('click',()=>openPage(b.dataset.pageLink)))}
@@ -1245,8 +1247,8 @@ async function banHistoryPage(){
  $('#banFilter').onchange=e=>{filter=e.target.value;render()};render();
 }
 async function communityChatPage(){
- const data=await api('community-chat'),rooms=data.rooms||[];
- let active=context.chatRoom||rooms.find(r=>r.joined)?.id||rooms[0]?.id||'';
+ const data=await api('community-chat'),rooms=(data.rooms||[]).filter(r=>r.id==='selc');
+ let active='selc';
  if(!rooms.some(r=>r.id===active))active=rooms[0]?.id||'';
  context.chatRoom=active;
  const room=rooms.find(r=>r.id===active);
@@ -1257,7 +1259,7 @@ async function communityChatPage(){
  '<div class="messenger-search"><input id="chatSearch" type="search" placeholder="Search this conversation" aria-label="Search messages"></div><div id="chatPinned" class="messenger-pinned" hidden></div><div id="chatMessages" class="messenger-messages" role="log" aria-live="polite" aria-relevant="additions"><div class="messenger-empty">Loading conversation…</div></div><div id="chatReplyPreview" class="messenger-reply-preview" hidden><span id="chatReplyText"></span><button type="button" id="chatCancelReply" aria-label="Cancel reply">×</button></div><form id="chatSend" class="messenger-composer"><label class="sr-only" for="chatMessage">Message</label><textarea id="chatMessage" name="message" rows="1" maxlength="1200" placeholder="Message '+esc(room.name)+'…" required></textarea><button type="submit" aria-label="Send message"><span aria-hidden="true">➤</span></button></form><p id="chatStatus" class="messenger-status" role="status"></p>':
  '<div class="messenger-welcome"><span class="messenger-welcome-icon">'+esc(roomIcon[room.id]||'◈')+'</span><h3>'+esc(room.name)+'</h3><p>Join this conversation to see messages and participate.</p>'+btn('Join conversation','data-chat-join','primary')+'</div>')+'</section>':
  '<div class="messenger-welcome"><h3>No conversations available</h3><p>Approved roles can join their eligible rooms.</p></div>';
- setContent('<section class="messenger-shell" aria-label="Community conversations"><div class="messenger-intro"><span class="hq-eyebrow">SELC / CONVERSATIONS</span><h1>Messages</h1><p>Keep your teams connected, without mixing private channels.</p></div><div class="messenger-layout"><aside class="messenger-sidebar"><div class="messenger-sidebar-title">Your rooms <span>'+number(rooms.length)+'</span></div><nav class="messenger-rooms" aria-label="Chat rooms">'+tabs+'</nav></aside>'+main+'</div></section>');
+ setContent('<section class="messenger-shell" aria-label="Private SELC chat"><div class="messenger-intro"><span class="hq-eyebrow">SELC / INTERNAL COMMUNICATION</span><h1>SELC private chat</h1><p>Only current committee appointees and the Founder can access this conversation. This is not the member-support inbox.</p></div><div class="messenger-layout"><aside class="messenger-sidebar"><div class="messenger-sidebar-title">Your rooms <span>'+number(rooms.length)+'</span></div><nav class="messenger-rooms" aria-label="Chat rooms">'+tabs+'</nav></aside>'+main+'</div></section>');
  $$('[data-chat-room]').forEach(button=>button.onclick=()=>{context.chatRoom=button.dataset.chatRoom;communityChatPage()});
  if(!room)return;
  if(!room.joined){$('[data-chat-join]').onclick=async()=>{try{await post('community-chat','join',{room:active});communityChatPage()}catch(error){flash(error.message)}};return}
@@ -1389,7 +1391,7 @@ async function communityInboxPage(){
   ['Suggestions',(data[1]?.suggestions||[]).length,'suggestionsdesk','Review ideas, respond where permitted and promote them to committee proposals'],
   ['Event feedback',(data[2]?.reviews||[]).length,'feedbackdesk','Review member event experiences and approved public comments']
  ];
- let markup=pageHeader('COMMUNITY / CORRESPONDENCE','Community Inbox','One place to triage communications while preserving the independent privacy controls on each record.');
+ let markup=pageHeader('SELC / MEMBER SUPPORT','Member messages & feedback','One place to triage communications while preserving the independent privacy controls on each record.');
  markup+='<div class="hq-grid">'+cards.map(([name,count,page,desc])=>card('<span class="hq-eyebrow">'+esc(name)+'</span><h2>'+number(count)+'</h2><p>'+esc(desc)+'</p>'+btn('Open','data-page-link="'+esc(page)+'"','primary'))).join('')+'</div>';
  if(data.some(x=>!x))markup+=card('<p>One or more message services are temporarily unavailable. Open the relevant category to see its current status.</p>');
  markup+=card('<p class="hq-micro">Private correspondence addressed directly to Eros is not included in SELC shared queues unless the sender explicitly authorized sharing. Incident records remain subject to IA access controls.</p>');
@@ -1397,7 +1399,7 @@ async function communityInboxPage(){
 }
 async function memberDeskPage(){
  const d=await api('committee-desk',{query:{scope:'messages'}}),rows=d.messages||[];
- let markup=pageHeader('MEMBER CORRESPONDENCE','Messages & complaints','A shared inbox for communications members have authorized SELC to see. Eros-only conversations stay private.');
+ let markup=pageHeader('SELC / MEMBER CORRESPONDENCE','Messages & complaints','A shared inbox for communications members have authorized SELC to see. Eros-only conversations stay private.');
  markup+='<div class="hq-stats"><div class="hq-stat"><small>CONVERSATIONS</small><strong>'+rows.length+'</strong></div><div class="hq-stat"><small>NEED REVIEW</small><strong>'+Number(d.counts?.new||0)+'</strong></div></div>';
  markup+=rows.length?rows.map((r,i)=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc(r.kind==='incident'?'Opted-in IA report':r.type==='complaint'?'Complaint':r.type==='portal_problem'?'Portal issue':'Member message')+'</span><h2>'+esc(r.subject||'Message')+'</h2><p>'+esc(String(r.message||'').slice(0,180))+'</p><p class="hq-micro">'+esc(r.username||r.caseNumber||'Member')+' · '+esc(date(r.updatedAt||r.createdAt))+'</p></div>'+tag(r.status)+btn('Open conversation','data-member-msg="'+i+'"','primary')+'</div>')).join(''):empty('No shared messages right now','Opted-in member conversations and reports appear here.');
  setContent(markup);
