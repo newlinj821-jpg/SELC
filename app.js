@@ -16,8 +16,8 @@ const isDiscontinuedEvent=e=>/\bkink\s+n\s+drinks\b/i.test(String(e?.event?.titl
 const activeSELCEvents=events=>(Array.isArray(events)?events:[]).filter(e=>!isDiscontinuedEvent(e));
 const RANK={founder:'Founder/Director',coordinator:'SELC Coordinator · Administration',representative:'SELC Representative · Leadership',advisor:'SELC Advisor · Event Support',staff:'Sanctum Eros Staff',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
 const committeeRole=u=>['founder','coordinator','representative'].includes(u);
-const participantRole=u=>committeeRole(u);
-const advisor=()=>false;
+const participantRole=u=>committeeRole(u)||u==='advisor';
+const advisor=()=>role()==='advisor';
 // All active SELC role tiers may vote on committee proposals.
 const organizerRole=u=>['community-applicant','community-leader'].includes(u); // legacy accounts remain able to access their account
 const leader=()=>context.me&&['founder','coordinator','representative'].includes(context.me.role);
@@ -142,7 +142,7 @@ async function loadPublicLeadership(){
   const host=$('#publicDirectory');if(!host)return;
   const people=Array.isArray(data.people)?data.people:[];
   const bySeat=new Map(people.filter(p=>p.role==='representative').map(p=>[Number(p.seat),p]));
-  const advisors=[];
+  const advisors=people.filter(p=>p.role==='advisor').slice(0,2);
   const grandfatheredRepresentatives=[]; // fifth-seat history remains archived
   const formerRepresentatives=people.filter(p=>p.role==='representative'&&Number(p.seat)>4).sort((a,b)=>Number(a.seat)-Number(b.seat));
   const coordinators=people.filter(p=>p.role==='coordinator').slice(0,2);
@@ -161,7 +161,7 @@ async function loadPublicLeadership(){
    transitionHost.classList.toggle('hidden',grandfatheredRepresentatives.length===0);
   }
   const advisorHost=$('#publicAdvisors');
-  if(advisorHost)advisorHost.innerHTML=advisors.length?advisors.map((person,i)=>'<div class="seat-card"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(person.publicName||'Advisor')+'</strong><small>SELC Advisor</small></div>').join(''):'<p class="directory-note">No Advisors have chosen to publish their names yet.</p>';
+  if(advisorHost)advisorHost.innerHTML=[0,1].map(n=>{const person=advisors[n];return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Advisor')+'</strong><small>'+esc(person?'SELC Advisor':'Position available')+'</small></div>'}).join('');
 }
 async function beginHeadquarters(){
  const session=await api('selc-auth');
@@ -176,7 +176,7 @@ const NAV=[
  ['handbook','▤','Staff Handbook','Your work',u=>u==='staff'],
  ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
   ['admincenter','◈','Coordinator administration','Leadership',u=>u==='coordinator'],
- ['join','✎','Apply for Representative','Your work',u=>u==='member'],
+ ['join','✎','Apply to SELC','Your work',u=>['member','advisor'].includes(u)],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
  ['ballots','✓','Coordinator election','Your work',u=>participantRole(u)&&u!=='founder'],
@@ -265,7 +265,7 @@ async function advisorHomePage(home){
   api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]}))
  ]);
  const eligible=(proposals.proposals||[]).filter(p=>p.status==='Discussion');
- const markup=pageHeader('SELC / ADVISOR','Welcome back, '+esc((context.me.displayName||'Advisor').split(' ')[0]),'Support member communications, education, outreach and community improvement. You may provide feedback and vote on committee proposals across all categories.')+
+ const markup=pageHeader('SELC / ADVISOR','Welcome back, '+esc((context.me.displayName||'Advisor').split(' ')[0]),'Support member communications, events and internal improvements. You may provide feedback and vote on committee proposals across all categories.')+
   '<div class="hq-stats"><div class="hq-stat"><small>SHARED MESSAGES</small><strong>'+number(inbox.messages?.length||0)+'</strong></div><div class="hq-stat"><small>ADVISOR-ELIGIBLE VOTES</small><strong>'+number(eligible.length)+'</strong></div></div>'+
   card('<h2>Your Advisor responsibilities</h2><p>Participate in SELC chat, review opted-in member communications and event feedback, contribute educational ideas, and vote on committee proposals. Private IA records, membership approvals, Staff accepted roles and bans remain outside the Advisor role.</p><div class="hq-actions">'+btn('Community inbox','data-page-link="communityinbox"','primary')+btn('Proposals and votes','data-page-link="proposals"')+btn('SELC chat','data-page-link="chat"')+btn('Leadership progression','data-page-link="join"')+'</div>');
  setContent(markup);bindPageLinks();
@@ -307,19 +307,24 @@ const ADVISORFIELDS=[
 async function joinPage(){
  const data=await api('selc-governance',{query:{scope:'home'}}),history=data.myApplications||[];
  context.data.home=data;
- let markup=pageHeader('SELC / MANAGEMENT','Representative application','Four Representatives and two Coordinators manage Sanctum Eros. Applicants must have approved SE membership.');
+ let markup=pageHeader('SELC / SANCTUM EROS','Apply to SELC','Two Advisors, four Representatives and two Coordinators serve Sanctum Eros. All roles require active SE membership.');
  if(history.length)markup+=card('<h2>Application history</h2>'+history.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>'+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join(''));
- if(role()!=='member'||!data.me?.hasApprovedSEMembership){setContent(markup+card('<h2>Eligibility</h2><p>An active Sanctum Eros membership is required. Members who already hold a leadership role use their existing management workspace.</p><a href="https://sanctumportal.org/membership.html#apply">Membership application</a>'));return}
- if(history.some(a=>a.type!=='advisor'&&['Pending','Under Review','Recommended','Certification Pending'].includes(a.status))){setContent(markup+card('<p>Your application is being reviewed or is awaiting certification.</p>'));return}
- markup+=card('<h2>Become a Representative</h2><form id="repForm" class="hq-form">'+REPFIELDS.map(f=>textfield(f)).join('')+'<label class="checkline"><input type="checkbox" name="truthful" required> My answers are accurate.</label><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Submit application</button></form>');
+ if(!['member','advisor'].includes(role())||!data.me?.hasApprovedSEMembership){setContent(markup+card('<h2>Eligibility</h2><p>An active SE membership is required. Existing leadership uses their assigned workspace.</p><a href="https://sanctumportal.org/membership.html#apply">Apply for membership</a>'));return}
+ if(history.some(a=>['Pending','Under Review','Recommended','Certification Pending'].includes(a.status))){setContent(markup+card('<p>Your application is already under review or awaiting certification.</p>'));return}
+ const advancing=role()==='advisor';
+ markup+=card('<h2>Committee application</h2><p>Advisors assist with event feedback and committee ideas. Representatives manage approved event and membership operations; Coordinators oversee administration. All require Founder approval and training.</p><form id="repForm" class="hq-form">'+
+ (advancing?'':'<label>Requested role<select name="requestedRole"><option value="advisor">Advisor (2 seats)</option><option value="representative">Representative (4 seats)</option></select></label>')+
+ '<div id="roleFields"></div><label class="checkline"><input type="checkbox" name="truthful" required> My answers are accurate.</label><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Submit application</button></form>');
  setContent(markup);
- watchForm($('#repForm'),async(data,form)=>{
-  if(!data.truthful)throw new Error('Confirm the accuracy of your responses.');
-  const answers=Object.fromEntries(REPFIELDS.map(f=>[f[0],data[f[0]]]));
-  if(String(answers.motivation||'').length<80||String(answers.experience||'').length<80)throw new Error('Please write at least 80 characters for motivation and experience.');
-  await post('selc-governance','apply_representative',{answers});
-  setStatus(form.querySelector('[data-status]'),'Application submitted.',true);
-  await openPage('home');
+ const form=$('#repForm'),update=()=>{const type=advancing?'representative':form.querySelector('[name=requestedRole]')?.value||'advisor';form.querySelector('#roleFields').innerHTML=(type==='advisor'?ADVISORFIELDS:REPFIELDS).map(f=>textfield(f)).join('')};
+ form.querySelector('[name=requestedRole]')?.addEventListener('change',update);update();
+ watchForm(form,async(vals,form)=>{
+  if(!vals.truthful)throw new Error('Confirm the accuracy of your answers.');
+  const type=advancing?'representative':vals.requestedRole==='advisor'?'advisor':'representative';
+  const fields=type==='advisor'?ADVISORFIELDS:REPFIELDS,answers=Object.fromEntries(fields.map(f=>[f[0],vals[f[0]]]));
+  if(String(answers.motivation||'').length<80||String(answers.experience||'').length<80)throw new Error('Provide at least 80 characters for motivation and experience.');
+  await post('selc-governance',type==='advisor'?'apply_advisor':'apply_representative',{answers});
+  setStatus(form.querySelector('[data-status]'),'Application submitted.',true);await openPage('home');
  });
 }
 async function certificationPage(){
@@ -580,10 +585,10 @@ async function leadershipWorkPage(){
 
 async function leaderPage(){
  const data=await api('selc-governance',{query:{scope:'members'}}),
- people=(data.members||[]).filter(p=>['representative','coordinator'].includes(p.role)).sort((a,b)=>({coordinator:0,representative:1}[a.role]??2)-({coordinator:0,representative:1}[b.role]??2)||Number(a.seat||0)-Number(b.seat||0));
- let markup=pageHeader('SELC / INTERNAL MANAGEMENT','Management team','Four Representatives and two Coordinators serve Sanctum Eros under the Founder. Staff and Dungeon Monitors have separate duties.');
- markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVES</small><strong>'+people.filter(p=>p.role==='representative').length+' / 4</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(p=>p.role==='coordinator').length+' / 2</strong></div></div>';
- markup+=card('<h2>Current management</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>'+esc(p.role==='coordinator'?'Coordinator':'Representative')+' · Seat '+esc(p.seat)+' · '+esc(p.availability?.status||'Available')+'</p></div>'+tag(p.role)+(owner()?btn('End appointment','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
+ people=(data.members||[]).filter(p=>['representative','coordinator','advisor'].includes(p.role)).sort((a,b)=>({coordinator:0,representative:1,advisor:2}[a.role]??3)-({coordinator:0,representative:1,advisor:2}[b.role]??3)||Number(a.seat||0)-Number(b.seat||0));
+ let markup=pageHeader('SELC / INTERNAL MANAGEMENT','Management team','Two Coordinators, four Representatives and two Advisors serve Sanctum Eros under the Founder. Staff and Dungeon Monitors have separate duties.');
+ markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVES</small><strong>'+people.filter(p=>p.role==='representative').length+' / 4</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(p=>p.role==='coordinator').length+' / 2</strong></div><div class="hq-stat"><small>ADVISORS</small><strong>'+people.filter(p=>p.role==='advisor').length+' / 2</strong></div></div>';
+ markup+=card('<h2>Current management</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>'+esc(p.role==='coordinator'?'Coordinator':p.role==='advisor'?'Advisor':'Representative')+(p.role==='advisor'?'':' · Seat '+esc(p.seat))+' · '+esc(p.availability?.status||'Available')+'</p></div>'+tag(p.role)+(owner()?btn('End appointment','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
  if(owner())markup+=card('<h2>Appointments</h2><p>Review Representative applications and Coordinator advancement. Application and certification records remain available.</p>'+btn('Review applications','data-page-link="applications"','primary'));
  setContent(markup);bindPageLinks();
  $$('[data-remove]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('End this SELC appointment? Their SE membership remains separate.'))return;try{await post('selc-governance','remove',{accountId:b.dataset.remove});flash('Appointment ended.');leaderPage()}catch(e){flash(e.message)}});
