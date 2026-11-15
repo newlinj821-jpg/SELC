@@ -932,9 +932,11 @@ async function eventPage(){
  function eventPricesSummary(e){
   if(e.freeAdmission===true)return 'Free';
   const defaults=e.eventType==='play'?{earlySinglePrice:25,earlyCouplePrice:40,returningSinglePrice:35,returningCouplePrice:50}:e.eventType==='workshop'?{newSinglePrice:10,newCouplePrice:20,returningSinglePrice:10,returningCouplePrice:20}:{newSinglePrice:10,newCouplePrice:10,returningSinglePrice:10,returningCouplePrice:10};
-  const oldSocial=e.eventType==='social'&&Number(e.returningSinglePrice)===10&&Number(e.returningCouplePrice)===15&&Number(e.newSinglePrice)===20&&Number(e.newCouplePrice)===20;
+  const oldSocialA=e.eventType==='social'&&Number(e.returningSinglePrice)===20&&Number(e.returningCouplePrice)===40&&Number(e.newSinglePrice)===10&&Number(e.newCouplePrice)===10;
+  const oldSocialB=e.eventType==='social'&&Number(e.returningSinglePrice)===10&&Number(e.returningCouplePrice)===15&&Number(e.newSinglePrice)===20&&Number(e.newCouplePrice)===20;
+  const oldSocial=oldSocialA||oldSocialB;
   const oldWorkshop=e.eventType==='workshop'&&Number(e.returningSinglePrice)===10&&Number(e.returningCouplePrice)===20&&Number(e.newSinglePrice)===20&&Number(e.newCouplePrice)===20;
-  const normalized=oldSocial?{...e,returningCouplePrice:10,newSinglePrice:10,newCouplePrice:10}:oldWorkshop?{...e,newSinglePrice:10}:e;
+  const normalized=oldSocial?{...e,returningSinglePrice:10,returningCouplePrice:10,newSinglePrice:10,newCouplePrice:10}:oldWorkshop?{...e,newSinglePrice:10}:e;
   const pr=(k,extra=0)=>'$'+(Number(normalized[k]??defaults[k]??0)+extra).toFixed(0);
   return e.eventType==='play'?'Early '+pr('earlySinglePrice')+'/'+pr('earlyCouplePrice')+' · Standard '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice'):'First-time total '+pr('newSinglePrice',10)+'/'+pr('newCouplePrice',10)+' · Returning '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice');
  };
