@@ -29,15 +29,16 @@ test('SELC application decisions and clarification responses stay wired',()=>{
  assert.match(app,/Complete application responses/);
 });
 
-test('the new independent Advisor journey has account, email, application, and certification controls',()=>{
- const html=read('advisor/index.html');
- for(const id of ['registerForm','verifyForm','signInForm','applyForm','priorApps'])assert.ok(html.includes('id="'+id+'"'),id+' missing');
- assert.match(advisor,/selc-advisor-registration/);
- assert.match(advisor,/apply_advisor/);
- assert.match(advisor,/sessionStorage\.setItem\(TOKEN_KEY,token\)/);
- assert.match(advisor,/Your session has been preserved/);
- assert.match(app,/SELC_ADVISOR|SELC Advisor/);
- assert.match(read('index.html'),/href="\/advisor\/"/);
+test('external advisor and Community Leaders signup has been retired',()=>{
+ const advisorPage=read('advisor/index.html'),leadersPage=read('community-leaders/index.html'),home=read('index.html');
+ assert.match(advisorPage,/PUBLIC APPLICATIONS/);
+ assert.match(leadersPage,/NETWORK/);
+ assert.doesNotMatch(advisorPage,/<form\\b/);
+ assert.doesNotMatch(leadersPage,/<form\\b/);
+ assert.doesNotMatch(home,/href="\\/advisor\\/"/);
+ assert.doesNotMatch(home,/href="\\/community-leaders\\/"/);
+ assert.match(app,/const visible=new Set/);
+ assert.match(app,/communityleaders','applyeducator/);
 });
 
 test('SELC role-based navigation keeps private operations away from Advisors',()=>{

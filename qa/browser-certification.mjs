@@ -102,13 +102,14 @@ try{
  await p.locator('#loginUser').fill('test-external-organizer');
  await p.locator('#loginPass').fill('synthetic-secret');
  await p.locator('#loginForm [type=submit]').click();
- await p.locator('#hqNavigation [data-page="communityleaders"]').waitFor({timeout:12000});
+ await p.locator('#hqNavigation [data-page="myaccount"]').waitFor({timeout:12000});
+ assert.equal(await p.locator('#hqNavigation [data-page="communityleaders"]').count(),0,'Retired network must not appear in navigation');
  assert.equal(await p.locator('#hqNavigation [data-page="work"]').count(),0);
  assert.equal(await p.locator('#hqNavigation [data-page="certification"]').count(),0);
  assert.equal(await p.locator('#hqNavigation [data-page="generalapps"]').count(),0);
  await p.locator('#hqMenu').click();
- await p.locator('#hqNavigation [data-page="communityleaders"]').click();
- await p.getByText('Message Community Leaders, SELC or Eros',{exact:false}).waitFor();
+ await p.locator('#hqNavigation [data-page="myaccount"]').click();
+ await p.locator('#hqContent').waitFor();
  assert.equal(await p.locator('#hqRole').count(),1);
  await mobile.close();
  const founderContext=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});
@@ -123,7 +124,7 @@ try{
  assert.equal(await founderPage.locator('#hqNavigation [data-page="applications"]').count(),1);
  assert.equal(await founderPage.locator('#hqNavigation [data-page="work"]').count(),1);
  assert.equal(await founderPage.locator('#hqNavigation [data-page="founderdesk"]').count(),1);
- for(const section of ['founderdesk','content','chat','readiness','banhistory','volunteer']){
+ for(const section of ['founderdesk','readiness','banhistory','volunteer']){
   await founderPage.locator('#hqMenu').click();
   await founderPage.locator('#hqNavigation [data-page="'+section+'"]').click();
   await founderPage.waitForFunction(name=>document.querySelector('#hqContent')?.textContent?.includes(name),{

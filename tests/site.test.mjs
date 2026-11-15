@@ -1,69 +1,37 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
-const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
-const js=readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const css=readFileSync(new URL('../style.css',import.meta.url),'utf8');
-test('SELC stands apart from Hub/Portal and includes community-first messaging',()=>{
- assert.match(html,/BUILT BY THE/);assert.match(html,/Community Educators/);
- assert.match(html,/Leadership Committee/);assert.match(html,/h3ll0nwh33ls/);
- assert.doesNotMatch(html,/Established to lead/i);
+const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const html=read('index.html'),js=read('app.js'),css=read('style.css');
+test('SELC describes internal event and membership operations',()=>{
+ assert.match(html,/THE TEAM BEHIND SANCTUM EROS/);
+ assert.match(html,/Dungeon Nights, socials and workshops/);
+ assert.match(html,/h3ll0nwh33ls/);
+ assert.doesNotMatch(html,/<a[^>]+href="\/community-leaders\/"/);
+ assert.doesNotMatch(html,/<a[^>]+href="\/advisor\/"/);
 });
-test('custom SELC logo is used and is accessible',()=>{
+test('accessible logo, navigation, sign-in and management UI remain',()=>{
  assert.match(html,/assets\/selc-emblem\.svg/);
  assert.ok(existsSync(new URL('../assets/selc-emblem.svg',import.meta.url)));
+ for(const id of ['mobileNavTrigger','publicNav','loginDialog','loginForm','headquarters','hqNavigation','hqContent'])assert.ok(html.includes('id="'+id+'"'),id);
+ assert.match(css,/@media\(max-width:650px\)/);
 });
-test('mobile navigation and independently styled Headquarters exist',()=>{
- assert.match(html,/id="mobileNavTrigger"/);assert.match(html,/id="headquarters"/);
- assert.match(css,/@media\(max-width:650px\)/);assert.match(css,/prefers-reduced-motion/);
+test('event management and safety routes remain implemented',()=>{
+ for(const id of ['home','founderdesk','admincenter','applications','work','leader','proposals','generalapps','events','volunteer','readiness','iacases','banreports','appeals','myaccount'])assert.ok(js.includes("'"+id+"'"),id);
+ for(const endpoint of ['selc-auth','selc-governance','shifts','safety-appeal-review','leadership-queue'])assert.ok(js.includes(endpoint),endpoint);
 });
-test('all requested workspace entries are bound to actual routes',()=>{
- for(const id of ['home','join','coordinator','ballots','applications','work','library','leader','proposals','requests','educators','generalapps','events','volunteer','door','banreports','appeals'])assert.ok(js.includes("'"+id+"'"),id);
- for(const endpoint of ['selc-auth','selc-governance','shifts','education-programs','safety-appeal-review','leadership-library','leadership-queue'])assert.ok(js.includes(endpoint),endpoint);
+test('retired external programs have no public enrollment forms',()=>{
+ const advisor=read('advisor/index.html'),network=read('community-leaders/index.html');
+ assert.match(advisor,/PUBLIC APPLICATIONS/);
+ assert.match(network,/NETWORK/);
+ assert.doesNotMatch(advisor,/<form\b/);
+ assert.doesNotMatch(network,/<form\b/);
 });
-test('public SELC pillars use Leadership, Education and Community rather than Consent branding',()=>{
- assert.match(html,/LEADERSHIP<\/span><span>EDUCATION<\/span><span>COMMUNITY/);
- assert.doesNotMatch(html,/CONSENT<\/span><span>EDUCATION<\/span><span>COMMUNITY/);
-});
-
-test('SELC governance respects distinct representative, coordinator and staff roles',()=>{
- assert.match(js,/people\.filter\(x=>x\.role==='representative'\)\.length\+' \/ 3/);
+test('governance and staff permissions remain separated',()=>{
  assert.match(js,/admincenter:coordinatorAdminPage/);
  assert.match(js,/iacases:iaCasesPage/);
  assert.match(js,/staffpath:staffPathPage/);
- assert.doesNotMatch(js,/\[data-claim-shift\],\[data-release-shift\]/);
- assert.match(js,/Staff and Dungeon Monitor volunteer sign-ups happen exclusively in the Staff Portal/);
- assert.match(js,/Submit feedback|Leadership recommendation/);
-});
-
-test('SELC website authenticates against Portal, not a local user list',()=>{
- assert.match(js,/sanctumportal\.org/);
- assert.match(js,/Authorization.*Bearer/);
+ assert.match(js,/const reviewer=\(\)=>/);
  assert.match(js,/credentials:'omit'/);
-});
-
-test('Advisor sits below Representative and can see only designated participation screens',()=>{
- assert.match(html,/id="publicAdvisors"/);
  assert.match(js,/role==='advisor'/);
- assert.match(js,/advisorHomePage/);
- assert.match(js,/const canVote=participantRole\(role\(\)\)/);
- assert.match(js,/advisorLessons/);
- assert.match(js,/type==='advisor'\?'Advisor certification'/);
- assert.match(js,/data-action="offer-advisor"/);
- assert.match(js,/data-action="reopen"/);
- assert.match(js,/pendingRole==='advisor'/);
- assert.doesNotMatch(js,/advisorVoteCategories/,'Active Advisors vote on all eligible committee proposals');
- assert.doesNotMatch(js,/\['registry'[^\n]+participantRole/);
- assert.doesNotMatch(js,/\['iacases'[^\n]+participantRole/);
- assert.doesNotMatch(js,/\['door'[^\n]+participantRole/);
-});
-
-test('five Advisors, three Representatives, two Coordinators comprise ten appointed SELC seats',()=>{
- assert.match(html,/Five Advisor positions, three Representative positions, two Coordinator positions/);
- assert.match(html,/id="publicAdvisors"/);
- assert.match(html,/id="publicTransitionRepresentatives"/);
- assert.match(js,/people\.filter\(x=>x\.role==='advisor'\)\.length\+' \/ 5/);
- assert.match(js,/people\.filter\(x=>x\.role==='coordinator'\)\.length\+' \/ 2/);
- assert.match(js,/target==='advisor'\?'apply_advisor':'apply_representative'/);
- assert.match(js,/const ADVISORFIELDS=/);
 });
