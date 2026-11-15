@@ -929,7 +929,7 @@ async function eventPage(){
  $$('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
  
  $$('[data-event-teacher]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eventTeacher));
- const eventPricesSummary=e=>{
+ function eventPricesSummary(e){
   if(e.freeAdmission===true)return 'Free';
   const defaults=e.eventType==='play'?{earlySinglePrice:25,earlyCouplePrice:40,returningSinglePrice:35,returningCouplePrice:50}:e.eventType==='workshop'?{newSinglePrice:10,newCouplePrice:20,returningSinglePrice:10,returningCouplePrice:20}:{newSinglePrice:10,newCouplePrice:10,returningSinglePrice:10,returningCouplePrice:10};
   const oldSocial=e.eventType==='social'&&Number(e.returningSinglePrice)===10&&Number(e.returningCouplePrice)===15&&Number(e.newSinglePrice)===20&&Number(e.newCouplePrice)===20;
