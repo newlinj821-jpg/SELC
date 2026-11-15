@@ -16,8 +16,8 @@ const isDiscontinuedEvent=e=>/\bkink\s+n\s+drinks\b/i.test(String(e?.event?.titl
 const activeSELCEvents=events=>(Array.isArray(events)?events:[]).filter(e=>!isDiscontinuedEvent(e));
 const RANK={founder:'Founder/Director',coordinator:'SELC Coordinator · Administration',representative:'SELC Representative · Leadership',advisor:'SELC Advisor · Event Support',staff:'Sanctum Eros Staff',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
 const committeeRole=u=>['founder','coordinator','representative'].includes(u);
-const participantRole=u=>committeeRole(u)||u==='advisor';
-const advisor=()=>role()==='advisor';
+const participantRole=u=>committeeRole(u);
+const advisor=()=>false;
 // All active SELC role tiers may vote on committee proposals.
 const organizerRole=u=>['community-applicant','community-leader'].includes(u); // legacy accounts remain able to access their account
 const leader=()=>context.me&&['founder','coordinator','representative'].includes(context.me.role);
@@ -142,15 +142,16 @@ async function loadPublicLeadership(){
   const host=$('#publicDirectory');if(!host)return;
   const people=Array.isArray(data.people)?data.people:[];
   const bySeat=new Map(people.filter(p=>p.role==='representative').map(p=>[Number(p.seat),p]));
-  const advisors=people.filter(p=>p.role==='advisor');
-  const grandfatheredRepresentatives=people.filter(p=>p.role==='representative'&&Number(p.seat)>3).sort((a,b)=>Number(a.seat)-Number(b.seat));
+  const advisors=[];
+  const grandfatheredRepresentatives=[]; // fifth-seat history remains archived
+  const formerRepresentatives=people.filter(p=>p.role==='representative'&&Number(p.seat)>4).sort((a,b)=>Number(a.seat)-Number(b.seat));
   const coordinators=people.filter(p=>p.role==='coordinator').slice(0,2);
   const coordinatorHost=$('#publicCoordinators');
   if(coordinatorHost)coordinatorHost.innerHTML=[0,1].map(n=>{
     const person=coordinators[n];
     return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Coordinator')+'</strong><small>'+esc(person?'SELC Coordinator':'Position available')+'</small></div>';
   }).join('');
-  host.innerHTML=[1,2,3].map(n=>{
+  host.innerHTML=[1,2,3,4].map(n=>{
     const person=bySeat.get(n);
     return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+'SELC Representative'+'</small></div>';
   }).join('');
@@ -175,12 +176,12 @@ const NAV=[
  ['handbook','▤','Staff Handbook','Your work',u=>u==='staff'],
  ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
   ['admincenter','◈','Coordinator administration','Leadership',u=>u==='coordinator'],
- ['join','✎','Apply to SELC','Your work',u=>['member','advisor'].includes(u)],
+ ['join','✎','Apply for Representative','Your work',u=>u==='member'],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
  ['ballots','✓','Coordinator election','Your work',u=>participantRole(u)&&u!=='founder'],
  ['applications','▤','SELC applications','Leadership',u=>u==='founder'||u==='coordinator'],
- ['leader','◈','SELC members & advisors','Leadership',u=>participantRole(u)],
+ ['leader','◈','SELC team','Leadership',u=>participantRole(u)],
  ['availability','◷','My availability','Your work',u=>participantRole(u)&&u!=='founder'],
  ['work','▣','Leadership Action Center','Leadership',u=>committeeRole(u)],
  ['handbook','▤','SELC Handbook Center','Your work',u=>participantRole(u)],
@@ -208,7 +209,7 @@ const NAV=[
  ['myaccount','◎','My account','Your work']
 ];
 function setupHQNav(){
- const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','communityinbox','proposals','generalapps','events','volunteer','readiness','iacases','banreports','appeals','handbook','certification','coordinator','ballots','join','work','registry','banhistory','staffpath','educators']);const groups={'Your work':'Overview','Leadership':'Leadership','Committee':'Community','Community':'Community','Partnerships':'Community','Education':'Resources','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
+ const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','communityinbox','proposals','generalapps','events','volunteer','readiness','iacases','banreports','appeals','certification','coordinator','ballots','join','work','registry','staffpath']);const groups={'Your work':'Account','Leadership':'Management','Committee':'Management','Community':'Management','Partnerships':'Management','Education':'Management','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
  root.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button){closeHQNav();openPage(button.dataset.page)}});
  $('#hqMenu').addEventListener('click',()=>{const open=!$('#hqSidebar').classList.contains('open');$('#hqSidebar').classList.toggle('open',open);$('#hqShade').classList.toggle('open',open);$('#hqMenu').setAttribute('aria-expanded',String(open))});
  $('#hqShade').addEventListener('click',closeHQNav);
@@ -278,15 +279,15 @@ async function homePage(){
  context.data.home=home;
  if(advisor())return advisorHomePage(home);
  if(role()==='staff')return staffConnectionPage();
- if(!leader()){const pendingCert=(home.myApplications||[]).some(a=>a.status==='Certification Pending'),underReview=(home.myApplications||[]).some(a=>['Pending','Under Review','Recommended'].includes(a.status));setContent(pageHeader('WELCOME TO SELC','Your next chapter','SELC Advisors may apply with a verified email account without SE membership. Representative and Coordinator advancement requires approved SE membership; every position requires review, acceptance and certification.')+(pendingCert?card('<h2>Application accepted — certification required</h2><p>Complete your training to activate committee privileges.</p>'+btn('Begin SELC certification','data-page-link="certification"','primary')):underReview?card('<h2>Your application is under review</h2><p>SELC leadership will review your answers. No committee permissions are granted until the application is accepted and certification completed.</p>'):card('<h2>Help build something meaningful</h2><p>Apply for an Advisor or Representative position. No committee privileges activate until acceptance and certification.</p>'+btn('Apply to SELC','data-page-link="join"','primary')))+(home.myApplications?.length?card('<h2>Your applications</h2>'+home.myApplications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>Submitted '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join('')):''));bindPageLinks();return}
+ if(!leader()){const pendingCert=(home.myApplications||[]).some(a=>a.status==='Certification Pending'),underReview=(home.myApplications||[]).some(a=>['Pending','Under Review','Recommended'].includes(a.status));setContent(pageHeader('WELCOME TO SELC','Your next chapter','SELC is an internal Sanctum Eros management team. Approved members may apply for Representative positions; Coordinators advance from active Representatives.')+(pendingCert?card('<h2>Application accepted — certification required</h2><p>Complete your training to activate committee privileges.</p>'+btn('Begin SELC certification','data-page-link="certification"','primary')):underReview?card('<h2>Your application is under review</h2><p>SELC leadership will review your answers. No committee permissions are granted until the application is accepted and certification completed.</p>'):card('<h2>Help build something meaningful</h2><p>Apply for a Representative seat. Appointment requires active membership, acceptance and certification.</p>'+btn('Apply to SELC','data-page-link="join"','primary')))+(home.myApplications?.length?card('<h2>Your applications</h2>'+home.myApplications.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>Submitted '+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join('')):''));bindPageLinks();return}
  const [conv,staff,bans]=results.slice(1).map(r=>r.status==='fulfilled'?r.value:null);
  const proposals=await api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]}));
- const cards=[['SELC POSITIONS',String((home.occupiedSeats||0)+(home.advisors||0))+'/10'],['COORDINATORS',String(home.coordinators||0)+'/2'],['OPEN CONVERSATIONS',number(conv?.openCount||0)],['BAN REPORTS PENDING',number(bans?.pendingCount||0)]];
+ const cards=[['SELC POSITIONS',String(home.occupiedSeats||0)+'/6'],['COORDINATORS',String(home.coordinators||0)+'/2'],['OPEN CONVERSATIONS',number(conv?.openCount||0)],['BAN REPORTS PENDING',number(bans?.pendingCount||0)]];
  let markup=pageHeader('YOUR COMMUNITY / YOUR RESPONSIBILITY','Welcome back, '+(context.me.displayName||'').split(' ')[0],'Leadership is the work we do together—not just the title we hold.',btn('Start a proposal','data-page-link="proposals"','primary'));
  markup+='<div class="hq-stats">'+cards.map(([label,value])=>'<div class="hq-stat"><small>'+esc(label)+'</small><strong>'+esc(value)+'</strong></div>').join('')+'</div>';
  markup+='<div class="hq-grid">'+card('<h2>Where your attention can help</h2>'+[
   ['Committee proposals',(proposals.proposals||[]).filter(p=>p.status==='Discussion').length,'proposals'],
-  ['Community & educator requests',conv?.openCount||0,'requests'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',activeSELCEvents(staff?.events).length,'events']
+  ['Member messages and event requests',conv?.openCount||0,'communityinbox'],['Ban Reports awaiting decision',bans?.pendingCount||0,'banreports'],['Upcoming events',activeSELCEvents(staff?.events).length,'events']
  ].map(([label,value,link])=>'<div class="hq-row"><div class="grow"><strong>'+esc(label)+'</strong><p>'+number(value)+' item(s)</p></div>'+btn('Open','data-page-link="'+link+'"')+'</div>').join(''))+
  card('<h2>Quick access</h2><p>All authorized SELC responsibilities live here, using the same event and member records as the Portal.</p><div class="hq-grid-3">'+[['Action Center','work'],['Community inbox','communityinbox'],['Applications','generalapps'],['Member registry','registry'],['Staffing overview','volunteer'],['Become Staff','staffpath'],['RSVPs & events','events'],['Education','educators'],['Committee vote','ballots'],['Leadership','leader']].map(([label,link])=>btn(label,'data-page-link="'+link+'"')).join('')+'</div>')+'</div>';
  if(!staff)markup+=card('<p>Portal event operations are temporarily unavailable. Other committee tools may still work.</p>');
@@ -518,7 +519,7 @@ async function applicationsPage(){
  });
 }
 async function roleHandbookPage(){
- const selected=role()==='staff'?'staff':context.handbookRole||(role()==='founder'?'advisor':role());
+ const selected=role()==='staff'?'staff':context.handbookRole||(role()==='founder'?'representative':role());
  const payload=await api('selc-handbook',{query:{role:selected}}),book=payload.handbook||{},roles=payload.accessibleRoles||[role()];
  // Supplementary articles remain editable in their existing storage; only a single handbook page is exposed.
  const supplemental=committeeRole(role())?await api('leadership-library').catch(()=>null):null;
@@ -591,10 +592,10 @@ async function leadershipWorkPage(){
 
 async function leaderPage(){
  const data=await api('selc-governance',{query:{scope:'members'}}),people=(data.members||[]).sort((a,b)=>({coordinator:0,representative:1,advisor:2}[a.role]??3)-({coordinator:0,representative:1,advisor:2}[b.role]??3)||String(a.displayName||'').localeCompare(String(b.displayName||'')));
- let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Five Advisors, three Representatives and two Coordinators, plus Eros as Founder/Director. All three accepted leadership tiers may discuss and vote on committee proposals; action and approval permissions remain role-specific.');
- markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.filter(x=>x.role==='representative').length+' / 3</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div><div class="hq-stat"><small>ADVISORS</small><strong>'+people.filter(x=>x.role==='advisor').length+' / 5</strong></div></div>';
+ let markup=pageHeader('THE PEOPLE BEHIND THE WORK','SELC leadership','Four Representatives and two Coordinators manage Sanctum Eros alongside Eros as Founder/Director. Responsibilities and approval permissions remain role-specific.');
+ markup+='<div class="hq-stats"><div class="hq-stat"><small>REPRESENTATIVE SEATS</small><strong>'+people.filter(x=>x.role==='representative').length+' / 4</strong></div><div class="hq-stat"><small>COORDINATORS</small><strong>'+people.filter(x=>x.role==='coordinator').length+' / 2</strong></div><div class="hq-stat"><small>ADVISORS</small><strong>'+people.filter(x=>x.role==='advisor').length+' / 5</strong></div></div>';
  if(people.filter(x=>x.role==='representative').length>3)markup+=card('<h3>Representative transition</h3><p>The new standard capacity is three Representatives. Existing accepted roles above this number remain valid during a deliberate transition. No one is automatically demoted; new Representative accepted roles stay paused until a vacancy opens within the three-seat cap.</p>');
- markup+=card('<h2>Committee members and Advisors</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>'+(p.role==='advisor'?'Advisor · project and community participation':'Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role))+' · '+esc(p.availability?.status||'Available')+(p.availability?.until?' through '+esc(p.availability.until):'')+'</p></div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
+ markup+=card('<h2>SELC management team</h2>'+people.map(p=>'<div class="hq-row"><div class="grow"><strong>'+esc(p.displayName)+'</strong><p>'+(p.role==='advisor'?'Advisor · project and community participation':'Seat '+esc(p.seat)+' · '+esc(RANK[p.role]||p.role))+' · '+esc(p.availability?.status||'Available')+(p.availability?.until?' through '+esc(p.availability.until):'')+'</p></div>'+tag(p.role)+(owner()?btn('Remove','data-remove="'+esc(p.accountId)+'"','danger'):'')+'</div>').join(''));
  if(owner())markup+=card('<h2>Lead the role process</h2><p>Review and appoint Representatives or Coordinators from applications. Coordinator applications follow a documented selection process and committee voting where eligible.</p>'+btn('Review SELC applications','data-page-link="applications"','primary'));
  setContent(markup);bindPageLinks();$$('[data-remove]').forEach(b=>b.onclick=async()=>{if(!confirmDecision('Remove this SELC leadership role? Their regular membership remains separate.'))return;try{await post('selc-governance','remove',{accountId:b.dataset.remove});flash('Leadership role ended.');leaderPage()}catch(e){flash(e.message)}});
 }
