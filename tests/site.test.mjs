@@ -8,7 +8,7 @@ test('SELC describes internal event and membership operations',()=>{
  assert.match(html,/Dungeon Nights, socials and workshops/);
  assert.match(html,/h3ll0nwh33ls/);
  assert.doesNotMatch(html,/<a[^>]+href="\/community-leaders\/"/);
- assert.doesNotMatch(html,/<a[^>]+href="\/advisor\/"/);
+ assert.match(html,/href="\/advisor\/"/);
 });
 test('accessible logo, navigation, sign-in and management UI remain',()=>{
  assert.match(html,/assets\/selc-emblem\.svg/);
@@ -22,7 +22,7 @@ test('event management and safety routes remain implemented',()=>{
 });
 test('retired external programs have no public enrollment forms',()=>{
  const advisor=read('advisor/index.html'),network=read('community-leaders/index.html');
- assert.match(advisor,/PUBLIC APPLICATIONS/);
+ assert.match(advisor,/INTERNAL ADVISOR APPLICATIONS/);
  assert.match(network,/NETWORK/);
  assert.doesNotMatch(advisor,/<form\b/);
  assert.doesNotMatch(network,/<form\b/);
