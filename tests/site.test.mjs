@@ -34,5 +34,5 @@ test('governance and staff permissions remain separated',()=>{
  assert.match(js,/const reviewer=\(\)=>/);
  assert.match(js,/credentials:'omit'/);
  assert.match(js,/const advisor=\(\)=>role\(\)==='advisor'/);
- assert.match(html,/Two Advisors review appropriately shared member feedback/);
+ assert.match(html,/Two Advisors read member feedback that has been shared with SELC/);
 });
