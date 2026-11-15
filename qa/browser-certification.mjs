@@ -124,13 +124,18 @@ try{
  assert.equal(await founderPage.locator('#hqNavigation [data-page="applications"]').count(),1);
  assert.equal(await founderPage.locator('#hqNavigation [data-page="work"]').count(),1);
  assert.equal(await founderPage.locator('#hqNavigation [data-page="founderdesk"]').count(),1);
- for(const section of ['founderdesk','readiness','banhistory','volunteer']){
+ for(const section of ['founderdesk','work','leader']){
   await founderPage.locator('#hqMenu').click();
   await founderPage.locator('#hqNavigation [data-page="'+section+'"]').click();
   await founderPage.waitForFunction(name=>document.querySelector('#hqContent')?.textContent?.includes(name),{
-   founderdesk:'Founder command center',content:'Website & content management',chat:'Messages',readiness:'Event readiness',banhistory:'Current & previous bans',volunteer:'Staffing overview'
+   founderdesk:'Founder command center',work:'Leadership Action Center',leader:'Management team'
   }[section],{timeout:12000});
  }
+ // The simplified sidebar keeps readiness available through the Founder workspace.
+ await founderPage.locator('#hqMenu').click();
+ await founderPage.locator('#hqNavigation [data-page="founderdesk"]').click();
+ await founderPage.locator('[data-go="readiness"]').click();
+ await founderPage.waitForFunction(()=>document.querySelector('#hqContent')?.textContent?.includes('Event readiness'),undefined,{timeout:12000});
  assert.equal(founderErrors.length,0,'Founder browser JavaScript errors: '+founderErrors.join('; '));
  await founderContext.close();
  console.log('SELC authenticated UI browser simulation passed: acceptance, retry, certification, role activation and mobile organizer isolation.');
