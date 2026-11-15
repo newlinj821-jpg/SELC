@@ -27,7 +27,7 @@ jobs:
               const home=await get(root+"/");
               assert.equal(new URL(home.url).hostname,"se-selc.netlify.app");
               assert.match(home.body,/FOUNDER \/ DIRECTOR/,"SELC must publish the Founder\/Director title");
-              assert.match(home.body,/Advisor or Representative position/,"SELC should describe both application paths");
+              assert.match(home.body,/two Coordinators, four Representatives and two Advisors/i,"SELC must publish the approved 2/4/2 structure");
               for(const route of ["/purpose/","/community-leaders/","/education/"])await get(root+route);
               const app=await get(root+"/app.js");
               assert.match(app.body,/async function staffConnectionPage\(\)/,"Staff SELC screen must be live");
