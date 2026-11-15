@@ -904,7 +904,7 @@ async function eventPage(){
  if(canManageDrafts)markup+=card('<h2>Unpublished event drafts</h2><p class="hq-muted">Drafts do not open RSVPs. Submit an event proposal for a committee vote before publication.</p>'+
   (drafts.length?drafts.map(e=>{
    const proposal=relatedProposals.find(p=>p.linkedEventId===e.id&&p.status!=='Declined');
-   return '<div class="hq-row"><div class="grow"><strong>'+esc(e.title)+'</strong><p>'+esc(date(e.start))+' · '+esc(({play:'Dungeon Night',social:'Social',workshop:'Workshop / Class'})[e.eventType]||e.eventType||'')+'</p>'+
+   return '<div class="hq-row"><div class="grow"><strong>'+esc(e.title)+'</strong><p>'+esc(date(e.start))+' · '+esc(({play:'Dungeon Night',social:'Social',workshop:'Workshop / Class'})[e.eventType]||e.eventType||'')+' · '+esc(eventPricesSummary(e))+'</p>'+
     (proposal?'<p class="hq-micro">Committee review: '+esc(proposal.status)+' · '+(proposal.voteSummary?.passed?'Majority recorded':String(proposal.voteSummary?.participating||0)+' votes recorded')+'</p>':'<p class="hq-micro">Not yet submitted to committee</p>')+
     '</div><div class="hq-actions">'+(coordinator?btn('Edit draft','data-edit-event-draft="'+esc(e.id)+'"'):'')+
     (proposal?btn('Open proposal','data-page-link="proposals"'):coordinator?btn('Submit for committee vote','data-propose-event="'+esc(e.id)+'"','primary'):'')+
@@ -916,6 +916,12 @@ async function eventPage(){
  $$('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
  
  $$('[data-event-teacher]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eventTeacher));
+ const eventPricesSummary=e=>{
+  if(e.freeAdmission===true)return 'Free';
+  const defaults=e.eventType==='play'?{earlySinglePrice:25,earlyCouplePrice:40,returningSinglePrice:35,returningCouplePrice:50}:e.eventType==='workshop'?{newSinglePrice:20,newCouplePrice:20,returningSinglePrice:10,returningCouplePrice:20}:{newSinglePrice:10,newCouplePrice:10,returningSinglePrice:20,returningCouplePrice:40};
+  const pr=k=>'$'+Number(e[k]??defaults[k]??0).toFixed(0);
+  return e.eventType==='play'?'Early '+pr('earlySinglePrice')+'/'+pr('earlyCouplePrice')+' · Standard '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice'):'New '+pr('newSinglePrice')+'/'+pr('newCouplePrice')+' · Returning '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice');
+ };
  const editor=(prior={})=>{
   const opts=[['play','Dungeon Night'],['social','Social'],['workshop','Workshop / Class']];
   const str=x=>esc(x??'');
