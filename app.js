@@ -305,32 +305,20 @@ const ADVISORFIELDS=[
  ['example','Describe a time you helped improve a group or situation.','What did you contribute, and what did you learn?']
 ];
 async function joinPage(){
- const home=await api('selc-governance',{query:{scope:'home'}}),pending=home.myApplications||[];context.data.home=home;
- let markup=pageHeader('YOUR APPLICATION','Join SELC','Advisors may join with a verified Portal email account without Sanctum Eros membership. Representatives and Coordinators require approved active SE membership and separate advancement and certification.');
- const hasSE=!!home.me?.hasApprovedSEMembership;
- if(!hasSE)markup+=card('<h2>Expand your opportunities with SE membership</h2><p>Your SELC Advisor pathway does not require SE membership. Apply separately to Sanctum Eros to become eligible for Representative advancement, eligible SE events, educational opportunities and other member programs. SE membership is free and reviewed independently. Dungeon parties remain 21+.</p><p class="hq-micro">SE membership: '+esc(home.me?.seMembershipStatus||'Not a member')+'</p><div class="hq-actions"><a class="hq-button primary" href="https://sanctumportal.org/membership.html#apply">Apply for SE membership</a><a class="hq-button" href="https://sanctumportal.org/member.html">Sign in to Portal</a></div>');
- if(pending.length)markup+=card('<h2>Your application history</h2>'+pending.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type==='advisor'?'Advisor':a.type==='coordinator'?'Coordinator':'Representative')+' application</strong><p>'+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join(''));
- if(!['member','advisor','community-applicant','community-leader'].includes(role())){setContent(markup+card('<h2>Your leadership role is already active</h2><p>Use your leadership sections for current responsibilities.</p>'));return}
- if(pending.some(a=>['Pending','Under Review','Recommended','Certification Pending'].includes(a.status))){setContent(markup+card('<h2>An application is already in progress</h2><p>Finish the existing review or assigned certification before submitting another SELC application.</p>'+btn('Review my status','data-page-link="home"','primary')));bindPageLinks();return}
- if(role()==='advisor'&&!hasSE){setContent(markup+card('<h2>Your next leadership opportunity</h2><p>Once your separate SE membership application is approved, return here to apply for Representative advancement. Your Advisor role continues while an SE membership application is pending.</p>'));return}
- const choices=role()==='advisor'?
-  '<option value="representative">Representative — advance from Advisor</option>':
-  '<option value="advisor">Advisor — community and education</option>'+(hasSE?'<option value="representative">Representative — organizational leadership</option>':'');
- markup+=card('<h2>Select a leadership path</h2><p>Advisor positions are capped at five, Representative positions at three, and Coordinator positions at two. Existing accepted roles remain in place during the transition.</p><form id="repForm" class="hq-form"><label>Position to apply for<select name="targetRole" id="selcTargetRole" required>'+choices+'</select></label><div id="selcApplicationQuestions"></div><label class="checkline"><input type="checkbox" name="truthful" required> These responses reflect my experience and intentions.</label><p data-status class="hq-form-status" aria-live="polite"></p><button type="submit" class="hq-button primary">Submit SELC application</button></form>');
+ const data=await api('selc-governance',{query:{scope:'home'}}),history=data.myApplications||[];
+ context.data.home=data;
+ let markup=pageHeader('SELC / MANAGEMENT','Representative application','Four Representatives and two Coordinators manage Sanctum Eros. Applicants must have approved SE membership.');
+ if(history.length)markup+=card('<h2>Application history</h2>'+history.map(a=>'<div class="hq-row"><div class="grow"><strong>'+esc(a.type)+' application</strong><p>'+esc(date(a.createdAt))+'</p></div>'+tag(a.status)+'</div>').join(''));
+ if(role()!=='member'||!data.me?.hasApprovedSEMembership){setContent(markup+card('<h2>Eligibility</h2><p>An active Sanctum Eros membership is required. Members who already hold a leadership role use their existing management workspace.</p><a href="https://sanctumportal.org/membership.html#apply">Membership application</a>'));return}
+ if(history.some(a=>a.type!=='advisor'&&['Pending','Under Review','Recommended','Certification Pending'].includes(a.status))){setContent(markup+card('<p>Your application is being reviewed or is awaiting certification.</p>'));return}
+ markup+=card('<h2>Become a Representative</h2><form id="repForm" class="hq-form">'+REPFIELDS.map(f=>textfield(f)).join('')+'<label class="checkline"><input type="checkbox" name="truthful" required> My answers are accurate.</label><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Submit application</button></form>');
  setContent(markup);
- const selector=$('#selcTargetRole'),questions=$('#selcApplicationQuestions');
- const render=()=>{const fields=selector.value==='advisor'?ADVISORFIELDS:REPFIELDS;questions.innerHTML=fields.map(f=>textfield(f)).join('')};
- selector.addEventListener('change',render);render();
  watchForm($('#repForm'),async(data,form)=>{
-  if(!data.truthful)throw new Error('Confirm the accuracy of your application.');
-  const target=String(data.targetRole||'');
-  if(!['advisor','representative'].includes(target)||(role()==='advisor'&&target!=='representative')||(target==='representative'&&!hasSE))throw new Error('Choose a permitted SELC application path.');
-  const fields=target==='advisor'?ADVISORFIELDS:REPFIELDS;
-  const answers=Object.fromEntries(fields.map(f=>[f[0],data[f[0]]]));
-  if(String(answers.motivation||'').trim().length<80||String(answers.experience||'').trim().length<80)throw new Error('Please expand your motivation and experience to at least 80 characters each.');
-  await post('selc-governance',target==='advisor'?'apply_advisor':'apply_representative',{answers});
-  setStatus(form.querySelector('[data-status]'),'Your application was received.',true);
-  flash('SELC '+(target==='advisor'?'Advisor':'Representative')+' application received.');
+  if(!data.truthful)throw new Error('Confirm the accuracy of your responses.');
+  const answers=Object.fromEntries(REPFIELDS.map(f=>[f[0],data[f[0]]]));
+  if(String(answers.motivation||'').length<80||String(answers.experience||'').length<80)throw new Error('Please write at least 80 characters for motivation and experience.');
+  await post('selc-governance','apply_representative',{answers});
+  setStatus(form.querySelector('[data-status]'),'Application submitted.',true);
   await openPage('home');
  });
 }
