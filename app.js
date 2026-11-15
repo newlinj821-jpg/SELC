@@ -939,7 +939,8 @@ async function eventPage(){
   const now=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
   const part=k=>now.find(p=>p.type===k)?.value||'';
   const nowLocal=part('year')+'-'+part('month')+'-'+part('day')+'T'+part('hour')+':'+part('minute');
-  const isCurrentPaid=e.published!==false&&e.freeAdmission!==true&&!e.deletedAt&&!e.cancelledAt&&String(e.start||'').slice(0,16)>=nowLocal&&!['premium','reduced'].includes(String(e.pricingType||'').toLowerCase())&&e.pricingScheduleOverride!==true;
+  const tier=String(e.pricingType||'').toLowerCase();
+  const isCurrentPaid=e.published!==false&&e.freeAdmission!==true&&!e.deletedAt&&!e.cancelledAt&&String(e.start||'').slice(0,16)>=nowLocal&&tier!=='reduced'&&(tier!=='premium'||e.eventType==='social')&&!(e.pricingScheduleOverride===true&&e.pricingScheduleVersion==='2026-11-15-standard-admission');
   const normalized=isCurrentPaid?{...e,...defaults}:oldSocial?{...e,returningSinglePrice:10,returningCouplePrice:10,newSinglePrice:10,newCouplePrice:10}:oldWorkshop?{...e,newSinglePrice:10}:e;
   const pr=(k,extra=0)=>'$'+(Number(normalized[k]??defaults[k]??0)+extra).toFixed(0);
   return e.eventType==='play'?'Early '+pr('earlySinglePrice')+'/'+pr('earlyCouplePrice')+' · Standard '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice'):'First-time total '+pr('newSinglePrice',10)+'/'+pr('newCouplePrice',10)+' · Returning '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice');
