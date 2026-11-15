@@ -943,7 +943,7 @@ async function eventPage(){
   const isCurrentPaid=e.published!==false&&e.freeAdmission!==true&&!e.deletedAt&&!e.cancelledAt&&String(e.start||'').slice(0,16)>=nowLocal&&tier!=='reduced'&&(tier!=='premium'||e.eventType==='social')&&!(e.pricingScheduleOverride===true&&e.pricingScheduleVersion==='2026-11-15-standard-admission');
   const normalized=isCurrentPaid?{...e,...defaults}:oldSocial?{...e,returningSinglePrice:10,returningCouplePrice:10,newSinglePrice:10,newCouplePrice:10}:oldWorkshop?{...e,newSinglePrice:10}:e;
   const pr=(k,extra=0)=>'$'+(Number(normalized[k]??defaults[k]??0)+extra).toFixed(0);
-  return e.eventType==='play'?'Early '+pr('earlySinglePrice')+'/'+pr('earlyCouplePrice')+' · Standard '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice'):'First-time total '+pr('newSinglePrice',10)+'/'+pr('newCouplePrice',10)+' · Returning '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice');
+  return e.eventType==='play'?'Standard '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice')+' · First-time standard '+pr('returningSinglePrice',10)+'/'+pr('returningCouplePrice',20)+' · Early prepaid '+pr('earlySinglePrice')+'/'+pr('earlyCouplePrice')+' · First-time prepaid '+pr('earlySinglePrice',10)+'/'+pr('earlyCouplePrice',20):'First-time total '+pr('newSinglePrice',10)+'/'+pr('newCouplePrice',10)+' · Returning '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice');
  };
  const editor=(prior={})=>{
   const opts=[['play','Dungeon Night'],['social','Social'],['workshop','Workshop / Class']];
