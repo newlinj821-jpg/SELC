@@ -958,6 +958,21 @@ async function rsvpPage(eventId){
  context.eventId=eventId;load();
  const d=await api('rsvps',{query:{eventId,detail:'requirements'}}),rows=d.rsvps||[];
  let markup=pageHeader('EVENT OPERATIONS','RSVP requests','Review applications for this event, manage capacity and record decisions.',btn('Back to events','data-page-link="events"'));
+ const confirmed=rows.filter(r=>r.rsvpStatus==='confirmed');
+ const weighted=arr=>arr.reduce((n,r)=>n+(Number(r.partySize)===2?2:1),0);
+ const paid=confirmed.filter(r=>['verified','cash_collected'].includes(String(r.paymentStatus||'').toLowerCase()));
+ const door=confirmed.filter(r=>r.paymentStatus==='cash_due');
+ const reviewing=confirmed.filter(r=>r.paymentStatus==='pending_verification');
+ const other=confirmed.filter(r=>!paid.includes(r)&&!door.includes(r)&&!reviewing.includes(r));
+ markup+=card('<h2>Attendance & payment commitments</h2><div class="hq-grid-3">'+[
+  ['Approved people',weighted(confirmed)],
+  ['Paid admissions',weighted(paid)],
+  ['Pay at door',weighted(door)],
+  ['Payment under review',weighted(reviewing)],
+  ['Other approved / unpaid',weighted(other)],
+  ['Pending approval',weighted(rows.filter(r=>r.rsvpStatus==='requested'))]
+ ].map(([label,value])=>'<div><strong>'+esc(String(value))+'</strong><p class="hq-muted">'+esc(label)+'</p></div>').join('')+'</div><p class="hq-muted">Only verified and collected admissions count as paid. Door commitments and uploaded proof are not confirmed revenue. The owner retains financial and cancellation authority.</p>');
+
  for(const [st,name] of [['requested','Waiting for review'],['waitlisted','Waitlist'],['confirmed','Confirmed'],['declined','Declined']]){
   const list=rows.filter(r=>r.rsvpStatus===st);
   markup+=card('<h2>'+esc(name)+' <span class="hq-muted">('+list.length+')</span></h2>'+(list.length?list.map(r=>'<div class="hq-row"><div class="grow"><strong>'+esc(r.name||'Guest')+(r.partySize===2?' + '+esc(r.guestName||'partner'):'')+'</strong><p>'+esc(r.firstEvent==='yes'?'First event':'Returning')+' · '+esc(r.memberStatus||'')+' · '+esc(r.paymentStatus||'')+(r.banMatch?' · Banned-person match':'')+'</p></div><div class="hq-actions">'+(st!=='confirmed'?btn('Approve','data-rsvp-decision="confirmed" data-rsvp-id="'+esc(r.id)+'"','primary'):'')+(st==='requested'?btn('Waitlist','data-rsvp-decision="waitlisted" data-rsvp-id="'+esc(r.id)+'"'):'')+(st!=='declined'?btn(st==='confirmed'?'Remove':'Decline','data-rsvp-decision="declined" data-rsvp-id="'+esc(r.id)+'"','danger'):'')+'</div></div>').join(''):'<p class="hq-muted">Nobody here right now.</p>'));
