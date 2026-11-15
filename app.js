@@ -14,7 +14,7 @@ const TOKEN_KEY='selc.session.v1';
 // This is a display safeguard; the Portal remains the authoritative event store.
 const isDiscontinuedEvent=e=>/\bkink\s+n\s+drinks\b/i.test(String(e?.event?.title||e?.title||e?.name||'').replace(/[^a-z0-9]+/gi,' ').trim());
 const activeSELCEvents=events=>(Array.isArray(events)?events:[]).filter(e=>!isDiscontinuedEvent(e));
-const RANK={founder:'Founder/Director',coordinator:'SELC Coordinator · Administration',representative:'SELC Representative · Leadership',advisor:'SELC Advisor · Community & Education',staff:'Sanctum Eros Staff',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
+const RANK={founder:'Founder/Director',coordinator:'SELC Coordinator · Administration',representative:'SELC Representative · Leadership',advisor:'SELC Advisor · Event Support',staff:'Sanctum Eros Staff',member:'Community Member','community-applicant':'Community Leaders applicant','community-leader':'Approved Community Leader'};
 const committeeRole=u=>['founder','coordinator','representative'].includes(u);
 const participantRole=u=>committeeRole(u)||u==='advisor';
 const advisor=()=>role()==='advisor';
@@ -175,7 +175,7 @@ const NAV=[
  ['handbook','▤','Staff Handbook','Your work',u=>u==='staff'],
  ['founderdesk','◈','Founder desk','Leadership',u=>u==='founder'],
   ['admincenter','◈','Coordinator administration','Leadership',u=>u==='coordinator'],
- ['join','✎','Apply to SELC','Your work',u=>['member','advisor','community-applicant','community-leader'].includes(u)],
+ ['join','✎','Apply to SELC','Your work',u=>['member','advisor'].includes(u)],
  ['certification','✓','SELC certification','Your work',u=>!organizerRole(u)&&u!=='founder'],
  ['coordinator','⇧','Coordinator application','Your work',u=>u==='representative'],
  ['ballots','✓','Coordinator election','Your work',u=>participantRole(u)&&u!=='founder'],
