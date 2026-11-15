@@ -29,13 +29,14 @@ test('SELC application decisions and clarification responses stay wired',()=>{
  assert.match(app,/Complete application responses/);
 });
 
-test('external advisor and Community Leaders signup has been retired',()=>{
+test('internal Advisor enrollment is open while the external Community Leaders network remains retired',()=>{
  const advisorPage=read('advisor/index.html'),leadersPage=read('community-leaders/index.html'),home=read('index.html');
- assert.match(advisorPage,/PUBLIC APPLICATIONS/);
+ assert.match(advisorPage,/INTERNAL ADVISOR APPLICATIONS/);
+ assert.match(advisorPage,/href="\/\?apply=advisor"/);
  assert.match(leadersPage,/NETWORK/);
  assert.doesNotMatch(advisorPage,/<form\\b/);
  assert.doesNotMatch(leadersPage,/<form\\b/);
- assert.ok(!home.includes('href="/advisor/"'));
+ assert.ok(home.includes('href="/advisor/"'));
  assert.ok(!home.includes('href="/community-leaders/"'));
  assert.match(app,/const visible=new Set/);
  assert.match(app,/communityleaders','applyeducator/);
