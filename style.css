@@ -403,3 +403,16 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 .selc-opportunities-limit{margin-top:24px;font-size:13px}
 .selc-opportunities-limit strong{color:#fff}
 @media(max-width:760px){.selc-opportunities-grid{grid-template-columns:1fr}.selc-opportunities h2{font-size:clamp(38px,10vw,56px)}}
+
+/* Clear public-facing follow-through path. */
+.selc-process{background:linear-gradient(180deg,#13141a,#1a1a20);border-top:1px solid #39353d}
+.selc-process-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:32px 0 25px}
+.selc-process-step{border:1px solid #494249;background:#222329;min-width:0;padding:clamp(20px,2.5vw,32px)}
+.selc-process-step span{font-size:11px;font-weight:850;letter-spacing:.12em;color:#f2a2ae}
+.selc-process-step h3{font-size:clamp(19px,2vw,24px);line-height:1.25;margin:13px 0}
+.selc-process-step p{color:#dbd1d0;line-height:1.7}
+.selc-process-note{display:flex;align-items:center;gap:15px;flex-wrap:wrap;padding:22px 26px;border-left:4px solid var(--red);background:#242227}
+.selc-process-note strong{color:#fff;font-size:17px}
+.selc-process-note p{flex:1 1 300px;color:#e1d9da}
+.selc-process-note a{color:#ffb0ba;font-weight:800}
+@media(max-width:760px){.selc-process-grid{grid-template-columns:1fr}.selc-process-note{align-items:flex-start}}

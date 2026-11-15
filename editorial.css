@@ -24,3 +24,13 @@
 .leader-account-layout .status:not(:empty){margin:8px 0 2px;min-height:28px;line-height:1.55}
 @media(max-width:830px){.leader-account-layout{grid-template-columns:1fr}.leader-account-layout>.panel{padding:clamp(18px,4vw,28px)}}
 @media(max-width:390px){.leader-choice{padding:14px}.leader-choice.active{padding:13px}.leader-choice strong{font-size:14px}}
+
+/* Public advisor eligibility, process, and clear answers. */
+.advisor-eligibility{font-size:13px;letter-spacing:.02em;color:#f1c6cc;font-weight:700;margin:18px 0}
+.advisor-faq{border-top:1px solid #645159;padding:18px 0}
+.advisor-faq:last-child{border-bottom:1px solid #645159}
+.advisor-faq summary{list-style:none;cursor:pointer;color:#fff;font-weight:800;font-size:17px;line-height:1.5;padding-right:28px;position:relative}
+.advisor-faq summary::-webkit-details-marker{display:none}
+.advisor-faq summary::after{content:"+";position:absolute;right:5px;top:0;color:#ff8d9b;font-size:22px}
+.advisor-faq[open] summary::after{content:"−"}
+.advisor-faq p{color:#ddd0d3;line-height:1.75;margin:13px 0 0}
