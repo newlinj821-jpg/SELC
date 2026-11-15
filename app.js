@@ -362,7 +362,7 @@ async function certificationPage(){
     'Preserve a safe reporting channel, prohibit retaliation and use an independent reviewer when a committee member or decision-maker is involved.'
    ],scenario:'A friend is named in a complaint. Disclose the relationship and recuse from recommendations or decisions that depend on your impartiality.'},
   {title:'Membership, RSVP and admission operations',objective:'Know which checks must precede approval, ticketing and physical admission.',steps:[
-    'Confirm account and membership status, event eligibility, the 21+ play-party minimum, approved attendee names, capacity and any current safety holds.',
+    'Confirm account and membership status, event eligibility, the 21+ Dungeon Night minimum, approved attendee names, capacity and any current safety holds.',
     'Tickets and QR check-in remain separate from government-photo-ID collection. The guest acknowledgment flow uses age and venue-rule attestations with review.',
     'Use the leadership work queue and event record to avoid duplicated approvals, preserve audit history and flag payment or eligibility issues for the correct team.'
    ],scenario:'A report has placed an RSVP on hold. Do not override a ticket merely because payment is confirmed; route the safety hold to an authorized reviewer.'},
@@ -900,23 +900,30 @@ async function eventPage(){
  const [operational,calendar,proposalResult]=await Promise.all([api('staff-portal'),canManageDrafts?api('events').catch(()=>({events:[]})):Promise.resolve(null),canManageDrafts?api('selc-governance',{query:{scope:'proposals'}}).catch(()=>({proposals:[]})):Promise.resolve(null)]);
  const evs=activeSELCEvents(operational.events),drafts=canManageDrafts?(calendar?.events||[]).filter(e=>e.published===false&&!e.deletedAt&&!e.cancelledAt):[],relatedProposals=proposalResult?.proposals||[];
  let markup=pageHeader('EVENT OPERATIONS','Events & RSVPs','Review RSVPs, event assignments, and guest lists. Coordinators may draft events here without publishing them.',coordinator?btn('Create event draft','data-new-event-draft','primary'):'');
+ markup+=card('<h2>Admission defaults</h2><p>Dungeon Nights: early prepaid $25 single / $40 couple; standard $35 single / $50 couple. Education: returning $10, new $20. Paid socials: returning $20, new $10. New couples at education and social events pay one base admission. A $10 orientation fee applies once per first-time paid attendee. The owner can override prices on individual event records in the Member Portal.</p>');
  if(canManageDrafts)markup+=card('<h2>Unpublished event drafts</h2><p class="hq-muted">Drafts do not open RSVPs. Submit an event proposal for a committee vote before publication.</p>'+
   (drafts.length?drafts.map(e=>{
    const proposal=relatedProposals.find(p=>p.linkedEventId===e.id&&p.status!=='Declined');
-   return '<div class="hq-row"><div class="grow"><strong>'+esc(e.title)+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'play')+'</p>'+
+   return '<div class="hq-row"><div class="grow"><strong>'+esc(e.title)+'</strong><p>'+esc(date(e.start))+' · '+esc(({play:'Dungeon Night',social:'Social',workshop:'Workshop / Class'})[e.eventType]||e.eventType||'')+' · '+esc(eventPricesSummary(e))+'</p>'+
     (proposal?'<p class="hq-micro">Committee review: '+esc(proposal.status)+' · '+(proposal.voteSummary?.passed?'Majority recorded':String(proposal.voteSummary?.participating||0)+' votes recorded')+'</p>':'<p class="hq-micro">Not yet submitted to committee</p>')+
     '</div><div class="hq-actions">'+(coordinator?btn('Edit draft','data-edit-event-draft="'+esc(e.id)+'"'):'')+
     (proposal?btn('Open proposal','data-page-link="proposals"'):coordinator?btn('Submit for committee vote','data-propose-event="'+esc(e.id)+'"','primary'):'')+
     (owner()&&proposal?.voteSummary?.passed&&proposal?.chairDecision==='approved'?btn('Publish approved event','data-publish-event="'+esc(e.id)+'"','primary'):'')+'</div></div>';
   }).join(''):empty('No event drafts','Create a draft to begin planning.')));
 
- markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming published events','New events will appear as they are scheduled.');
+ markup+=evs.length?evs.map(e=>card('<div class="hq-row"><div class="grow"><strong>'+esc(e.title||'Event')+'</strong><p>'+esc(date(e.start))+' · '+esc(({play:'Dungeon Night',social:'Social',workshop:'Workshop / Class'})[e.eventType]||e.eventType||'')+'</p></div>'+btn('RSVP queue','data-event-rsvp="'+esc(e.id)+'"','primary')+(e.eventType==='workshop'&&e.classId?btn('Teacher materials','data-event-teacher="'+esc(e.classId)+'"'):'')+'</div>')).join(''):empty('No upcoming published events','New events will appear as they are scheduled.');
  setContent(markup);bindPageLinks();
  $$('[data-event-rsvp]').forEach(b=>b.onclick=()=>rsvpPage(b.dataset.eventRsvp));
  
  $$('[data-event-teacher]').forEach(b=>b.onclick=()=>openSEEducationTeacherMaterials(b.dataset.eventTeacher));
+ const eventPricesSummary=e=>{
+  if(e.freeAdmission===true)return 'Free';
+  const defaults=e.eventType==='play'?{earlySinglePrice:25,earlyCouplePrice:40,returningSinglePrice:35,returningCouplePrice:50}:e.eventType==='workshop'?{newSinglePrice:20,newCouplePrice:20,returningSinglePrice:10,returningCouplePrice:20}:{newSinglePrice:10,newCouplePrice:10,returningSinglePrice:20,returningCouplePrice:40};
+  const pr=k=>'$'+Number(e[k]??defaults[k]??0).toFixed(0);
+  return e.eventType==='play'?'Early '+pr('earlySinglePrice')+'/'+pr('earlyCouplePrice')+' · Standard '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice'):'New '+pr('newSinglePrice')+'/'+pr('newCouplePrice')+' · Returning '+pr('returningSinglePrice')+'/'+pr('returningCouplePrice');
+ };
  const editor=(prior={})=>{
-  const opts=[['play','Play party'],['social','Social'],['workshop','Workshop / Class']];
+  const opts=[['play','Dungeon Night'],['social','Social'],['workshop','Workshop / Class']];
   const str=x=>esc(x??'');
   const form='<p class="hq-muted">Only an unpublished draft can be saved here. A Coordinator cannot publish an event using this form.</p><form class="hq-form" id="eventDraftForm">'+
    '<label>Event title<input name="title" required minlength="6" maxlength="180" value="'+str(prior.title||'')+'"></label>'+
