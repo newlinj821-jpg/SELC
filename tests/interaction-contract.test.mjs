@@ -35,8 +35,8 @@ test('external advisor and Community Leaders signup has been retired',()=>{
  assert.match(leadersPage,/NETWORK/);
  assert.doesNotMatch(advisorPage,/<form\\b/);
  assert.doesNotMatch(leadersPage,/<form\\b/);
- assert.doesNotMatch(home,/href="\\/advisor\\/"/);
- assert.doesNotMatch(home,/href="\\/community-leaders\\/"/);
+ assert.ok(!home.includes('href="/advisor/"'));
+ assert.ok(!home.includes('href="/community-leaders/"'));
  assert.match(app,/const visible=new Set/);
  assert.match(app,/communityleaders','applyeducator/);
 });
