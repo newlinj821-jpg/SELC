@@ -99,6 +99,9 @@ try{
  await p.goto(base+'/',{waitUntil:'domcontentloaded'});
  if(!(await p.locator('[data-signin]:visible').count()))await p.locator('#mobileNavTrigger').click();
  await p.locator('[data-signin]:visible').first().click();
+ const registerLink=p.locator('#selcRegistrationLink');
+ assert.equal(await registerLink.isVisible(),true,'Mobile SELC sign-in must offer a visible member signup path');
+ assert.equal(await registerLink.getAttribute('href'),'https://sanctumportal.org/membership.html#apply','SELC must use Portal registration, not duplicate it');
  await p.locator('#loginUser').fill('test-external-organizer');
  await p.locator('#loginPass').fill('synthetic-secret');
  await p.locator('#loginForm [type=submit]').click();
