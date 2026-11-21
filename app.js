@@ -196,7 +196,7 @@ const NAV=[
  ['requests','↗','Community conversations','Committee',u=>committeeRole(u)],
  ['educatorreviews','▤','Educator applications','Education',u=>u==='founder'||u==='coordinator'],
  ['educators','✦','Education & workshops','Committee',u=>participantRole(u)],
- ['registry','▤','Member registry','Leadership',u=>committeeRole(u)],
+ ['registry','▤','Member Registry & Profiles','Leadership',u=>committeeRole(u)],
  ['generalapps','▧','Membership applications','Event operations',u=>committeeRole(u)],
  ['events','▦','Events & RSVPs','Event operations',u=>committeeRole(u)],
  ['volunteer','✋','Staffing overview','Event operations',u=>committeeRole(u)],
@@ -210,7 +210,7 @@ const NAV=[
  ['myaccount','◎','My account','Your work']
 ];
 function setupHQNav(){
- const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','generalapps','communityinbox','chat','proposals','events','iacases','appeals','certification','coordinator','ballots','join','work']);const groups={'Your work':'Account','Leadership':'Management','Committee':'Management','Community':'Management','Partnerships':'Management','Education':'Management','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
+ const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','registry','generalapps','communityinbox','chat','proposals','events','readiness','iacases','appeals','certification','coordinator','ballots','join','work']);const groups={'Your work':'Account','Leadership':'Management','Committee':'Management','Community':'Management','Partnerships':'Management','Education':'Management','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
  root.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button){closeHQNav();openPage(button.dataset.page)}});
  $('#hqMenu').addEventListener('click',()=>{const open=!$('#hqSidebar').classList.contains('open');$('#hqSidebar').classList.toggle('open',open);$('#hqShade').classList.toggle('open',open);$('#hqMenu').setAttribute('aria-expanded',String(open))});
  $('#hqShade').addEventListener('click',closeHQNav);
@@ -803,16 +803,17 @@ function membershipDashboard(members){
 async function memberRegistryPage(){
  if(!leader())return openPage('home');
  const result=await api('members'),members=(Array.isArray(result.members)?result.members:[]).filter(m=>m&&!m.deletedAt&&!m.isTestAccount);
- let search='',status='All',access='All';
+ let search='',status='All',access='All',shown=40;
  const statuses=['All','approved','pending','denied'],accessLevels=['All','Active','Restricted','Temp-Banned','Banned','Inactive','Re-vetting Required'];
- let html=pageHeader('SELC / MEMBERSHIP','Member management','Review member records and permitted corrections. Portal remains the authoritative membership database.',btn('Review applications','data-page-link="generalapps"','primary'));
+ let html=pageHeader('SELC / MEMBERSHIP','Member Registry & Profiles','Search members, review profiles, confirm attendance history, and make permitted corrections. Portal remains the authoritative database.',btn('Review applications','data-page-link="generalapps"','primary'));
  html+='<section class="se-membership">'+membershipDashboard(members)+'<div class="se-work-panel"><div class="se-section-head"><div><h2>Member directory</h2><p class="se-muted">Confidential records · Activity is subject to role-based authorization</p></div></div><div class="se-filters"><label>Search<input id="registrySearch" type="search" placeholder="Name, FetLife, email or member ID"></label><label>Membership<select id="registryStatus">'+statuses.map(v=>'<option value="'+esc(v)+'">'+esc(v==='All'?'All statuses':v)+'</option>').join('')+'</select></label><label>Venue access<select id="registryAccess">'+accessLevels.map(v=>'<option value="'+esc(v)+'">'+esc(v)+'</option>').join('')+'</select></label></div><div id="registryResults" aria-live="polite"></div></div></section>';
  setContent(html);bindPageLinks();
  const render=()=>{
   const selected=members.filter(m=>(status==='All'||String(m.status||'').toLowerCase()===status)&&(access==='All'||String(m.accessStatus||'Active').toLowerCase()===access.toLowerCase())&&(!search||[m.memberId,m.name,m.preferredName,m.fetlife,m.loginEmail].some(v=>String(v||'').toLowerCase().includes(search))));
   const target=$('#registryResults');
-  target.innerHTML='<p class="se-muted">'+selected.length+' matching records'+(selected.length>150?' · Showing first 150':'')+'</p>'+(selected.length?'<div class="se-directory">'+selected.slice(0,150).map(m=>'<article class="se-member-row"><div class="se-avatar">'+esc(initials(m.preferredName||m.name))+'</div><div class="se-member-main"><strong>'+esc(m.preferredName||m.name||'Member')+'</strong><span>'+esc(m.memberId||'No member number')+' · '+esc(m.fetlife?'@'+m.fetlife:(m.loginEmail||'No username'))+'</span><div>'+tag(m.status)+tag(m.accessStatus||'Active')+'<span class="se-muted" style="margin-left:.45rem">'+(m.firstAttendedAt?'Verified attendee':'Attendance not verified')+'</span></div></div>'+btn('View profile','data-registry-edit="'+esc(m.id)+'"')+'</article>').join('')+'</div>':empty('No matching members','Adjust the search or filters.'));
-  $$('[data-registry-edit]',target).forEach(button=>button.onclick=()=>{
+  target.innerHTML='<p class="se-muted">'+selected.length+' matching profiles · Showing '+Math.min(shown,selected.length)+'</p>'+(selected.length?'<div class="se-directory">'+selected.slice(0,shown).map(m=>'<article class="se-member-row"><div class="se-avatar">'+esc(initials(m.preferredName||m.name))+'</div><div class="se-member-main"><strong>'+esc(m.preferredName||m.name||'Member')+'</strong><span>'+esc(m.memberId||'No member number')+' · '+esc(m.fetlife?'@'+m.fetlife:(m.loginEmail||'No username'))+'</span><div>'+tag(m.status)+tag(m.accessStatus||'Active')+'<span class="se-muted" style="margin-left:.45rem">'+(m.firstAttendedAt?'Verified attendee':'Attendance not verified')+'</span></div></div>'+btn('Open profile','data-registry-edit="'+esc(m.id)+'"')+'</article>').join('')+'</div>'+(selected.length>shown?'<button class="hq-button" type="button" id="registryShowMore">Show more profiles ('+(selected.length-shown)+' remaining)</button>':''):empty('No matching members','Adjust the search or filters.'));
+  $('#registryShowMore',target)?.addEventListener('click',()=>{shown+=40;render()});
+  $('[data-registry-edit]',target).forEach(button=>button.onclick=()=>{
    const m=members.find(x=>String(x.id)===button.dataset.registryEdit);if(!m)return;
    const form='<div class="hq-form-grid"><label>Member name<input name="name" required maxlength="120" value="'+esc(m.name||'')+'"></label><label>Contact<input name="contact" maxlength="180" value="'+esc(m.contact||'')+'"></label></div><label>Attendance category<select name="attendanceCategory">'+['new','returning','established'].map(x=>'<option value="'+x+'"'+(x===(m.attendanceCategory||'new')?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label><label>Internal registry notes<textarea name="adminNotes" rows="4">'+esc(m.adminNotes||'')+'</textarea></label><p class="se-muted">Access restrictions, bans and certifications require their separate authorized workflows.</p><p data-status class="hq-form-status"></p><button class="hq-button primary" type="submit">Save registry correction</button>';
    const d=modal('Member · '+(m.preferredName||m.name||m.memberId||'Profile'),'<div class="se-app-detail">'+applicationDetails(m)+'</div><h3>Correct registry information</h3><form class="hq-form" id="registryEditForm">'+form+'</form><div class="hq-actions">'+btn('Applications','data-page-link="generalapps"')+btn('Restriction history','data-page-link="banhistory"')+'</div>');
@@ -820,9 +821,9 @@ async function memberRegistryPage(){
    watchForm($('#registryEditForm',d),async values=>{await api('members',{method:'POST',body:{adminAction:'selc_registry_update',id:m.id,...values}});d.close();flash('Registry correction saved.');await memberRegistryPage()});
   });
  };
- $('#registrySearch').oninput=e=>{search=e.target.value.trim().toLowerCase();render()};
- $('#registryStatus').onchange=e=>{status=e.target.value;render()};
- $('#registryAccess').onchange=e=>{access=e.target.value;render()};
+ $('#registrySearch').oninput=e=>{search=e.target.value.trim().toLowerCase();shown=40;render()};
+ $('#registryStatus').onchange=e=>{status=e.target.value;shown=40;render()};
+ $('#registryAccess').onchange=e=>{access=e.target.value;shown=40;render()};
  render();
 }
 async function generalAppsPage(){
