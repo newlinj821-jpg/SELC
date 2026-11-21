@@ -742,7 +742,7 @@ const MEMBER_QUESTION_ORDER=[
 ['contact','Contact information'],['generalArea','General area'],['referralSource','How did you hear about us?'],['hasCommunityReference','Do you have a community reference?'],['communityReferenceName','Reference name'],['communityReferenceRelationship','Relationship to reference'],['communityReferenceContact','Reference contact'],['communityReferenceContactPermission','Permission to contact reference'],
 ['experience','Describe your experience'],['communityHistory','Community involvement and history'],['expectations','What do you expect from Sanctum Eros?'],
 ['consentUnderstanding','What does consent mean to you?'],['freezeResponse','How would you respond if someone froze?'],['boundaryAccountability','How do you take accountability for a boundary violation?'],['rejectionBoundaryResponse','How would you respond when someone says no?'],['observedBoundaryResponse','What would you do if you witnessed a boundary violation?'],['privacyResponse','How do you protect member privacy?'],['communityConductResponse','How do you handle community conduct concerns?'],['safetyJudgment','How do you approach safety?'],
-['rulesCheck','Venue rules knowledge'],['priorVenueAction','Prior venue or organization actions'],['priorVenueActionDetails','Details of prior actions'],['priorSexCharge','Disclosed sexual offenses or charges'],['priorSexChargeDetails','Details disclosed'],['priorSeriousComplaint','Disclosed serious complaints'],['priorSeriousComplaintDetails','Complaint details'],['priorProtectiveOrder','Disclosed protective orders'],['priorProtectiveOrderDetails','Protective order details'],['safetyDisclosures','Other safety disclosures'],['acknowledgements','Applicant acknowledgements']];
+['rulesCheck','Venue rules knowledge'],['priorVenueAction','Prior venue or organization actions'],['priorVenueActionDetails','Details of prior actions'],['priorSexCharge','Disclosed sexual offenses or charges'],['priorSexChargeDetails','Details disclosed'],['priorSeriousComplaint','Disclosed serious complaints'],['priorSeriousComplaintDetails','Complaint details'],['priorProtectiveOrder','Disclosed protective orders'],['priorProtectiveOrderDetails','Protective order details'],['safetyDisclosures','Other safety disclosures'],['acknowledgements','Applicant acknowledgements'],['firstAttendedAt','First verified attendance'],['lastAttendedAt','Most recent verified attendance']];
 const APP_ADMIN_ONLY=new Set(['id','deletedAt','isTestAccount','reviewAssist','applicationVersion','createdAt','updatedAt','accountId','memberId','coupleRelationshipId','linkedPartnerMemberId','attendanceCategorySource','attendanceCategorySelectedAt','legacyAttendanceQuestionRequired','accessStatus','status','adminNotes','attendanceCategory','rulesSecretWord','notificationEmail','emailNotificationsOptIn','loginType','hasFetlife','rulesCheckPassed']);
 function applicationValue(value){
  if(value===null||value===undefined||value==='')return '<em class="se-unanswered">No answer recorded</em>';
@@ -751,15 +751,49 @@ function applicationValue(value){
  if(typeof value==='object')return '<div class="se-nested-answers">'+Object.entries(value).filter(([k])=>!PRIVATE_APP_KEY.test(k)).map(([key,v])=>'<div><strong>'+esc(readableLabel(key))+'</strong>'+applicationValue(v)+'</div>').join('')+'</div>';
  return '<p>'+esc(value)+'</p>';
 }
+/* SE version 5: recorded questions and submitted answers, shown without changing legacy v3/v4.
+ * SELC membership permissions are checked upstream by the existing Portal members API. */
+function v5MembershipAnswers(source){
+ const v=source?.vettingV5;
+ if(!v||typeof v!=='object')return '';
+ const display=(entries)=>entries.filter(([,value])=>value!==undefined&&value!==null&&value!=='')
+ .map(([label,value],i)=>'<article class="se-question-answer"><div class="se-question-heading"><span>'+String(i+1).padStart(2,'0')+'</span><h3>'+esc(label)+'</h3></div><div class="se-question-response">'+applicationValue(value)+'</div></article>').join('');
+ const core=[
+  ['Pronouns',Array.isArray(v.pronouns)?v.pronouns.join(', ')+(v.pronounsOther?' · '+v.pronounsOther:''):v.pronounsOther],
+  ['Community contribution',v.communityContribution],
+  ['Consent with a previous play partner',v.priorPlayConsent],
+  ['Aftercare approach',v.aftercareApproach],
+  ['Meaningful accountability',v.accountabilityResponse]
+ ];
+ const custom=(Array.isArray(v.customQuestions)?v.customQuestions:[]).filter(q=>q&&q.id&&q.label)
+ .map(q=>[String(q.label),v.customAnswers?.[q.id]||'']);
+ const agreed='<div class="se-application-facts">'+
+ '<span><strong>Dungeon Rules acknowledged:</strong> '+esc(v.dungeonRulesAcknowledged?'Yes':'No')+'</span>'+
+ '<span><strong>Agreement version:</strong> '+esc(v.agreementVersion||'Unrecorded')+'</span>'+
+ '<span><strong>Signed:</strong> '+esc(v.signatureName||'Unrecorded')+'</span>'+
+ '</div>';
+ // Optional wellbeing remains restricted by the Portal API response for SELC role.
+ const wellbeing=v.wellbeing&&typeof v.wellbeing==='object'?
+ '<details class="fold"><summary>Optional wellbeing &amp; accessibility (confidential)</summary>'+
+ '<div class="se-complete-answers">'+display([
+  ['Accessibility or communication considerations',v.wellbeing.accessibilityConsiderations],
+  ['Anticipated sexual play',v.wellbeing.sexualPlayIntent],
+  ['Safer-sex communication',v.wellbeing.stiCommunication]
+ ])+'</div><p class="se-muted">Voluntary information. Do not copy into guest lists or public messages.</p></details>':'';
+ const answered=display([...core,...custom]);
+ return '<section class="se-full-application"><h3>Sanctum Eros · Membership &amp; Vetting Form v5</h3>'+
+ '<p class="se-muted">These are the recorded questions and original answers, including form-specific wording.</p>'+
+ agreed+'<div class="se-complete-answers">'+answered+'</div>'+wellbeing+'</section>';
+}
 function applicationDetails(record){
  const source=record||{},membership=('applicationVersion' in source)||('consentUnderstanding' in source)||('boundaryAccountability' in source);
  const ordered=membership?MEMBER_QUESTION_ORDER:[];
  const listed=new Set(ordered.map(([key])=>key));
- const extra=Object.keys(source).filter(key=>!listed.has(key)&&!APP_ADMIN_ONLY.has(key)&&!PRIVATE_APP_KEY.test(key)).map(key=>[key,readableLabel(key)]);
+ const extra=Object.keys(source).filter(key=>key!=='vettingV5'&&key!=='membershipReviewNotes'&&!listed.has(key)&&!APP_ADMIN_ONLY.has(key)&&!PRIVATE_APP_KEY.test(key)).map(key=>[key,readableLabel(key)]);
  const questions=ordered.concat(extra).filter(([key])=>!PRIVATE_APP_KEY.test(key)&&key!=='rulesSecretWord'&&(!(key.startsWith('partner')&&source.couple!=='Yes')||source[key]!==undefined&&source[key]!==null&&source[key]!==''));
  const markup=questions.map(([key,label],index)=>'<article class="se-question-answer"><div class="se-question-heading"><span>'+String(index+1).padStart(2,'0')+'</span><h3>'+esc(label)+'</h3></div><div class="se-question-response">'+applicationValue(source[key])+'</div></article>').join('');
  const facts=[['Application version',source.applicationVersion],['Submitted',source.createdAt?date(source.createdAt):''],['Status',source.status]].filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>'<span><strong>'+esc(k)+':</strong> '+esc(v)+'</span>').join('');
- return '<div class="se-full-application"><h3>Complete application responses</h3><p class="se-muted">Full recorded answers appear below, without abbreviating or rewriting the applicant’s words. Unanswered fields are indicated.</p><div class="se-application-facts">'+facts+'</div><div class="se-complete-answers">'+markup+'</div></div>'+assistSummary(source.reviewAssist);
+ return '<div class="se-full-application"><h3>Complete application responses</h3><p class="se-muted">Full recorded answers appear below, without abbreviating or rewriting the applicant’s words. Unanswered fields are indicated.</p><div class="se-application-facts">'+facts+'</div><div class="se-complete-answers">'+markup+'</div></div>'+v5MembershipAnswers(source)+assistSummary(source.reviewAssist);
 }
 function membershipDashboard(members){
  const count=status=>members.filter(m=>String(m.status||'').toLowerCase()===status).length;
@@ -777,7 +811,7 @@ async function memberRegistryPage(){
  const render=()=>{
   const selected=members.filter(m=>(status==='All'||String(m.status||'').toLowerCase()===status)&&(access==='All'||String(m.accessStatus||'Active').toLowerCase()===access.toLowerCase())&&(!search||[m.memberId,m.name,m.preferredName,m.fetlife,m.loginEmail].some(v=>String(v||'').toLowerCase().includes(search))));
   const target=$('#registryResults');
-  target.innerHTML='<p class="se-muted">'+selected.length+' matching records'+(selected.length>150?' · Showing first 150':'')+'</p>'+(selected.length?'<div class="se-directory">'+selected.slice(0,150).map(m=>'<article class="se-member-row"><div class="se-avatar">'+esc(initials(m.preferredName||m.name))+'</div><div class="se-member-main"><strong>'+esc(m.preferredName||m.name||'Member')+'</strong><span>'+esc(m.memberId||'No member number')+' · '+esc(m.fetlife?'@'+m.fetlife:(m.loginEmail||'No username'))+'</span><div>'+tag(m.status)+tag(m.accessStatus||'Active')+'</div></div>'+btn('View profile','data-registry-edit="'+esc(m.id)+'"')+'</article>').join('')+'</div>':empty('No matching members','Adjust the search or filters.'));
+  target.innerHTML='<p class="se-muted">'+selected.length+' matching records'+(selected.length>150?' · Showing first 150':'')+'</p>'+(selected.length?'<div class="se-directory">'+selected.slice(0,150).map(m=>'<article class="se-member-row"><div class="se-avatar">'+esc(initials(m.preferredName||m.name))+'</div><div class="se-member-main"><strong>'+esc(m.preferredName||m.name||'Member')+'</strong><span>'+esc(m.memberId||'No member number')+' · '+esc(m.fetlife?'@'+m.fetlife:(m.loginEmail||'No username'))+'</span><div>'+tag(m.status)+tag(m.accessStatus||'Active')+'<span class="se-muted" style="margin-left:.45rem">'+(m.firstAttendedAt?'Verified attendee':'Attendance not verified')+'</span></div></div>'+btn('View profile','data-registry-edit="'+esc(m.id)+'"')+'</article>').join('')+'</div>':empty('No matching members','Adjust the search or filters.'));
   $$('[data-registry-edit]',target).forEach(button=>button.onclick=()=>{
    const m=members.find(x=>String(x.id)===button.dataset.registryEdit);if(!m)return;
    const form='<div class="hq-form-grid"><label>Member name<input name="name" required maxlength="120" value="'+esc(m.name||'')+'"></label><label>Contact<input name="contact" maxlength="180" value="'+esc(m.contact||'')+'"></label></div><label>Attendance category<select name="attendanceCategory">'+['new','returning','established'].map(x=>'<option value="'+x+'"'+(x===(m.attendanceCategory||'new')?' selected':'')+'>'+esc(x)+'</option>').join('')+'</select></label><label>Internal registry notes<textarea name="adminNotes" rows="4">'+esc(m.adminNotes||'')+'</textarea></label><p class="se-muted">Access restrictions, bans and certifications require their separate authorized workflows.</p><p data-status class="hq-form-status"></p><button class="hq-button primary" type="submit">Save registry correction</button>';
