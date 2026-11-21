@@ -789,7 +789,7 @@ function applicationDetails(record){
  const source=record||{},membership=('applicationVersion' in source)||('consentUnderstanding' in source)||('boundaryAccountability' in source);
  const ordered=membership?MEMBER_QUESTION_ORDER:[];
  const listed=new Set(ordered.map(([key])=>key));
- const extra=Object.keys(source).filter(key=>key!=='vettingV5'&&!listed.has(key)&&!APP_ADMIN_ONLY.has(key)&&!PRIVATE_APP_KEY.test(key)).map(key=>[key,readableLabel(key)]);
+ const extra=Object.keys(source).filter(key=>key!=='vettingV5'&&key!=='membershipReviewNotes'&&!listed.has(key)&&!APP_ADMIN_ONLY.has(key)&&!PRIVATE_APP_KEY.test(key)).map(key=>[key,readableLabel(key)]);
  const questions=ordered.concat(extra).filter(([key])=>!PRIVATE_APP_KEY.test(key)&&key!=='rulesSecretWord'&&(!(key.startsWith('partner')&&source.couple!=='Yes')||source[key]!==undefined&&source[key]!==null&&source[key]!==''));
  const markup=questions.map(([key,label],index)=>'<article class="se-question-answer"><div class="se-question-heading"><span>'+String(index+1).padStart(2,'0')+'</span><h3>'+esc(label)+'</h3></div><div class="se-question-response">'+applicationValue(source[key])+'</div></article>').join('');
  const facts=[['Application version',source.applicationVersion],['Submitted',source.createdAt?date(source.createdAt):''],['Status',source.status]].filter(([,v])=>v!==undefined&&v!==null&&v!=='').map(([k,v])=>'<span><strong>'+esc(k)+':</strong> '+esc(v)+'</span>').join('');
