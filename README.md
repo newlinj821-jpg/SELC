@@ -1,37 +1,53 @@
 # Sanctum Eros Leadership Committee (SELC)
 
-The independent public website and private Leadership Headquarters for **Sanctum Eros Leadership Committee**. The public site, Community Leaders account flow, and authenticated Headquarters are hosted at [se-selc.netlify.app](https://se-selc.netlify.app/).
+SELC is Sanctum Eros's **internal leadership and operations committee**. Its public website and authenticated Headquarters are hosted at https://se-selc.netlify.app/.
 
-## Site roles and boundaries
+## Three connected websites with distinct responsibilities
 
-SELC is the *internal* committee of Sanctum Eros, not an independent nonprofit or an organization-wide electorate. Eros is Founder & Chair and retains final approval over appointments, removals, publication, policy, financial decisions, and exceptional access. There are five Advisor seats, three Representative seats, and up to two separate Coordinator seats (ten leadership positions total), plus the Founder & Chair. Advisors may participate without SE membership after approval and certification. Representative and Coordinator appointments require active SE membership; Coordinator advancement uses a separate Coordinator seat.
+| Site | Responsibility |
+| --- | --- |
+| [Sanctum Eros Hub](https://sanctumeroshub.org/about/) | Public identity, mission, venue, community participation, education resources and introductory event guidance |
+| [Member Portal](https://sanctumportal.org/) | Authoritative Dungeon Rules, membership vetting, event admission and pricing, RSVPs, courses, member records, messages, safety reports and Staff assignments |
+| [SELC](https://se-selc.netlify.app/) | Committee structure, leadership applications, authorized operational work, feedback and governance |
 
-**An SELC Advisor must:**\n1. Be 18 or older and use a verified email identity; SE membership is optional.\n2. Submit the independent Advisor application, obtain Founder approval, and pass the Advisor certification before role privileges or votes activate.\n3. Respect the limited Advisor permission boundary: no confidential member records, Internal Affairs cases, event admissions, or Staff privileges by virtue of being an Advisor.\n\n**An SELC Representative must:**
-1. Hold an approved, active Sanctum Eros membership. Attending events or purchasing supporter membership is **not** required.
-2. Complete a separate SELC application; approved SE membership alone does not qualify.
-3. Receive Founder acceptance after review.
-4. Complete the required, server-scored **SELC Representative certification**. Acceptance without a passing assessment grants no committee or voting privileges.
+Do not duplicate a full event price table, Dungeon Rules, vetting form or member record inside SELC pages. Explain the committee's responsibility and link to the Portal for official processes or to the Hub for the organization’s purpose.
 
-Existing Representatives seeking Coordinator appointment must complete the Coordinator application, meet the committee election requirement, receive Founder acceptance, and complete the **Coordinator certification** before advancement activates. Only the Founder and currently active Coordinators review SELC applications. Specialized Internal Affairs work has its own distinct authorization/certification and does not automatically follow every SELC role.
+## Committee structure
 
-**Community Leaders** is separate. An owner/authorized organizer of another kink organization may sign in using an existing Portal account **or** create a separate verified organizer-only account, without joining Sanctum Eros. The Founder reviews applications. Approved organizers may communicate with SELC, Eros, and each other, and propose minimized safety notices subject to controlled disclosure approval. They do **not** receive SELC votes, Staff roles, internal case-file access, tickets, member applications, or venue permissions. Community Leaders is distinct from the SELC Advisor tier: organizer recognition never automatically grants Advisor status or voting rights.
+The leadership structure provides **two Coordinator seats, four Representative seats and two Advisor seats**, alongside the **Founder/Director**. These are authorized positions, not a statement that every seat is currently occupied.
 
-## System integration
+- **Coordinators** oversee designated operational and administrative duties within the authority granted to their role.
+- **Representatives** help with approved member applications, RSVPs, member communication and event operations.
+- **Advisors** bring member perspectives, evaluate feedback and suggestions, and participate in eligible internal proposals. Advisors do not independently approve membership, access restricted IA cases, admit attendees or issue bans.
+- **Staff and Dungeon Monitors** have separate event duties, approval and training requirements. A committee role does not grant Staff privileges.
+- **Internal Affairs and access restrictions** are handled by the specific authorized role holders and processes. Filing a report does not establish wrongdoing.
 
-- Canonical Portal & datastore: [sanctumportal.org](https://sanctumportal.org)
-- Organization Hub: [sanctumeroshub.org](https://sanctumeroshub.org)
-- SELC: [se-selc.netlify.app](https://se-selc.netlify.app)
-- GitHub: `newlinj821-jpg/SELC`, **production branch `main`**
-- Netlify: **`se-selc`** project; publish directory `.`; use existing `netlify.toml`
-- Authentication and password recovery reuse Portal services; no second password database.
-- Cross-site requests use Portal-issued sessions and the allowlisted SELC origin. The local `portal-gateway` is a same-origin transport fallback and cannot confer authorization.
+SELC positions are internal to Sanctum Eros; applicants must hold the required active SE membership and complete the applicable review and certification. The organization membership is free and available to adults 18+, but Dungeon Nights and Kinky Game Nights are 21+. Other public events follow their posted requirements.
+
+The former external **Community Leaders network is retired**; its old public route is an informational notice and not an application or sign-in pathway.
+
+## Authentication and access
+
+- Approved committee members and the Founder use their existing [Portal account](https://sanctumportal.org/member.html).
+- The dedicated handoff starts at https://sanctumportal.org/selc-connect.html.
+- Portal server-side permissions are authoritative. The local `portal-gateway` is only a transport fallback, not an authorization bypass.
+- Staff scheduling, shift assignments and member tickets belong in the Portal. SELC may display authorized operational information but must not create a second assignment system.
+- The online committee site is not a public incident-report repository. Confidential reports are made using https://sanctumportal.org/safety.html.
+
+## Deployment
+
+- GitHub repository: `newlinj821-jpg/SELC`
+- Production branch: `main`
+- Netlify project: `se-selc`
+- Publish directory: `.` using `netlify.toml`
+- Changes to SELC do not deploy the Hub or Member Portal.
 
 ## QA
 
-Run source smoke checks with `node qa/smoke.mjs` and `node --test tests/*.test.mjs`. The `selc-smoke.yml` workflow validates source and syntax. The `selc-browser-certification.yml` workflow uses isolated Playwright sessions to verify committee acceptance, certification attempts, activation, and organizer isolation without creating or accessing real member data.
+Run `node qa/smoke.mjs` and `node --test tests/*.test.mjs`. The `selc-smoke.yml` workflow checks frontend syntax and basic integration contracts; other release workflows check safe browser and service behavior.
 
-**Deployment checks:** verify the production Netlify build for the exact merged `main` commit, public route navigation, Community Leaders verification and recovery, Portal sign-in/handoff, and authenticated operation with safe controlled test accounts. A successful preview build is not proof that private production workflows are live.
+After merging, verify the deployed build matches the merge commit, check public desktop/mobile navigation, and test Portal sign-in/handoff with an authorized safe test account. A successful source commit, preview build, or public HTTP 200 is not proof that authenticated production workflows work.
 
-## Dual Staff / SELC appointments
+## Historical materials
 
-A person can be both Sanctum Eros Staff and an SELC Representative or Coordinator. In the authenticated interfaces, show the combined title **Staff + Representative** or **Staff + Coordinator** after verifying both appointments. Staff/DM volunteer sign-up, shift release, complimentary admission and companion requests are handled exclusively from the Portal Staff workspace (`https://sanctumportal.org/staff.html#shifts`). SELC may display staffing coverage, handover notes, and authorized Founder management; it must not independently claim a shift or create Staff privileges for committee-only members. The Portal remains the authoritative record for event staff assignments.
+Earlier role structures and external Community Leaders materials may appear in historical implementation documents. They are not current operating policy; public SELC pages and authoritative Portal permissions take precedence.
