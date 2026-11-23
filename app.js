@@ -112,7 +112,7 @@ function startPublic(){
    loginMessage.setAttribute('role','alert');
   }finally{submit.disabled=false;submit.removeAttribute('aria-busy')}
  });
- loadPublicLeadership().catch(()=>{});
+ loadPublicLeadership().catch(()=>{const x=$('#publicTeamStatus');if(x)x.textContent='Leadership directory is temporarily unavailable. Vacancies cannot be confirmed right now.';}
  const params=new URLSearchParams(location.search);
  if(params.get('apply')==='advisor')openLogin();
  const ownerCode=params.get('se_owner_handoff');
@@ -160,14 +160,15 @@ async function loadPublicLeadership(){
   }).join('');
   host.innerHTML=[1,2,3,4].map(n=>{
     const person=bySeat.get(n);
-    return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+'SELC Representative'+'</small></div>';
+    return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+esc(person?'SELC Representative':'Position available')+'</small></div>';
   }).join('');
   const transitionHost=$('#publicTransitionRepresentatives');
   if(transitionHost){
    transitionHost.innerHTML=grandfatheredRepresentatives.map(p=>'<div class="seat-card"><span>•</span><strong>'+esc(p.publicName||'Representative')+'</strong><small>Current Representative · previously accepted role</small></div>').join('');
    transitionHost.classList.toggle('hidden',grandfatheredRepresentatives.length===0);
   }
-  const advisorHost=$('#publicAdvisors');
+  const statusHost=$('#publicTeamStatus');if(statusHost){const appointed=coordinators.filter(Boolean).length+[1,2,3,4].filter(n=>bySeat.has(n)).length+advisors.filter(Boolean).length;statusHost.textContent=appointed+' of 8 committee seats filled. Display names appear only by member choice.';}
+ const advisorHost=$('#publicAdvisors');
   if(advisorHost)advisorHost.innerHTML=[0,1].map(n=>{const person=advisors[n];return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Advisor')+'</strong><small>'+esc(person?'SELC Advisor':'Position available')+'</small></div>'}).join('');
 }
 async function beginHeadquarters(){
@@ -588,13 +589,14 @@ async function leadershipWorkPage(){
  const categories={member:'Membership',role:'Role applications',selc:'SELC',ban:'Ban Reports',community:'Member requests'};
  let markup=pageHeader('SELC / LEADERSHIP','Leadership Action Center','Coordinators delegate and supervise; Representatives independently resolve eligible reviews. Every assignment is recorded in Portal.',btn('Refresh','data-work-refresh'));
  if(canDelegate)markup+=card('<p>Delegation is available for active SELC Representatives and Coordinators. Staff accepted roles remain separate, and assigned review work never grants additional enforcement authority.</p>');
+ markup+='<div class="hq-card hq-work-filter"><h2>Find the work that needs you</h2><div class="hq-work-controls"><label>Assignment<select id="workAssignmentFilter"><option value="all">All work</option><option value="mine">Assigned to me</option><option value="unassigned">Unassigned</option><option value="assigned">Claimed by someone else</option></select></label><label>Search<input id="workTextFilter" type="search" placeholder="Member, request, status, or type" autocomplete="off"></label></div><p class="hq-micro" id="workFilterCount" role="status" aria-live="polite"></p></div>';
  markup+='<div class="hq-stats">'+Object.entries(categories).filter(([k])=>counts[k]).map(([key,label])=>'<div class="hq-stat"><small>'+esc(label)+'</small><strong>'+number(counts[key]||0)+'</strong></div>').join('')+'</div>';
  markup+=items.length?Object.entries(categories).map(([kind,label])=>{
-  const filtered=items.filter(x=>x.kind===kind);if(!filtered.length)return '';
+  const filtered=items.filter(x=>x.kind===kind).sort((a,b)=>String(a.dueAt||'9999').localeCompare(String(b.dueAt||'9999'))||String(a.createdAt||'').localeCompare(String(b.createdAt||'')));if(!filtered.length)return '';
   return card('<h2>'+esc(label)+' ('+filtered.length+')</h2>'+
    filtered.map(row=>{
     const mine=row.claim?.mine,claimed=row.claim&&!mine,route={member:'generalapps',role:'generalapps',selc:'applications',ban:'banreports',community:'requests'}[kind];
-    return '<div class="hq-row"><div class="grow"><strong>'+esc(row.title)+' · '+esc(row.name)+'</strong><p>'+tag(row.status)+' '+esc(date(row.createdAt))+'</p>'+
+    return '<div class="hq-row" data-work-row data-work-owned="'+(mine?'mine':claimed?'assigned':'unassigned')+'" data-work-search="'+esc((row.title+' '+row.name+' '+row.status+' '+label).toLowerCase())+'"><div class="grow"><strong>'+esc(row.title)+' · '+esc(row.name)+'</strong><p>'+tag(row.status)+' '+esc(date(row.createdAt))+'</p>'+
       (row.dueAt?'<p class="hq-micro">Review target: '+esc(date(row.dueAt))+'</p>':'')+
       (row.claim?'<p class="hq-micro">'+(mine?'You claimed this review.':'Being reviewed by '+esc(row.claim.by))+ ' · until '+esc(date(row.claim.until))+'</p>':'<p class="hq-micro">Unassigned · available to claim</p>')+'</div><div class="hq-actions">'+
       (mine?btn('Release','data-queue-action="release" data-queue-kind="'+kind+'" data-queue-id="'+esc(row.id)+'"'):claimed?tag('Claimed'):btn('Claim','data-queue-action="claim" data-queue-kind="'+kind+'" data-queue-id="'+esc(row.id)+'"','primary'))+
@@ -603,6 +605,8 @@ async function leadershipWorkPage(){
    }).join(''));
  }).join(''):empty('Everything is up to date','New applications, Ban Reports, and community conversations appear here when they need attention.');
  setContent(markup);bindPageLinks();$('[data-work-refresh]')?.addEventListener('click',leadershipWorkPage);
+ const rows=$('[data-work-row]'),assignment=$('#workAssignmentFilter'),query=$('#workTextFilter'),count=$('#workFilterCount');
+ if(assignment&&query){const apply=()=>{const a=assignment.value,q=query.value.toLowerCase().trim();let visible=0;rows.forEach(row=>{const matched=(a==='all'||row.dataset.workOwned===a)&&(!q||row.dataset.workSearch.includes(q));row.hidden=!matched;if(matched)visible++});count.textContent=visible+' of '+rows.length+' items shown. Filters do not change assignments.'};assignment.addEventListener('change',apply);query.addEventListener('input',apply);apply()};
  $$('[data-queue-delegate]').forEach(button=>button.onclick=()=>{
   const kind=button.dataset.queueKind,id=button.dataset.queueId,row=items.find(item=>item.kind===kind&&item.id===id);
   if(!row)return;
@@ -634,8 +638,10 @@ async function proposalPage(){
  const [d,team]=await Promise.all([api('selc-governance',{query:{scope:'proposals'}}),api('selc-governance',{query:{scope:'members'}}).catch(()=>({members:[]}))]),rows=d.proposals||[],members=team.members||[];
  const actions=btn('Bring an idea forward','data-new-proposal','primary');
  let markup=pageHeader('COMMITTEE WORK','Discuss, decide, improve','From workshops and venue improvements to pricing and event ideas—every proposal deserves a real discussion.',actions);
+ markup+=card('<h2>From decision to publication</h2><p>A vote or approval creates a decision record, not an automatic live policy change. Implementation has an owner, status, target date and notes. Authorized publishers update the canonical Portal rules, pricing and admission settings; the Hub and SELC link to those sources rather than duplicating them.</p><div class="hq-actions">'+btn('Current Portal rules','data-open-canonical="rules"')+btn('Official event pricing','data-open-canonical="events"')+'</div>');
  markup+=rows.length?rows.map(p=>card('<div class="hq-row"><div class="grow"><span class="hq-eyebrow">'+esc((p.category||'').replaceAll('_',' '))+'</span><h2>'+esc(p.title)+'</h2><p>'+esc(p.description||'').slice(0,210)+'</p><p class="hq-micro">Started by '+esc(p.createdBy)+' · '+esc(date(p.createdAt))+' · '+(p.comments?.length||0)+' replies</p></div>'+tag(p.status)+btn('Discuss','data-proposal="'+esc(p.id)+'"')+'</div>')).join(''):empty('No ideas on the table yet','Start a proposal, invite perspectives, and move it toward a decision.');
  setContent(markup);
+ $('[data-open-canonical]').forEach(button=>button.addEventListener('click',()=>{const u=button.dataset.openCanonical==='rules'?'https://sanctumportal.org/rules.html':'https://sanctumportal.org/events.html#typical-event-pricing';window.open(u,'_blank','noopener,noreferrer')}));
  $('[data-new-proposal]').onclick=()=>{
   const d=modal('Bring an idea forward','<form class="hq-form" id="newProposal"><label>What is your idea called?</label><input name="title" required minlength="8" placeholder="Give it a clear name"><label>Area of community life</label><select name="category"><option value="education">Education & workshops</option><option value="events">Events & socials</option><option value="equipment">Equipment</option><option value="work_sessions">Venue work sessions</option><option value="rules">Rules & expectations</option><option value="pricing">Pricing & admission</option><option value="outreach">Community outreach</option><option value="community">Community initiatives</option><option value="accessibility">Accessibility</option><option value="other">Something else</option></select><label>What should happen and why?</label><textarea name="description" required rows="6" minlength="40"></textarea><p data-status class="hq-form-status"></p><button type="submit" class="hq-button primary">Start discussion</button></form>');
   watchForm($('#newProposal',d),async vals=>{await post('selc-governance','create_proposal',vals);d.close();flash('Proposal added for discussion.');proposalPage()})
@@ -1545,7 +1551,7 @@ async function accountPage(){
   const name=data.member?.screenName||values.publicName;
   setStatus(form.querySelector('[data-status]'),'Saved. Your SELC screen name is '+name+'.');
   flash('SELC name updated.');
-  await loadPublicLeadership().catch(()=>{});
+  await loadPublicLeadership().catch(()=>{const x=$('#publicTeamStatus');if(x)x.textContent='Leadership directory is temporarily unavailable. Vacancies cannot be confirmed right now.';}
  });
 }
 addEventListener('DOMContentLoaded',startPublic);
