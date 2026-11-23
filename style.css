@@ -446,3 +446,15 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 @media(max-width:850px){.site-nav{max-height:calc(100dvh - 100px);overflow-y:auto;overscroll-behavior:contain}.site-nav a,.site-nav button{min-height:47px}.hq-nav-search{padding:10px 15px}}
 @media(max-width:520px){.hero h1{font-size:clamp(39px,10vw,56px);line-height:1.03}.hero-copy{font-size:16px;line-height:1.72}.hq-page-header{align-items:flex-start;flex-wrap:wrap}.hq-content{padding:20px 14px max(70px,env(safe-area-inset-bottom))}.hq-top-brand{font-size:9px;letter-spacing:.08em}.hq-actions>*{max-width:100%}}
 @media(prefers-reduced-motion:reduce){.hq-sidebar nav button,.site-nav a{transition:none}}
+
+
+/* Current appointment transparency, keyboard-friendly filters and polished queue. */
+.team-occupancy{padding:13px 17px;border:1px solid #554047;background:linear-gradient(90deg,#2d2028,#1a191e);color:#f1d9de;margin:18px 0 25px;line-height:1.6;border-radius:6px;font-size:14px}
+.hq-work-filter{margin-bottom:16px;background:linear-gradient(135deg,#222126,#17181d);border-color:#a37480}
+.hq-work-controls{display:grid;grid-template-columns:1fr 1.5fr;gap:15px}
+.hq-work-controls label{display:block;font-size:12px;font-weight:750;color:#e9c5cb;letter-spacing:.01em}
+.hq-work-controls :is(input,select){display:block;width:100%;box-sizing:border-box;margin-top:9px;min-height:46px;padding:10px 12px;border:1px solid #8a7176;border-radius:7px;background:#101116;color:#f5e9eb;font:inherit;font-size:14px}
+.hq-work-controls :is(input,select):focus-visible{outline:3px solid #f8b2bd;outline-offset:2px}
+[data-work-row][hidden]{display:none!important}
+.hq-work-filter .hq-micro{margin:15px 0 0;min-height:24px}
+@media(max-width:650px){.hq-work-controls{grid-template-columns:1fr}.hq-work-filter{padding:15px}.team-occupancy{font-size:13px;padding:13px}}
