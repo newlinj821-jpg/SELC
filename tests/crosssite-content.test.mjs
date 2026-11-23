@@ -21,7 +21,7 @@ test('SELC keeps public learning, application and event pathways connected',()=>
 });
 test('Retired external organizer network is closed and the README describes only current SELC roles',()=>{
  const retired=read('community-leaders/index.html'),docs=read('README.md');
- assert.match(retired,/NETWORK RETIRED/);
+ assert.match(retired,/NETWORK\s*(?:<em>)?RETIRED/,'Retired-network notice remains visible with semantic emphasis');
  assert.doesNotMatch(retired,/<form\b/);
  assert.match(docs,/two Coordinator seats, four Representative seats and two Advisor seats/i);
  assert.match(docs,/Community Leaders network is retired/);
