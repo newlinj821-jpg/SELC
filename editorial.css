@@ -50,3 +50,17 @@
 @media(max-width:760px){.top{position:relative}.top .wrap{padding:9px 0;gap:7px}.top nav{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;padding:2px 0 5px}.top nav a{flex:0 0 auto;min-height:43px;padding:9px 7px;scroll-snap-align:start;border-radius:5px;border:1px solid #66505a;background:#201820}.top nav a[aria-current=page]{background:#4f2533;border-color:#f6a5b8}.hero{padding:46px 0 40px}.section{padding:42px 0}.panel{padding:22px}.grid3{gap:12px}}
 @media(max-width:430px){.brand img{width:39px;height:46px}.brand small{max-width:190px;line-height:1.4}.top nav a{font-size:12px}.hero h1{font-size:clamp(41px,11vw,57px);overflow-wrap:anywhere}.section h2{overflow-wrap:anywhere;font-size:clamp(33px,9.5vw,46px)}}
 @media(prefers-reduced-motion:reduce){.panel{transition:none}}
+
+
+/* Editorial subpages: reveal headings, give cards tactile feedback, respect reduced motion. */
+@media(prefers-reduced-motion:no-preference){
+ @keyframes selc-editorial-rise{from{opacity:.7;transform:translate3d(0,11px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+ .hero h1,.hero .lead,.hero .actions{animation:selc-editorial-rise .48s ease-out both}
+ .hero .lead{animation-delay:75ms}.hero .actions{animation-delay:130ms}
+ .section .panel{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+ .section .panel:hover{transform:translateY(-3px);border-color:var(--red);box-shadow:0 8px 27px rgba(0,0,0,.18)}
+ .section .cta{transition:transform .18s ease,background-color .18s ease}
+ .section .cta:hover{transform:translateY(-2px)}.section .cta:active{transform:translateY(0) scale(.99)}
+ .advisor-faq details[open]{animation:selc-editorial-rise .22s ease-out both}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}.hero h1,.hero .lead,.hero .actions,.advisor-faq details[open]{animation:none!important}.section .panel,.section .cta{transition:none!important;transform:none!important}}

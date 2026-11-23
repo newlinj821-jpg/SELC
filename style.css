@@ -466,3 +466,21 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 .hq-work-controls :is(input,select){background:var(--bg);border-color:var(--line);color:var(--ink)}
 .hq-work-controls :is(input,select):focus-visible{outline-color:var(--red-hot)}
 .hq-work-filter .hq-micro{color:var(--muted)}
+
+
+/* Motion accents retain SELC charcoal/signal-red. No sustained decorative loop. */
+@media(prefers-reduced-motion:no-preference){
+ @keyframes selc-motion-appear{from{opacity:.68;transform:translate3d(0,12px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+ @keyframes selc-motion-panel{from{opacity:.75;transform:translate3d(0,7px,0)}to{opacity:1;transform:translate3d(0,0,0)}}
+ .selc-motion-arrived{animation:selc-motion-appear .45s cubic-bezier(.2,.8,.28,1) var(--selc-motion-delay,0ms) both}
+ #publicSite .hero .hero-actions{animation:selc-motion-panel .45s ease-out 150ms both}
+ #publicSite .leader-card,#publicSite .pillar,#publicSite .principle-card,#headquarters .hq-card,#headquarters .hq-row,.hq-sidebar nav button,.site-nav a,.nav-signin{transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease,background-color .18s ease}
+ #publicSite .leader-card:hover,#publicSite .pillar:hover,#publicSite .principle-card:hover,#headquarters .hq-card:hover{border-color:var(--red)}
+ #headquarters .hq-row:hover{border-color:var(--red-dark);background:var(--surface-2)}
+ .hq-sidebar nav button:active,.hq-button:active,.cta:active{transform:scale(.985)}
+ .hq-sidebar nav button:hover{transform:translateX(2px)}
+ #publicSite .leader-card:hover{transform:translateY(-3px)}
+ .hq-card:focus-within{border-color:var(--red-hot)}
+}
+#headquarters :is(a,button,input,textarea,select,summary):focus-visible{outline:3px solid var(--red-hot);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}.selc-motion-arrived,#publicSite .hero .hero-actions{animation:none!important}#publicSite .leader-card,#publicSite .pillar,#publicSite .principle-card,#headquarters .hq-card,#headquarters .hq-row,.hq-sidebar nav button,.site-nav a{transition:none!important;transform:none!important}}

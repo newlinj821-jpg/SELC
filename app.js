@@ -1567,4 +1567,32 @@ async function accountPage(){
  });
 }
 addEventListener('DOMContentLoaded',startPublic);
+
+/* SELC motion language: public invitation and Headquarters operations remain legible without JS. */
+(()=>{
+ 'use strict';
+ const start=()=>{
+  if(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+  const candidates='#publicSite .hero h1,#publicSite .hero .lead,#publicSite .leader-card,#publicSite .pillar,#publicSite .principle-card,#publicSite .site-section,#publicSite .team-card,#headquarters .hq-card,#headquarters .hq-row,#headquarters .hq-stats,#headquarters .hq-page-header,#headquarters .hq-view-header';
+  const known=new WeakSet();
+  let observer=null;
+  if('IntersectionObserver' in window)observer=new IntersectionObserver(entries=>{
+   entries.forEach(entry=>{if(!entry.isIntersecting)return;entry.target.classList.add('selc-motion-arrived');observer.unobserve(entry.target)})
+  },{threshold:.03,rootMargin:'0px 0px -28px 0px'});
+  let scheduled=false;
+  function scan(){
+   scheduled=false;
+   document.querySelectorAll(candidates).forEach((el,i)=>{
+    if(known.has(el))return;
+    known.add(el);el.style.setProperty('--selc-motion-delay',(i%4*45)+'ms');
+    if(observer)observer.observe(el);
+   });
+  }
+  const schedule=()=>{if(!scheduled){scheduled=true;requestAnimationFrame(scan)}};
+  scan();
+  if('MutationObserver' in window)new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true});
+ };
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+})();
+
 })();
