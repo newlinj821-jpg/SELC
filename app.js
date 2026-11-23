@@ -112,7 +112,7 @@ function startPublic(){
    loginMessage.setAttribute('role','alert');
   }finally{submit.disabled=false;submit.removeAttribute('aria-busy')}
  });
- loadPublicLeadership().catch(()=>{const x=$('#publicTeamStatus');if(x)x.textContent='Leadership directory is temporarily unavailable. Vacancies cannot be confirmed right now.';}
+ loadPublicLeadership().catch(()=>{const x=$('#publicTeamStatus');if(x)x.textContent='Leadership directory is temporarily unavailable. Vacancies cannot be confirmed right now.';});
  const params=new URLSearchParams(location.search);
  if(params.get('apply')==='advisor')openLogin();
  const ownerCode=params.get('se_owner_handoff');
@@ -1563,7 +1563,7 @@ async function accountPage(){
   const name=data.member?.screenName||values.publicName;
   setStatus(form.querySelector('[data-status]'),'Saved. Your SELC screen name is '+name+'.');
   flash('SELC name updated.');
-  await loadPublicLeadership().catch(()=>{const x=$('#publicTeamStatus');if(x)x.textContent='Leadership directory is temporarily unavailable. Vacancies cannot be confirmed right now.';}
+  await loadPublicLeadership().catch(()=>{const x=$('#publicTeamStatus');if(x)x.textContent='Leadership directory is temporarily unavailable. Vacancies cannot be confirmed right now.';});
  });
 }
 addEventListener('DOMContentLoaded',startPublic);
