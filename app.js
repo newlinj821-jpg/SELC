@@ -80,7 +80,7 @@ function openLogin(){closeMobileNav();const d=$('#loginDialog');if(d&&!d.open){d
 function startPublic(){
  $$('[data-year]').forEach(n=>n.textContent=String(new Date().getFullYear()));
  $('#mobileNavTrigger').addEventListener('click',()=>{const nav=$('#publicNav');const next=!nav.classList.contains('open');nav.classList.toggle('open',next);$('#mobileNavTrigger').setAttribute('aria-expanded',String(next))});
- $('#publicNav a').forEach(a=>{
+ document.querySelectorAll('#publicNav a').forEach(a=>{
    a.addEventListener('click',closeMobileNav);
    const link=new URL(a.href,location.href);
    if(link.origin===location.origin&&link.pathname.replace(/index\.html$/,'/')===location.pathname.replace(/index\.html$/,'/'))a.setAttribute('aria-current','page');
