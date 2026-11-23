@@ -662,7 +662,19 @@ async function proposalPage(){
     d.appendChild(section);
     watchForm(d.querySelector('#implementationForm'),async values=>{await post('selc-governance','track_proposal',{id:p.id,...values});d.close();flash('Implementation updated.');proposalPage()});
   }
-  $$('[data-pvote]',d).forEach(x=>x.onclick=async()=>{try{await post('selc-governance','vote_proposal',{id:p.id,vote:x.dataset.pvote});flash('Vote recorded.');d.close();proposalPage()}catch(e){flash(e.message)}});
+
+  if(p.status==='Published'&&p.publicationUrl){
+    const evidence=document.createElement('section');evidence.className='hq-card';
+    evidence.innerHTML='<h3>Published change</h3><p class="hq-micro">Verified by '+esc(p.publishedBy||'Founder')+' · '+esc(date(p.publishedAt))+' · version '+esc(p.publicationVersion||'recorded')+'</p><p>This records the actual released page, not merely the committee vote.</p><a class="hq-button" href="'+esc(p.publicationUrl)+'" target="_blank" rel="noopener noreferrer">Open published page ↗</a>';
+    d.appendChild(evidence);
+  }
+  if(owner()&&p.status==='Completed'&&p.chairDecision==='approved'){
+    const publication=document.createElement('section');publication.className='hq-card';
+    publication.innerHTML='<h3>Verify and record publication</h3><p>Implementation is complete. Only record publication after an authorized release actually exists. This does not deploy a website or change another system.</p><form class="hq-form" id="recordPublication"><label>Public page URL<input name="publicationUrl" type="url" required placeholder="https://sanctumportal.org/rules.html"></label><label>Release version or identifier<input name="version" required minlength="3" maxlength="70" placeholder="2026-11-23-policy-v2"></label><label>What changed, and what did you verify?<textarea name="notes" rows="4" minlength="15" required></textarea></label><p data-status role="status"></p><button type="submit" class="hq-button primary">Record verified publication</button></form>';
+    d.appendChild(publication);
+    watchForm(d.querySelector('#recordPublication'),async values=>{await post('selc-governance','record_publication',{id:p.id,...values});d.close();flash('Publication recorded with a version and authorized audit history.');proposalPage()});
+  }
+  $('[data-pvote]',d).forEach(x=>x.onclick=async()=>{try{await post('selc-governance','vote_proposal',{id:p.id,vote:x.dataset.pvote});flash('Vote recorded.');d.close();proposalPage()}catch(e){flash(e.message)}});
   watchForm($('#commentProposal',d),async vals=>{await post('selc-governance','comment_proposal',{id:p.id,message:vals.message});d.close();proposalPage()});
   $$('[data-chair]',d).forEach(x=>x.onclick=async()=>{const reason=prompt('Give a reason or brief summary for this decision:')||'';if(!reason)return;try{await post('selc-governance','decide_proposal',{id:p.id,decision:x.dataset.chair,reason});d.close();proposalPage()}catch(e){flash(e.message)}});
  });
