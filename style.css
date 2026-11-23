@@ -428,3 +428,21 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 #registryResults .se-directory{max-height:none;overflow:visible}
 #registryShowMore{display:block;margin:1rem auto;width:max-content;max-width:100%}
 @media(max-width:640px){.se-profile-top{padding:.8rem;align-items:flex-start}.se-profile-top .se-avatar-large{width:44px;height:44px;min-width:44px}.se-profile-fold>.se-app-detail{padding:.3rem .7rem 1rem}}
+
+/* 9.5+ refinement: clear interactive hierarchy and searchable Headquarters. */
+.hq-nav-search{padding:12px 15px 13px;border-bottom:1px solid #47424a;background:#17171d}
+.hq-nav-search label{display:block;margin-bottom:8px;color:#f19aa6;font-size:10px;font-weight:850;letter-spacing:.12em;text-transform:uppercase}
+.hq-nav-search input{width:100%;box-sizing:border-box;min-height:44px;padding:10px 12px;border:1px solid #7b6268;border-radius:6px;background:#0e1015;color:#fff;font:inherit;font-size:14px}
+.hq-nav-search input::placeholder{color:#a9a5ac}
+.hq-sidebar nav [hidden]{display:none!important}
+.hq-sidebar nav button{min-height:45px;transition:background-color .15s ease,border-color .15s ease}
+.hq-sidebar nav button:focus-visible{outline:3px solid #ffc8d0;outline-offset:-2px}
+.site-nav a[aria-current=page]{color:#fff;border-bottom:2px solid #ff7283;padding-bottom:4px}
+.site-nav a,.nav-signin{min-height:44px;display:inline-flex;align-items:center}
+.hero-copy{max-width:74ch}
+.hero-copy a{text-decoration:underline;text-decoration-color:#f98798;text-underline-offset:4px}
+.hq-content h1,.hq-content h2,.hq-content h3,.hero h1,.section h2{overflow-wrap:anywhere}
+.hq-card,.hq-panel,.hq-sidebar,.hq-content{min-width:0}
+@media(max-width:850px){.site-nav{max-height:calc(100dvh - 100px);overflow-y:auto;overscroll-behavior:contain}.site-nav a,.site-nav button{min-height:47px}.hq-nav-search{padding:10px 15px}}
+@media(max-width:520px){.hero h1{font-size:clamp(39px,10vw,56px);line-height:1.03}.hero-copy{font-size:16px;line-height:1.72}.hq-page-header{align-items:flex-start;flex-wrap:wrap}.hq-content{padding:20px 14px max(70px,env(safe-area-inset-bottom))}.hq-top-brand{font-size:9px;letter-spacing:.08em}.hq-actions>*{max-width:100%}}
+@media(prefers-reduced-motion:reduce){.hq-sidebar nav button,.site-nav a{transition:none}}
