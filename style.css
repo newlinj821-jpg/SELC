@@ -458,3 +458,11 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 [data-work-row][hidden]{display:none!important}
 .hq-work-filter .hq-micro{margin:15px 0 0;min-height:24px}
 @media(max-width:650px){.hq-work-controls{grid-template-columns:1fr}.hq-work-filter{padding:15px}.team-occupancy{font-size:13px;padding:13px}}
+
+
+/* Brand-lock: leadership additions retain SELC charcoal and signal-red identity. */
+.team-occupancy,.hq-work-filter{background:var(--surface);border-color:var(--line);color:var(--ink)}
+.hq-work-controls label{color:var(--ink)}
+.hq-work-controls :is(input,select){background:var(--bg);border-color:var(--line);color:var(--ink)}
+.hq-work-controls :is(input,select):focus-visible{outline-color:var(--red-hot)}
+.hq-work-filter .hq-micro{color:var(--muted)}
