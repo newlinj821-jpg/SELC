@@ -80,7 +80,13 @@ function openLogin(){closeMobileNav();const d=$('#loginDialog');if(d&&!d.open){d
 function startPublic(){
  $$('[data-year]').forEach(n=>n.textContent=String(new Date().getFullYear()));
  $('#mobileNavTrigger').addEventListener('click',()=>{const nav=$('#publicNav');const next=!nav.classList.contains('open');nav.classList.toggle('open',next);$('#mobileNavTrigger').setAttribute('aria-expanded',String(next))});
- $$('#publicNav a').forEach(a=>a.addEventListener('click',closeMobileNav));
+ $('#publicNav a').forEach(a=>{
+   a.addEventListener('click',closeMobileNav);
+   const link=new URL(a.href,location.href);
+   if(link.origin===location.origin&&link.pathname.replace(/index\.html$/,'/')===location.pathname.replace(/index\.html$/,'/'))a.setAttribute('aria-current','page');
+ });
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeMobileNav();if(!$('#headquarters').classList.contains('hidden'))closeHQNav()}});
+ document.addEventListener('pointerdown',e=>{if($('#publicNav').classList.contains('open')&&!e.target.closest('.site-header'))closeMobileNav()});
  $$('[data-signin]').forEach(b=>b.addEventListener('click',openLogin));
  $('#loginDialog').addEventListener('click',e=>{if(e.target.id==='loginDialog')e.target.close()});
  const loginForm=$('#loginForm'),loginMessage=$('#loginStatus');
@@ -211,7 +217,19 @@ const NAV=[
 ];
 function setupHQNav(){
  const root=$('#hqNavigation');let last='';const visible=new Set(['home','myaccount','staffconnection','founderdesk','admincenter','applications','leader','registry','generalapps','communityinbox','chat','proposals','events','readiness','iacases','appeals','certification','coordinator','ballots','join','work']);const groups={'Your work':'Account','Leadership':'Management','Committee':'Management','Community':'Management','Partnerships':'Management','Education':'Management','Event operations':'Events','Safety':'Safety'};root.innerHTML=NAV.filter(item=>visible.has(item[0])&&(!item[4]||item[4](role()))&&item[5]!=='hidden').map(([id,ico,label,group])=>{const groupLabel=groups[group]||group||'Resources';let groupPart='';if(groupLabel!==last){groupPart='<p class="nav-group">'+esc(groupLabel)+'</p>';last=groupLabel}return groupPart+'<button type="button" data-page="'+esc(id)+'"><span class="nav-emoji">'+esc(ico)+'</span><span>'+esc(label)+'</span></button>'}).join('');
- root.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button){closeHQNav();openPage(button.dataset.page)}});
+ const find=$('#hqNavSearch');
+ const updateFilter=()=>{
+   const query=find.value.toLocaleLowerCase().trim();
+   let group=null;
+   for(const node of root.children){
+     if(node.classList.contains('nav-group')){group=node;group.hidden=Boolean(query);continue}
+     const match=!query||node.textContent.toLocaleLowerCase().includes(query);
+     node.hidden=!match;
+     if(match&&group)group.hidden=false;
+   }
+ };
+ find.addEventListener('input',updateFilter);
+ root.addEventListener('click',e=>{const button=e.target.closest('[data-page]');if(button){find.value='';updateFilter();closeHQNav();openPage(button.dataset.page)}});
  $('#hqMenu').addEventListener('click',()=>{const open=!$('#hqSidebar').classList.contains('open');$('#hqSidebar').classList.toggle('open',open);$('#hqShade').classList.toggle('open',open);$('#hqMenu').setAttribute('aria-expanded',String(open))});
  $('#hqShade').addEventListener('click',closeHQNav);
  $('#hqRefresh').addEventListener('click',()=>openPage(context.activePage));
