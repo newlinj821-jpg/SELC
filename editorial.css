@@ -64,3 +64,11 @@
  .advisor-faq details[open]{animation:selc-editorial-rise .22s ease-out both}
 }
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}.hero h1,.hero .lead,.hero .actions,.advisor-faq details[open]{animation:none!important}.section .panel,.section .cta{transition:none!important;transform:none!important}}
+
+/* Public editorial pages: prevent intrinsic grid and navigation overflow. */
+.grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.grid3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.hero :is(h1,h2),.section :is(h2,h3),.panel,.copy{overflow-wrap:anywhere;min-width:0}
+.actions>*{min-width:0;max-width:100%}
+.form :is(input,select,textarea){box-sizing:border-box;max-width:100%}
+@media(max-width:760px){.grid,.grid3{grid-template-columns:minmax(0,1fr)}.hero .actions .cta{flex:1 1 160px;white-space:normal}.top nav a{min-height:44px}}
