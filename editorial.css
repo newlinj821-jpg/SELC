@@ -72,3 +72,5 @@
 .actions>*{min-width:0;max-width:100%}
 .form :is(input,select,textarea){box-sizing:border-box;max-width:100%}
 @media(max-width:760px){.grid,.grid3{grid-template-columns:minmax(0,1fr)}.hero .actions .cta{flex:1 1 160px;white-space:normal}.top nav a{min-height:44px}}
+
+.top nav{flex-wrap:wrap;gap:10px}.top nav a{white-space:normal}.actions>a{overflow-wrap:anywhere}

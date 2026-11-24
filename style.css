@@ -498,3 +498,5 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 #headquarters .hq-actions :is(button,a,select){white-space:normal;overflow-wrap:anywhere;max-width:100%}
 #headquarters .hq-work-controls{grid-template-columns:minmax(0,1fr) minmax(0,1.5fr)}
 @media(max-width:650px){#headquarters .hq-work-controls{grid-template-columns:minmax(0,1fr)}#headquarters .hq-row .hq-actions{gap:8px}#headquarters .hq-row .hq-actions>*{min-width:0;flex:1 1 120px;min-height:44px}#publicSite .leader-card{min-width:0}}
+
+#publicNav{flex-wrap:wrap;justify-content:flex-end}#publicNav>a{white-space:normal}#publicNav .nav-signin{flex-shrink:0}
