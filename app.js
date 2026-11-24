@@ -666,6 +666,20 @@ async function proposalPage(){
   if(p.status==='Published'&&p.publicationUrl){
     const evidence=document.createElement('section');evidence.className='hq-card';
     evidence.innerHTML='<h3>Published change</h3><p class="hq-micro">Verified by '+esc(p.publishedBy||'Founder')+' · '+esc(date(p.publishedAt))+' · version '+esc(p.publicationVersion||'recorded')+'</p><p>This records the actual released page, not merely the committee vote.</p><a class="hq-button" href="'+esc(p.publicationUrl)+'" target="_blank" rel="noopener noreferrer">Open published page ↗</a>';
+    const history=Array.isArray(p.publicationHistory)?p.publicationHistory:[];
+    if(history.length){
+      const heading=document.createElement('h4');heading.textContent='Publication history';evidence.append(heading);
+      const records=document.createElement('ol');records.className='hq-publication-history';
+      history.slice().reverse().forEach(record=>{
+        const item=document.createElement('li');
+        const title=document.createElement('strong');title.textContent=String(record.version||'Recorded version');item.append(title);
+        const meta=document.createElement('p');meta.className='hq-micro';meta.textContent=(record.by||'Authorized publisher')+' · '+date(record.at);item.append(meta);
+        if(record.notes){const notes=document.createElement('p');notes.textContent=record.notes;item.append(notes)}
+        try{const url=new URL(record.url);if(['https://sanctumportal.org','https://sanctumeroshub.org','https://se-selc.netlify.app'].includes(url.origin)&&!url.username&&!url.password){const link=document.createElement('a');link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent='View published page';item.append(link)}}catch{}
+        records.append(item);
+      });
+      evidence.append(records);
+    }
     d.appendChild(evidence);
   }
   if(owner()&&p.status==='Completed'&&p.chairDecision==='approved'){
