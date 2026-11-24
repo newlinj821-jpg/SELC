@@ -43,11 +43,11 @@ test('public navigation, motion and original charcoal-red identity remain access
 test('education, leadership and governance routes retain canonical links and fresh styles',()=>{
  for(const path of ['purpose/index.html','education/index.html','advisor/index.html']){
    const page=read(path);
-   assert.match(page,/editorial\.css\?v=20261123-motion-2/);
+   assert.match(page,/editorial\.css\?v=20261123-refined/);
  }
  assert.match(read('education/index.html'),/FROM PROPOSAL/);
  assert.match(read('purpose/index.html'),/AUTHORITY IS/);
- assert.match(home,/style\.css\?v=20261123-motion-2/);
+ assert.match(home,/style\.css\?v=20261123-refined/);
  assert.match(home,/app\.js\?v=20261123-motion-2/);
 });
 
