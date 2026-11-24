@@ -156,11 +156,11 @@ async function loadPublicLeadership(){
   const coordinatorHost=$('#publicCoordinators');
   if(coordinatorHost)coordinatorHost.innerHTML=[0,1].map(n=>{
     const person=coordinators[n];
-    return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Coordinator')+'</strong><small>'+esc(person?'SELC Coordinator':'Position available')+'</small></div>';
+    return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?(person.publicName||'Private member'):'Coordinator')+'</strong><small>'+esc(person?(person.publicName?'SELC Coordinator':'Position occupied · name private'):'Position available')+'</small></div>';
   }).join('');
   host.innerHTML=[1,2,3,4].map(n=>{
     const person=bySeat.get(n);
-    return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Representative')+'</strong><small>'+esc(person?'SELC Representative':'Position available')+'</small></div>';
+    return '<div class="seat-card"><span>'+String(n).padStart(2,'0')+'</span><strong>'+esc(person?(person.publicName||'Private member'):'Representative')+'</strong><small>'+esc(person?(person.publicName?'SELC Representative':'Position occupied · name private'):'Position available')+'</small></div>';
   }).join('');
   const transitionHost=$('#publicTransitionRepresentatives');
   if(transitionHost){
@@ -169,7 +169,7 @@ async function loadPublicLeadership(){
   }
   const statusHost=$('#publicTeamStatus');if(statusHost){const appointed=coordinators.filter(Boolean).length+[1,2,3,4].filter(n=>bySeat.has(n)).length+advisors.filter(Boolean).length;statusHost.textContent=appointed+' of 8 committee seats filled. Display names appear only by member choice.';}
  const advisorHost=$('#publicAdvisors');
-  if(advisorHost)advisorHost.innerHTML=[0,1].map(n=>{const person=advisors[n];return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?.publicName||'Advisor')+'</strong><small>'+esc(person?'SELC Advisor':'Position available')+'</small></div>'}).join('');
+  if(advisorHost)advisorHost.innerHTML=[0,1].map(n=>{const person=advisors[n];return '<div class="seat-card"><span>'+String(n+1).padStart(2,'0')+'</span><strong>'+esc(person?(person.publicName||'Private member'):'Advisor')+'</strong><small>'+esc(person?(person.publicName?'SELC Advisor':'Position occupied · name private'):'Position available')+'</small></div>'}).join('');
 }
 async function beginHeadquarters(){
  const session=await api('selc-auth');
