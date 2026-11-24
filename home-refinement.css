@@ -1,0 +1,9 @@
+/* Governance landing: shorter sections without changing Headquarters. */
+#publicSite.selc-public-refined .section{padding-block:clamp(38px,6vw,82px)}
+#publicSite.selc-public-refined .hero-copy{max-width:58ch}
+#publicSite.selc-public-refined .selc-process{padding-block:20px}
+#publicSite.selc-public-refined .selc-process-note{margin:0}
+#publicSite.selc-public-refined .culture h2{font-size:clamp(30px,5vw,56px)}
+#publicSite.selc-public-refined .culture p{max-width:65ch}
+#publicSite.selc-public-refined .copy-block a{display:inline-flex;min-height:44px;align-items:center;text-underline-offset:4px}
+@media(max-width:680px){#publicSite.selc-public-refined .section{padding-block:34px}#publicSite.selc-public-refined .selc-process{padding-block:16px}}
