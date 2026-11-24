@@ -605,7 +605,7 @@ async function leadershipWorkPage(){
    }).join(''));
  }).join(''):empty('Everything is up to date','New applications, Ban Reports, and community conversations appear here when they need attention.');
  setContent(markup);bindPageLinks();$('[data-work-refresh]')?.addEventListener('click',leadershipWorkPage);
- const rows=$('[data-work-row]'),assignment=$('#workAssignmentFilter'),query=$('#workTextFilter'),count=$('#workFilterCount');
+ const rows=$$('[data-work-row]'),assignment=$('#workAssignmentFilter'),query=$('#workTextFilter'),count=$('#workFilterCount');
  if(assignment&&query){const apply=()=>{const a=assignment.value,q=query.value.toLowerCase().trim();let visible=0;rows.forEach(row=>{const matched=(a==='all'||row.dataset.workOwned===a)&&(!q||row.dataset.workSearch.includes(q));row.hidden=!matched;if(matched)visible++});count.textContent=visible+' of '+rows.length+' items shown. Filters do not change assignments.'};assignment.addEventListener('change',apply);query.addEventListener('input',apply);apply()};
  $$('[data-queue-delegate]').forEach(button=>button.onclick=()=>{
   const kind=button.dataset.queueKind,id=button.dataset.queueId,row=items.find(item=>item.kind===kind&&item.id===id);
