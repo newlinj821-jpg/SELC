@@ -50,3 +50,12 @@ test('education, leadership and governance routes retain canonical links and fre
  assert.match(home,/style\.css\?v=20261123-motion-2/);
  assert.match(home,/app\.js\?v=20261123-motion-2/);
 });
+
+test('work queue filters the entire collection and published changes expose audit evidence',()=>{
+ assert.ok(app.includes("const rows=$$('[data-work-row]')"));
+ assert.match(app,/rows\.forEach\(row=>/);
+ assert.match(app,/p\.publicationHistory/);
+ assert.match(app,/history\.slice\(\)\.reverse\(\)/);
+ assert.match(app,/notes\.textContent=record\.notes/);
+ assert.match(css,/\.hq-publication-history/);
+});
