@@ -484,3 +484,9 @@ p,h1,h2,h3,h4{margin-top:0}p{margin-bottom:1em}h1,h2,h3,h4{line-height:1.1}
 }
 #headquarters :is(a,button,input,textarea,select,summary):focus-visible{outline:3px solid var(--red-hot);outline-offset:3px}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto!important}.selc-motion-arrived,#publicSite .hero .hero-actions{animation:none!important}#publicSite .leader-card,#publicSite .pillar,#publicSite .principle-card,#headquarters .hq-card,#headquarters .hq-row,.hq-sidebar nav button,.site-nav a{transition:none!important;transform:none!important}}
+
+/* Publication evidence follows the existing charcoal/red hierarchy. */
+.hq-publication-history{margin:12px 0 0;padding-left:1.4rem;display:grid;gap:12px}
+.hq-publication-history li{padding:12px;min-width:0;border:1px solid currentColor;border-radius:10px;overflow-wrap:anywhere}
+.hq-publication-history p{margin:.35rem 0;white-space:pre-wrap}
+.hq-publication-history a{display:inline-flex;align-items:center;min-height:44px;text-decoration:underline;text-underline-offset:3px}
