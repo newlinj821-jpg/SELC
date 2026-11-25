@@ -23,7 +23,7 @@ test('event management and safety routes remain implemented',()=>{
 test('retired external programs have no public enrollment forms',()=>{
  const advisor=read('advisor/index.html'),network=read('community-leaders/index.html');
  assert.match(advisor,/INTERNAL ADVISOR APPLICATIONS/);
- assert.match(network,/NETWORK/);
+ assert.match(network,/FORMER COMMUNITY LEADERS PROGRAM/);
  assert.doesNotMatch(advisor,/<form\b/);
  assert.doesNotMatch(network,/<form\b/);
 });
